@@ -1,0 +1,9 @@
+export const REMOTION_DEFAULT_FPS = 24;
+export const REMOTION_DEFAULT_WIDTH = 1080;
+export const REMOTION_DEFAULT_HEIGHT = 1920;
+export const REMOTION_CROPPED_WIDTH = 1920;
+export const REMOTION_CROPPED_HEIGHT = 1080;
+export const REMOTION_TOKEN_COMBINE_MS = 30000;
+export const REMOTION_CACHE_SIZE = 1024 * 1024 * 1024;
+export const REMOTION_CRF = 24;
+export const REMOTION_X264_PRESET = 'ultrafast';
