@@ -3,8 +3,45 @@
 ## Project Structure
 - `src/app/api`: API routes for content generation (split, descriptions, images, audio, transcription, etc.)
 - `src/components/flows`: Different story creation flows (Simple, With Commentator)
-- `src/components/shared`: UI components shared across flows (FlowStepper, StageControls)
+- `src/components/flows/shared`: Shared UI components and stages for all flows
+- `src/components/shared`: Base UI components (FlowStepper, StageControls)
+- `src/lib/flows`: Shared hooks and types for flow logic
 - `src/lib/ai/processors`: Core logic for AI-powered generation
+
+## Flow Architecture
+
+### Shared Hooks (`src/lib/flows/`)
+- `types.ts` - Shared type definitions
+- `use-image-generation.ts` - Image generation logic (generateAll, regenerate, updatePrompt)
+- `use-audio-generation.ts` - Audio generation (single/multi-voice support)
+- `use-transcription.ts` - Transcription handling
+- `use-video-generation.ts` - Video alignment and rendering
+- `use-project.ts` - Project persistence (save/load/download)
+
+### Shared Stages (`src/components/flows/shared/stages/`)
+- `InputStage.tsx` - Script input, segment size, language
+- `ImagesStage.tsx` - Visual description and image grid
+- `AudioStage.tsx` - Audio batch status and voice config
+- `TranscriptionStage.tsx` - Transcription status and results
+- `VideoStage.tsx` - Video preview with caption controls
+- `DownloadStage.tsx` - ZIP download
+
+### Creating New Flows
+To create a new flow, compose existing hooks and stages:
+```typescript
+const imageGen = useImageGeneration(descriptions, setDescriptions, { systemPrompt })
+const audioGen = useAudioGeneration({ type: 'single', getText, voice })
+const transcription = useTranscription(audioGen.batches, language)
+const videoGen = useVideoGeneration({ getSegments, audioBatches, transcriptionResults })
+
+return (
+  <StoryFlowBase title="My Flow" steps={STEPS} ...>
+    {currentStage === 'INPUT' && <InputStage ... />}
+    {currentStage === 'IMAGES' && <ImagesStage ... />}
+    {/* ... other stages */}
+  </StoryFlowBase>
+)
+```
 
 ## Key Types
 
@@ -48,6 +85,8 @@ interface VisualDescription {
 }
 ```
 Images are generated using a specific epic cinematic pre-prompt. The `imagePrompt` is cleaned to remove any "Scene X:" prefixes before being wrapped in the style template. In case of failure (e.g., safety filters), the error message now includes the `finish_reason` and the full response message for easier debugging.
+
+The `useImageGeneration` hook leverages functional state updates (`setDescriptions(prev => ...)`) to prevent concurrent image generation results from overwriting each other. Additionally, base64 API responses in logs are automatically truncated to prevent console pollution.
 
 ## Flows
 
@@ -111,11 +150,14 @@ interface CaptionStyle {
 }
 ```
 
-### `FlowStepper`
-Displays progress through the story creation stages.
+### `StoryFlowBase`
+A wrapper component that provides a unified tabbed interface for story stages and a persistent bottom action bar. It handles global navigation (Voltar, Avançar) and execution (Executar) buttons, delegating the logic to the specific flow implementation.
 
-### `StageControls`
-Contextual buttons for regenerating a stage or moving to the next one.
+### Navigation and Execution
+The UI uses a globally positioned action bar at the bottom for executing stage-specific logic (e.g., "Gerar Descrições", "Gerar Áudio") and navigating between tabs. Stage components no longer manage their own `StageControls`.
+
+### Auto-Saving
+Flows implementation (like `SimpleStoryFlow`) trigger `project.save()` automatically after completing major generation steps. A toast notification (via `sonner`) is displayed upon successful save.
 
 ### `VideoPlayer`
 Renders the story with synchronized audio and subtitles using Remotion.

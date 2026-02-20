@@ -71,7 +71,17 @@ export async function generateImage(
   console.log('[generateImage] API Payload:', JSON.stringify(payload, null, 2))
 
   const completion = await openai.chat.completions.create(payload)
-  console.log('[generateImage] API Response:', JSON.stringify(completion, null, 2))
+
+  const logReplacer = (key: string, value: any) => {
+    if (typeof value === 'string' && value.length > 500) {
+      if (value.startsWith('data:image/') || value.length > 2000) {
+        return `${value.substring(0, 40)}... [TRUNCATED_BASE64, len=${value.length}]`;
+      }
+    }
+    return value;
+  };
+
+  console.log('[generateImage] API Response:', JSON.stringify(completion, logReplacer, 2))
 
   const message = completion.choices[0]?.message as any
   if (!message) {
@@ -94,7 +104,7 @@ export async function generateImage(
     }
   }
 
-  throw new Error(`No image URL found in response. Finish reason: ${completion.choices[0]?.finish_reason}. Message: ${JSON.stringify(message)}`)
+  throw new Error(`No image URL found in response. Finish reason: ${completion.choices[0]?.finish_reason}. Message: ${JSON.stringify(message, logReplacer)}`)
 }
 
 export async function audioRequest(
