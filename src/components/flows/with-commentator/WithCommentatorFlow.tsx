@@ -29,7 +29,7 @@ import {
   CaptionStyle,
   VideoSegment
 } from "@/lib/flows/types"
-import { DEFAULT_IMAGE_SYSTEM_PROMPT } from "@/lib/ai/prompts/image-prompts"
+
 import { COMMENTATOR_IMAGE_GENERATION_PROMPT } from "@/lib/ai/prompts/prompts"
 import { splitTextIntoBatches } from "@/lib/ai/utils/text-splitter"
 import { cn } from "@/lib/utils"
@@ -38,7 +38,7 @@ import CommentatorConfigComponent from "./CommentatorConfig"
 type Stage = 'INPUT' | 'COMMENTATOR' | 'COMMENTS' | 'DESCRIPTIONS' | 'IMAGES' | 'AUDIO' | 'TRANSCRIPTION' | 'VIDEO' | 'DOWNLOAD'
 
 const STAGE_ORDER: Stage[] = ['INPUT', 'COMMENTATOR', 'COMMENTS', 'DESCRIPTIONS', 'IMAGES', 'AUDIO', 'TRANSCRIPTION', 'VIDEO', 'DOWNLOAD']
-const STEPS = ["Entrada", "Comentador", "Comentários", "Descrições", "Imagens", "Áudio", "Transcrição", "Vídeo"]
+const STEPS = ["Entrada", "Comentador", "Comentários", "Descrições", "Cenas", "Áudio", "Transcrição", "Vídeo"]
 
 interface WithCommentatorFlowProps {
   onBack: () => void
@@ -52,12 +52,11 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   const [scriptText, setScriptText] = useState("")
   const [segmentSize, setSegmentSize] = useState([DEFAULT_SEGMENT_SIZE_COMMENTATOR])
   const [language, setLanguage] = useState("portuguese brasilian")
-  const [style, setStyle] = useState("")
   const [segments, setSegments] = useState<string[]>([])
   const [commentator, setCommentator] = useState<CommentatorConfig | undefined>()
   const [segmentsWithComments, setSegmentsWithComments] = useState<SegmentWithComment[]>([])
   const [commentVisualDescriptions, setCommentVisualDescriptions] = useState<VisualDescription[]>([])
-  const [imageSystemPrompt, setImageSystemPrompt] = useState(DEFAULT_IMAGE_SYSTEM_PROMPT)
+  const [imageSystemPrompt, setImageSystemPrompt] = useState("")
   const [audioSystemPrompt, setAudioSystemPrompt] = useState("")
   const [audioVoiceNarrator, setAudioVoiceNarrator] = useState("nPczCjzI2devNBz1zQrb")
   const [audioVoiceCommentator, setAudioVoiceCommentator] = useState("Clyde")
@@ -125,12 +124,14 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
     flowType: 'with-commentator',
     getProjectData: () => ({
       name: title,
+      consistency: false,
       scriptText,
       segmentSize: segmentSize[0],
       language,
-      style,
+      style: imageSystemPrompt,
+      voice: audioVoiceNarrator,
       segments,
-      commentator,
+      commentator: commentator ? { ...commentator, voice: audioVoiceCommentator } : undefined,
       segmentsWithComments,
       visualDescriptions: commentVisualDescriptions,
       audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
@@ -143,9 +144,13 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       setScriptText(data.scriptText)
       if (data.segmentSize) setSegmentSize([data.segmentSize])
       if (data.language) setLanguage(data.language)
-      if (data.style) setStyle(data.style)
+      if (data.style) setImageSystemPrompt(data.style)
+      if (data.voice) setAudioVoiceNarrator(data.voice)
       if (data.segments) setSegments(data.segments)
-      if (data.commentator) setCommentator(data.commentator)
+      if (data.commentator) {
+        setCommentator(data.commentator)
+        if (data.commentator.voice) setAudioVoiceCommentator(data.commentator.voice)
+      }
       if (data.segmentsWithComments) setSegmentsWithComments(data.segmentsWithComments)
       if (data.visualDescriptions) setCommentVisualDescriptions(data.visualDescriptions)
       if (data.audioBatches) audioGen.setBatches(data.audioBatches)
@@ -229,7 +234,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       setCommentVisualDescriptions([])
 
       setCurrentStage('COMMENTATOR') // Pick commentator next
-      setTimeout(() => project.save(), 100)
+      await project.save({ segments: splitData.segments, segmentsWithComments: [], visualDescriptions: [] })
     } catch (error) {
       console.error("Splitting error:", error)
       alert("Failed to split scenes")
@@ -281,13 +286,15 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
           commentatorPersonality: commentator?.personality,
           commentatorImage: commentator?.appearance?.imageUrl,
           language,
-          style
+          style: imageSystemPrompt
         }),
       })
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
-      setCommentVisualDescriptions(data.visualDescriptions.map((d: VisualDescription) => ({ ...d, status: 'completed' })))
+      const newDescriptions = data.visualDescriptions.map((d: VisualDescription) => ({ ...d, status: 'completed' }))
+      setCommentVisualDescriptions(newDescriptions)
       setCurrentStage('DESCRIPTIONS')
+      await project.save({ visualDescriptions: newDescriptions })
     } catch (e) {
       console.error(e)
       alert("Error generating descriptions")
@@ -297,8 +304,14 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   }
 
   const handleGenerateImages = async () => {
-    await imageGen.generateAll()
+    let activeProjectId = project.currentProjectId
+    if (!activeProjectId) {
+      const savedProject = await project.save()
+      activeProjectId = savedProject?.id
+    }
+    await imageGen.generateAll({ projectId: activeProjectId, projectName: title })
     setCurrentStage('IMAGES')
+    await project.save()
   }
 
   const handleGenerateAudio = async () => {
@@ -312,7 +325,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
 
   const handleTranscribe = async () => {
     await transcription.transcribe()
-    setTimeout(() => project.save(), 100)
+    await project.save()
     setCurrentStage('TRANSCRIPTION')
   }
 
@@ -582,7 +595,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
                             {visualDesc.status === 'completed' && visualDesc.imageUrl ? (
                               <div className="relative group">
                                 <img src={visualDesc.imageUrl} alt="Scene" className="w-full rounded-lg" />
-                                <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => imageGen.regenerate(index)}>
+                                <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title })}>
                                   <RefreshCw className="w-4 h-4" />
                                 </Button>
                               </div>
@@ -593,7 +606,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
                                 {visualDesc.status === 'error' ? (
                                   <>
                                     <span>Erro ao gerar</span>
-                                    <Button variant="outline" size="sm" onClick={() => imageGen.regenerate(index)}>
+                                    <Button variant="outline" size="sm" onClick={() => imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title })}>
                                       <RefreshCw className="w-4 h-4 mr-2" />
                                       Tentar Novamente
                                     </Button>

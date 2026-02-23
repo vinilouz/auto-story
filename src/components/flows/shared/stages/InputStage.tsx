@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { NAGA_VOICES } from "@/config/voices"
 import { VoicePicker } from "@/components/ui/voice-picker"
+import { Switch } from "@/components/ui/switch"
 
 interface InputStageProps {
   title: string
@@ -26,6 +27,8 @@ interface InputStageProps {
   setImageSystemPrompt: (val: string) => void
   audioVoice?: string
   setAudioVoice?: (val: string) => void
+  consistency?: boolean
+  setConsistency?: (val: boolean) => void
 }
 
 export function InputStage({
@@ -40,7 +43,9 @@ export function InputStage({
   imageSystemPrompt,
   setImageSystemPrompt,
   audioVoice,
-  setAudioVoice
+  setAudioVoice,
+  consistency,
+  setConsistency
 }: InputStageProps) {
   return (
     <>
@@ -127,6 +132,22 @@ export function InputStage({
               className="min-h-[100px]"
             />
           </div>
+
+          {consistency !== undefined && setConsistency && (
+            <div className="flex items-center space-x-2 pt-2 border-t mt-4">
+              <Switch
+                id="consistency-mode"
+                checked={consistency}
+                onCheckedChange={setConsistency}
+              />
+              <div className="space-y-0.5">
+                <label htmlFor="consistency-mode" className="text-base font-medium">Consistência de Personagens</label>
+                <p className="text-sm text-muted-foreground">
+                  Ativa um pipeline avançado para extrair e gerar imagens de referência consistentes para os personagens antes das cenas.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </>

@@ -6,6 +6,13 @@ export interface VisualDescription {
   status: 'pending' | 'generating' | 'completed' | 'error'
 }
 
+export interface EntityAsset {
+  name: string
+  description?: string
+  imageUrl?: string
+  status: 'pending' | 'generating' | 'completed' | 'error'
+}
+
 export interface AudioBatch {
   index: number
   text: string
@@ -43,11 +50,14 @@ export interface ProjectData {
   id?: string | null
   name: string
   flowType: 'simple' | 'with-commentator'
+  consistency: boolean
   scriptText: string
   segmentSize: number
   language: string
   style?: string
+  voice?: string
   segments?: string[]
+  entities?: EntityAsset[]
   visualDescriptions?: VisualDescription[]
   segmentsWithComments?: SegmentWithComment[]
   audioUrls?: string[]
@@ -72,6 +82,7 @@ export interface CommentatorConfig {
     imagePrompt?: string
     description?: string
   }
+  voice?: string
 }
 
 export interface VideoSegment {

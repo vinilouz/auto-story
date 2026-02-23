@@ -1,3 +1,10 @@
+function toJsonForPrompt(data: any, includeIndex = false): string {
+  if (Array.isArray(data) && includeIndex) {
+    return JSON.stringify(data.map((item, index) => ({ index, ...item })), null, 2);
+  }
+  return JSON.stringify(data, null, 2);
+}
+
 export const PROMPTS = {
   /**
    * Visual description generation prompt

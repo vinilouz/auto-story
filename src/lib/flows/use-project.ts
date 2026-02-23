@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { ProjectData, AudioBatch, TranscriptionResult, VisualDescription, SegmentWithComment, CommentatorConfig } from "./types"
+import { ProjectData, AudioBatch, TranscriptionResult, VisualDescription, SegmentWithComment, CommentatorConfig, EntityAsset } from "./types"
 
 interface UseProjectConfig {
   projectId?: string
@@ -10,11 +10,14 @@ interface UseProjectConfig {
 
 export interface LoadedProjectData {
   name?: string
+  consistency?: boolean
   scriptText: string
   segmentSize: number
   language: string
   style?: string
+  voice?: string
   segments?: string[]
+  entities?: EntityAsset[]
   visualDescriptions?: VisualDescription[]
   segmentsWithComments?: SegmentWithComment[]
   audioBatches?: AudioBatch[]
@@ -43,11 +46,14 @@ export function useProject(config: UseProjectConfig) {
         setCurrentProjectId(project.id)
         config.onLoad?.({
           name: project.name,
+          consistency: project.consistency || false,
           scriptText: project.scriptText || '',
           segmentSize: project.segmentSize || 150,
           language: project.language || 'english',
           style: project.style,
+          voice: project.voice,
           segments: project.segments,
+          entities: project.entities,
           visualDescriptions: project.visualDescriptions,
           segmentsWithComments: project.segmentsWithComments,
           audioBatches: project.audioBatches || (project.audioUrls?.map((url: string, i: number) => ({
@@ -68,7 +74,7 @@ export function useProject(config: UseProjectConfig) {
     }
   }
 
-  const save = async () => {
+  const save = async (overrides?: Partial<ProjectData>) => {
     const projectPayload = config.getProjectData()
 
     if (!projectPayload.scriptText?.trim()) return null
@@ -85,7 +91,8 @@ export function useProject(config: UseProjectConfig) {
         id: currentProjectId || undefined,
         name: resolvedName,
         flowType: config.flowType,
-        ...projectPayload
+        ...projectPayload,
+        ...overrides
       } as ProjectData
 
       const res = await fetch('/api/projects', {
@@ -115,6 +122,9 @@ export function useProject(config: UseProjectConfig) {
     }
     if (data.audioBatches && data.audioBatches.some(b => b.status === 'completed')) {
       return 'AUDIO'
+    }
+    if (data.consistency && data.entities && data.entities.length > 0 && !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
+      return 'ENTITIES'
     }
     if (data.visualDescriptions && data.visualDescriptions.length > 0) {
       return 'IMAGES'

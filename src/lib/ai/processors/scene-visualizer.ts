@@ -10,10 +10,12 @@ export interface SceneData {
   commentatorPersonality?: string
   language?: string
   style?: string
+  consistency?: boolean
 }
 
 export interface VisualData {
   visualDescriptions: Array<{ imagePrompt: string }>
+  entities?: string[]
 }
 
 export interface SceneVisualizationRequest extends SceneData {
@@ -50,17 +52,14 @@ const validateSceneData = (data: SceneVisualizationRequest): SceneVisualizationR
 
 const buildVisualPrompt = (data: SceneVisualizationRequest): PromptData => {
 
-  const scenesJson = JSON.stringify(data.segments.map((segment, index) => ({
-    id: index + 1,
-    text: segment.trim()
-  })))
+  const segmentsForPrompt = data.segments.map((segment, index) => ({
+    id: String(index + 1),
+    scriptText: segment.trim()
+  }))
 
   const visualPrompt = SCENE_VISUAL_PROMPT(
-    scenesJson,
-    data.language || "Portuguese",
-    data.style || "Cinematic",
-    data.commentatorName,
-    data.commentatorPersonality
+    segmentsForPrompt,
+    data.language || "Portuguese"
   )
 
 
@@ -110,18 +109,23 @@ const parseVisualResponse = (data: PromptData & { aiResponse: string }): SceneVi
     }
 
     cleanResponse = cleanResponse.trim()
+    const parsedData = JSON.parse(cleanResponse)
 
-
-    const visualDescriptions = JSON.parse(cleanResponse)
-
+    let visualDescriptions: any = parsedData
+    let entities: string[] | undefined = undefined
 
     if (!Array.isArray(visualDescriptions)) {
-      console.error('Response is not an array:', typeof visualDescriptions)
-      throw new Error('Response is not an array')
+      if (visualDescriptions && visualDescriptions.visualDescriptions) {
+        // Handle case where AI still returns the old format by mistake
+        visualDescriptions = visualDescriptions.visualDescriptions
+      } else {
+        console.error('Visual descriptions is not an array:', typeof visualDescriptions)
+        throw new Error('Visual descriptions is not an array')
+      }
     }
 
     // Handle both old and new formats
-    const validDescriptions = visualDescriptions.map((item, index) => {
+    const validDescriptions = visualDescriptions.map((item: any, index: number) => {
       if (item && typeof item.imagePrompt === 'string') {
         return { imagePrompt: item.imagePrompt }
       } else if (item && typeof item === 'string') {
@@ -129,40 +133,35 @@ const parseVisualResponse = (data: PromptData & { aiResponse: string }): SceneVi
         return { imagePrompt: item }
       } else {
         console.warn(`Invalid description at index ${index}:`, item)
-        return { imagePrompt: `Scene ${index + 1}` } // Fallback description
+        throw new Error(`Invalid description format at index ${index}`)
       }
-    }).filter(item => item.imagePrompt)
+    })
 
-
+    if (data.consistency && validDescriptions.length > 0) {
+      const extractedEntities = new Set<string>()
+      validDescriptions.forEach((desc: any) => {
+        const matches = desc.imagePrompt.match(/<<([^>]+)>>/g)
+        if (matches) {
+          matches.forEach((m: string) => extractedEntities.add(m.replace(/<<|>>/g, '')))
+        }
+      })
+      entities = Array.from(extractedEntities)
+    }
 
     if (validDescriptions.length === 0) {
       console.error('No valid descriptions found')
-      // Create fallback descriptions
-      return {
-        segments: data.segments,
-        visualDescriptions: data.segments.map((segment, index) => ({
-          imagePrompt: `Visual representation of scene: ${segment.substring(0, 100)}...`
-        }))
-      }
+      throw new Error('No valid descriptions found in AI response')
     }
-
 
     return {
       segments: data.segments,
-      visualDescriptions: validDescriptions
+      visualDescriptions: validDescriptions,
+      ...(entities ? { entities } : {})
     }
   } catch (error) {
     console.error('Parse error details:', error)
     console.log('AI response that failed to parse:', data.aiResponse)
-
-    // Return fallback descriptions instead of failing
-    console.log('Using fallback descriptions')
-    return {
-      segments: data.segments,
-      visualDescriptions: data.segments.map((segment, index) => ({
-        imagePrompt: `Scene ${index + 1}: ${segment.substring(0, 100)}...`
-      }))
-    }
+    throw new Error('Failed to parse AI response into valid JSON: ' + (error instanceof Error ? error.message : String(error)))
   }
 }
 

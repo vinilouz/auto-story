@@ -4,6 +4,7 @@ import { VisualDescription } from "./types"
 interface ImageGenerationConfig {
   systemPrompt: string
   referenceImage?: string
+  entities?: any[]
   buildPrompt?: (originalPrompt: string) => string
 }
 
@@ -24,11 +25,13 @@ export function useImageGeneration(
     })
   }, [setDescriptions])
 
-  const generateAll = async () => {
+  const generateAll = async (params?: { projectId?: string | null, projectName?: string }) => {
     setIsLoading(true)
 
+    const isRegeneratingAll = descriptions.every(d => d.status === 'completed' && d.imageUrl)
+
     const promises = descriptions.map(async (desc, index) => {
-      if (desc.status === 'completed' && desc.imageUrl) return
+      if (!isRegeneratingAll && desc.status === 'completed' && desc.imageUrl) return
 
       updateAtIndex(index, { status: 'generating' })
 
@@ -37,15 +40,29 @@ export function useImageGeneration(
           ? config.buildPrompt(desc.imagePrompt)
           : desc.imagePrompt
 
+        const payload: any = {
+          imagePrompt: finalPrompt,
+          imageConfig: { aspect_ratio: "16:9" },
+          systemPrompt: config.systemPrompt,
+          projectId: params?.projectId,
+          projectName: params?.projectName
+        }
+
+        if (config.entities && config.entities.length > 0) {
+          const mentionedEntities = config.entities.filter(e => finalPrompt.includes(`<<${e.name}>>`) && e.imageUrl)
+          if (mentionedEntities.length > 0) {
+            payload.referenceImages = mentionedEntities.map(e => e.imageUrl)
+          } else if (config.referenceImage) {
+            payload.referenceImage = config.referenceImage
+          }
+        } else if (config.referenceImage) {
+          payload.referenceImage = config.referenceImage
+        }
+
         const res = await fetch('/api/generate/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imagePrompt: finalPrompt,
-            referenceImage: config.referenceImage,
-            imageConfig: { aspect_ratio: "16:9" },
-            systemPrompt: config.systemPrompt
-          })
+          body: JSON.stringify(payload)
         })
 
         if (!res.ok) throw new Error('Failed to generate image')
@@ -60,7 +77,7 @@ export function useImageGeneration(
     setIsLoading(false)
   }
 
-  const regenerate = async (index: number) => {
+  const regenerate = async (index: number, params?: { projectId?: string | null, projectName?: string }) => {
     const desc = descriptions[index]
     if (!desc) return
 
@@ -71,15 +88,29 @@ export function useImageGeneration(
         ? config.buildPrompt(desc.imagePrompt)
         : desc.imagePrompt
 
+      const payload: any = {
+        imagePrompt: finalPrompt,
+        imageConfig: { aspect_ratio: "16:9" },
+        systemPrompt: config.systemPrompt,
+        projectId: params?.projectId,
+        projectName: params?.projectName
+      }
+
+      if (config.entities && config.entities.length > 0) {
+        const mentionedEntities = config.entities.filter(e => finalPrompt.includes(`<<${e.name}>>`) && e.imageUrl)
+        if (mentionedEntities.length > 0) {
+          payload.referenceImages = mentionedEntities.map(e => e.imageUrl)
+        } else if (config.referenceImage) {
+          payload.referenceImage = config.referenceImage
+        }
+      } else if (config.referenceImage) {
+        payload.referenceImage = config.referenceImage
+      }
+
       const res = await fetch('/api/generate/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imagePrompt: finalPrompt,
-          referenceImage: config.referenceImage,
-          imageConfig: { aspect_ratio: "16:9" },
-          systemPrompt: config.systemPrompt
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!res.ok) throw new Error('Failed to regenerate image')

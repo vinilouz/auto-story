@@ -21,9 +21,6 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
   const [isLoading, setIsLoading] = useState(false)
 
   const generate = async () => {
-    if (batches.length > 0 && batches.every(b => b.status === 'completed' && b.url)) {
-      return batches
-    }
 
     setIsLoading(true)
 

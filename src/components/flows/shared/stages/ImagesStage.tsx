@@ -130,7 +130,9 @@ export function ImagesStage({
                   </Button>
                 </div>
               ) : (
-                <Skeleton className="w-full h-48" />
+                <div className="w-full h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed border-muted-foreground/30">
+                  <span className="text-sm font-medium text-muted-foreground/50">Aguardando geração...</span>
+                </div>
               )}
 
               {desc.status === 'completed' && desc.imageUrl && (

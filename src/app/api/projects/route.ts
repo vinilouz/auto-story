@@ -35,15 +35,19 @@ export async function POST(request: NextRequest) {
       segmentSize: body.segmentSize || 150,
       language: body.language,
       style: body.style,
+      voice: body.voice,
+      consistency: body.consistency,
       // Simple flow fields
       segments: body.segments || [],
+      entities: body.entities,
       visualDescriptions: body.visualDescriptions,
       audioUrls: body.audioUrls,
       // Commentator flow fields
       commentator: body.commentator,
       segmentsWithComments: body.segmentsWithComments,
       audioSystemPrompt: body.audioSystemPrompt,
-      audioBatches: body.audioBatches
+      audioBatches: body.audioBatches,
+      transcriptionResults: body.transcriptionResults
     }
 
     await StorageService.saveProject(project)

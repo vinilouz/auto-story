@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync } from 'fs';
 
 // Change storage location to public/ so images can be served natively
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
@@ -20,6 +20,7 @@ export interface CommentatorConfig {
     imageUrl?: string;
     imagePrompt?: string;
   };
+  voice?: string;
 }
 
 export interface ProjectData {
@@ -32,7 +33,10 @@ export interface ProjectData {
   segmentSize?: number;
   language?: string;
   style?: string;
+  voice?: string;
+  consistency?: boolean;
   segments?: string[];
+  entities?: Array<{ name: string; description?: string; imageUrl?: string; status: string }>;
   visualDescriptions?: Array<{ imagePrompt: string; imageUrl?: string; status: string }>;
   audioUrls?: string[];
   commentator?: CommentatorConfig;
@@ -45,6 +49,7 @@ export interface ProjectData {
     url?: string;
     error?: string;
   }>;
+  transcriptionResults?: any[];
 }
 
 export interface ProjectSummary {
@@ -72,6 +77,17 @@ function slugify(text: string): string {
 
 function getProjectDirName(project: Pick<ProjectData, "id" | "name">): string {
   const shortId = project.id.split('-')[0] || project.id.substring(0, 8);
+
+  // Return existing directory if one already exists for this ID
+  if (existsSync(DATA_DIR)) {
+    const dirs = readdirSync(DATA_DIR, { withFileTypes: true });
+    for (const dirent of dirs) {
+      if (dirent.isDirectory() && dirent.name.includes(shortId)) {
+        return dirent.name;
+      }
+    }
+  }
+
   const slug = slugify(project.name) || 'untitled';
   return `${slug}-${shortId}`;
 }
@@ -89,11 +105,14 @@ export const StorageService = {
     }
 
     // Extract base64 images to files
-    if (project.visualDescriptions && project.visualDescriptions.length > 0) {
+    const ensureImagesDir = () => {
       if (!existsSync(imagesDir)) {
         mkdirSync(imagesDir, { recursive: true });
       }
+    };
 
+    if (project.visualDescriptions && project.visualDescriptions.length > 0) {
+      ensureImagesDir();
       for (let i = 0; i < project.visualDescriptions.length; i++) {
         const desc = project.visualDescriptions[i];
         if (desc.imageUrl && desc.imageUrl.startsWith('data:image/')) {
@@ -115,10 +134,52 @@ export const StorageService = {
       }
     }
 
+    // Extract base64 images from entities
+    if (project.entities && project.entities.length > 0) {
+      ensureImagesDir();
+      for (let i = 0; i < project.entities.length; i++) {
+        const entity = project.entities[i];
+        if (entity.imageUrl && entity.imageUrl.startsWith('data:image/')) {
+          const matches = entity.imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+            const base64Data = matches[2];
+            const fileName = `entity-${slugify(entity.name).substring(0, 10)}-${Date.now()}.${extension}`;
+            const filePath = path.join(imagesDir, fileName);
+
+            // Write payload to disk
+            await fs.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+
+            // Update the JSON to point to the saved file via URL
+            entity.imageUrl = `/projects/${dirName}/images/${fileName}`;
+          }
+        }
+      }
+    }
+
     const configPath = path.join(projectDir, 'config.json');
     await fs.writeFile(configPath, JSON.stringify(project, null, 2));
 
     return project.id;
+  },
+
+  async saveBase64Image(projectId: string, fileName: string, base64Data: string, projectName: string): Promise<string | null> {
+    try {
+      const dirName = getProjectDirName({ id: projectId, name: projectName });
+      const imagesDir = path.join(DATA_DIR, dirName, 'images');
+
+      if (!existsSync(imagesDir)) {
+        mkdirSync(imagesDir, { recursive: true });
+      }
+
+      const filePath = path.join(imagesDir, fileName);
+      await fs.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+
+      return `/projects/${dirName}/images/${fileName}`;
+    } catch (e) {
+      console.error('Failed to save base64 image locally:', e);
+      return null;
+    }
   },
 
   async getProjectByDirName(dirName: string): Promise<ProjectData | null> {
@@ -175,7 +236,16 @@ export const StorageService = {
         }
       }
 
-      return summaries.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      // Deduplicate by ID, keeping the most recently updated occurrence
+      const deduplicated = new Map<string, ProjectSummary>();
+      for (const p of summaries) {
+        const existing = deduplicated.get(p.id);
+        if (!existing || new Date(p.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+          deduplicated.set(p.id, p);
+        }
+      }
+
+      return Array.from(deduplicated.values()).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     } catch (error) {
       console.error("Error reading all projects:", error);
       return [];

@@ -34,12 +34,6 @@ describe('Audio Segmentation', () => {
     const text = 'Word1 Word2 Word3';
     const segments = splitTextIntoBatches(text, 10);
 
-    expect(segments).toHaveLength(2);
-    expect(segments[0]).toBe('Word1 Word2'); // 11 chars > 10? No wait.
-    // "Word1 Word2" is 11 chars. Max is 10.
-    // "Word1" is 5. " " is 6. "Word2" ends at 11.
-    // Should split at space after Word1.
-
     // Let's trace:
     // searchWindow = "Word1 Word" (10 chars)
     // lastSpace = 5

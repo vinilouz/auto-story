@@ -9,6 +9,7 @@ interface DescriptionsRequest {
   commentatorPersonality?: string
   language?: string
   style?: string
+  consistency?: boolean
 }
 
 export async function POST(request: NextRequest) {
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
       commentatorName: body.commentatorName,
       commentatorPersonality: body.commentatorPersonality,
       language: body.language,
-      style: body.style
+      style: body.style,
+      consistency: body.consistency
     })
 
     return NextResponse.json(result)

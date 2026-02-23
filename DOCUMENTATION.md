@@ -88,6 +88,11 @@ Images are generated using a specific epic cinematic pre-prompt. The `imagePromp
 
 The `useImageGeneration` hook leverages functional state updates (`setDescriptions(prev => ...)`) to prevent concurrent image generation results from overwriting each other. Additionally, base64 API responses in logs are automatically truncated to prevent console pollution.
 
+### Text Generation
+The AI client (`custom-client.ts`) uses native `fetch` for all providers, completely removing dependency on the `openai` library. The `generateText` function implements streaming (`stream: true`) to keep connections alive and prevent `504 Gateway Timeout` errors from Cloudflare during long-running generations. Chunks are accumulated and returned as a single string to maintain compatibility with existing processors.
+
+The API payload dynamically excludes `max_tokens` parameters, mirroring the behavior validated in `test-api.ts`. This prevents unexpected generation halting (`finish_reason: length`). System logging actively records the `BASE_URL` alongside API payloads for debugging visibility.
+
 ## Flows
 
 ### Simple Story Flow (`SimpleStoryFlow.tsx`)

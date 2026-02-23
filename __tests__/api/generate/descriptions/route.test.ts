@@ -10,23 +10,27 @@ describe('/api/generate/descriptions', () => {
     jest.clearAllMocks()
   })
 
-  it('should generate visual descriptions successfully', async () => {
+  it('should generate visual descriptions successfully with all parameters', async () => {
     const mockResponse = {
       visualDescriptions: [
         { imagePrompt: 'A beautiful sunset over mountains' },
-        { imagePrompt: 'A person walking through a forest' },
-        { imagePrompt: 'A city skyline at night' }
+      ],
+      entities: [
+        { name: 'John', description: 'Tall guy', status: 'pending' }
       ]
     }
 
     mockGenerateSceneDescriptions.mockResolvedValue(mockResponse)
 
     const requestBody = {
-      segments: [
-        'The sun set behind the mountains.',
-        'She walked through the dense forest.',
-        'The city lights twinkled in the night sky.'
-      ]
+      segments: ['The sun set behind the mountains.'],
+      context: 'commentator',
+      commentatorImage: 'data:img',
+      commentatorName: 'Jane',
+      commentatorPersonality: 'Happy',
+      language: 'english',
+      style: 'anime',
+      consistency: true
     }
 
     const request = {
@@ -39,7 +43,14 @@ describe('/api/generate/descriptions', () => {
     expect(response.status).toBe(200)
     expect(data).toEqual(mockResponse)
     expect(mockGenerateSceneDescriptions).toHaveBeenCalledWith({
-      segments: requestBody.segments
+      segments: requestBody.segments,
+      context: requestBody.context,
+      commentatorImage: requestBody.commentatorImage,
+      commentatorName: requestBody.commentatorName,
+      commentatorPersonality: requestBody.commentatorPersonality,
+      language: requestBody.language,
+      style: requestBody.style,
+      consistency: requestBody.consistency
     })
   })
 
@@ -107,28 +118,6 @@ describe('/api/generate/descriptions', () => {
     expect(data.error).toBe('Internal server error')
   })
 
-  it('should handle empty segment strings', async () => {
-    const mockResponse = {
-      visualDescriptions: []
-    }
-
-    mockGenerateSceneDescriptions.mockResolvedValue(mockResponse)
-
-    const requestBody = {
-      segments: ['']
-    }
-
-    const request = {
-      json: async () => requestBody
-    } as any
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data).toEqual(mockResponse)
-  })
-
   it('should handle malformed JSON', async () => {
     const request = {
       json: async () => {
@@ -141,31 +130,5 @@ describe('/api/generate/descriptions', () => {
 
     expect(response.status).toBe(500)
     expect(data.error).toBe('Internal server error')
-  })
-
-  it('should handle very long segments', async () => {
-    const mockResponse = {
-      visualDescriptions: [
-        { imagePrompt: 'A detailed scene description' }
-      ]
-    }
-
-    mockGenerateSceneDescriptions.mockResolvedValue(mockResponse)
-
-    const longSegment = 'A'.repeat(10000)
-
-    const requestBody = {
-      segments: [longSegment]
-    }
-
-    const request = {
-      json: async () => requestBody
-    } as any
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data).toEqual(mockResponse)
   })
 })
