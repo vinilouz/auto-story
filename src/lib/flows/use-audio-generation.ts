@@ -5,6 +5,8 @@ interface SingleVoiceConfig {
   type: 'single'
   getText: () => string
   voice: string
+  projectId: string
+  projectName: string
 }
 
 interface MultiVoiceConfig {
@@ -12,6 +14,8 @@ interface MultiVoiceConfig {
   getText: () => string
   voices: VoiceConfig
   systemPrompt?: string
+  projectId: string
+  projectName: string
 }
 
 type AudioGenerationConfig = SingleVoiceConfig | MultiVoiceConfig
@@ -30,7 +34,9 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
       if (config.type === 'single') {
         payload = {
           text: config.getText(),
-          voice: config.voice
+          voice: config.voice,
+          projectId: config.projectId,
+          projectName: config.projectName
         }
       } else {
         payload = {
@@ -39,7 +45,9 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
           voices: [
             { speaker: 'narrator', voice: config.voices.narrator },
             { speaker: 'commentator', voice: config.voices.commentator }
-          ]
+          ],
+          projectId: config.projectId,
+          projectName: config.projectName
         }
       }
 
@@ -88,7 +96,9 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
         payload = {
           text: config.getText(),
           voice: config.voice,
-          targetBatchIndices: [index]
+          targetBatchIndices: [index],
+          projectId: config.projectId,
+          projectName: config.projectName
         }
       } else {
         payload = {
@@ -98,7 +108,9 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
             { speaker: 'narrator', voice: config.voices.narrator },
             { speaker: 'commentator', voice: config.voices.commentator }
           ],
-          targetBatchIndices: [index]
+          targetBatchIndices: [index],
+          projectId: config.projectId,
+          projectName: config.projectName
         }
       }
 

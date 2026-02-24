@@ -17,8 +17,7 @@ export async function POST(req: Request) {
       const filename = url.split('/').pop();
       if (!filename) continue;
 
-      const publicDir = path.join(process.cwd(), 'public', 'audio');
-      const inputPath = path.join(publicDir, filename);
+      const inputPath = path.join(process.cwd(), 'public', url);
 
       if (!fs.existsSync(inputPath)) {
         console.error(`File not found: ${inputPath}`);

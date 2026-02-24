@@ -7,6 +7,8 @@ interface VideoGenerationConfig {
   getSegments: () => VideoSegment[]
   audioBatches: AudioBatch[]
   transcriptionResults: TranscriptionResult[]
+  projectId?: string
+  projectName?: string
 }
 
 export function useVideoGeneration(config: VideoGenerationConfig) {
@@ -108,7 +110,9 @@ export function useVideoGeneration(config: VideoGenerationConfig) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          videoProps: { ...videoProps, captionStyle }
+          videoProps: { ...videoProps, captionStyle },
+          projectId: config.projectId,
+          projectName: config.projectName
         })
       })
 

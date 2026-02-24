@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Download, Loader2, Pencil, Check, X, RefreshCw, Save, FolderOpen, Trash2 } from "lucide-react"
+import { cleanTitle } from "@/lib/utils"
 import {
   Sheet,
   SheetContent,
@@ -77,7 +78,7 @@ export default function ScriptForm() {
     try {
       const projectData = {
         id: currentProjectId,
-        name: scriptText.substring(0, 30) + (scriptText.length > 30 ? "..." : ""),
+        name: cleanTitle(scriptText),
         scriptText,
         segmentSize: segmentSize[0],
         segments: response?.segments,
@@ -562,9 +563,9 @@ export default function ScriptForm() {
                         </p>
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2 py-1 rounded ${response.visualDescriptions[index].status === 'completed' ? 'bg-green-100 text-green-800' :
-                              response.visualDescriptions[index].status === 'generating' ? 'bg-blue-100 text-blue-800' :
-                                response.visualDescriptions[index].status === 'error' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
+                            response.visualDescriptions[index].status === 'generating' ? 'bg-blue-100 text-blue-800' :
+                              response.visualDescriptions[index].status === 'error' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
                             }`}>
                             {response.visualDescriptions[index].status}
                           </span>

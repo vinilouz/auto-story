@@ -9,6 +9,8 @@ export interface AudioGenerationRequest {
   model?: string;
   systemPrompt?: string;
   targetBatchIndices?: number[];
+  projectId: string;
+  projectName: string;
 }
 
 export interface AudioBatch {
@@ -23,12 +25,14 @@ export interface AudioGenerationResponse {
   batches: AudioBatch[];
 }
 
+import { splitTextIntoBatches } from '../utils/text-splitter';
 
-// --- Audio Request ---
 async function audioRequest(
   model: string,
   prompt: string,
-  voice: string
+  voice: string,
+  projectId: string,
+  projectName: string
 ): Promise<string> {
   const BASE_URL = process.env.NAGA_BASE_URL;
   const API_KEY = process.env.NAGA_API_KEY;
@@ -36,8 +40,6 @@ async function audioRequest(
   if (!BASE_URL || !API_KEY) {
     throw new Error("Missing NAGA_BASE_URL or NAGA_API_KEY");
   }
-
-
 
   const response = await fetch(
     `${BASE_URL}/v1/audio/speech`,
@@ -63,10 +65,15 @@ async function audioRequest(
 
   const audioBuffer = await response.arrayBuffer();
 
-
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `audio_${timestamp}_${Math.random().toString(36).substring(7)}.mp3`;
-  const publicDir = path.join(process.cwd(), 'public', 'audio');
+
+  const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 10);
+  const slug = cleanTitle(projectName) || 'untitled';
+  const shortId = projectId.split('-')[0] || projectId.substring(0, 8);
+  const dirName = `${slug}-${shortId}`;
+
+  const publicDir = path.join(process.cwd(), 'public', 'projects', dirName, 'audios');
 
   if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
@@ -75,18 +82,14 @@ async function audioRequest(
   const filepath = path.join(publicDir, filename);
   fs.writeFileSync(filepath, Buffer.from(audioBuffer));
 
-
-  return `/audio/${filename}`;
+  return `/projects/${dirName}/audios/${filename}`;
 }
 
-import { splitTextIntoBatches } from '../utils/text-splitter';
-
 export const generateAudio = async (request: AudioGenerationRequest): Promise<AudioGenerationResponse> => {
-  const { text, voice = "nPczCjzI2devNBz1zQrb", model = "eleven-multilingual-v2:free", systemPrompt, targetBatchIndices } = request;
+  const { text, voice = "nPczCjzI2devNBz1zQrb", model = "eleven-multilingual-v2:free", systemPrompt, targetBatchIndices, projectId, projectName } = request;
 
   const segments = splitTextIntoBatches(text, 10000, systemPrompt);
 
-  // Initialize batches with basic info
   const batches: AudioBatch[] = segments.map((seg, i) => ({
     index: i,
     text: seg,
@@ -96,18 +99,14 @@ export const generateAudio = async (request: AudioGenerationRequest): Promise<Au
   const CONCURRENCY = 4;
   const MAX_RETRIES = 2;
 
-  // Filter indices to process
   const indicesToProcess = targetBatchIndices
     ? targetBatchIndices.filter(i => i >= 0 && i < segments.length)
     : segments.map((_, i) => i);
-
-
 
   for (let i = 0; i < indicesToProcess.length; i += CONCURRENCY) {
     const chunkIndices = indicesToProcess.slice(i, i + CONCURRENCY);
 
     await Promise.all(chunkIndices.map(async (index, batchIdx) => {
-      // Stagger start
       await new Promise(r => setTimeout(r, batchIdx * 800));
 
       batches[index].status = 'generating';
@@ -115,8 +114,7 @@ export const generateAudio = async (request: AudioGenerationRequest): Promise<Au
       let attempt = 0;
       while (attempt < MAX_RETRIES) {
         try {
-
-          const url = await audioRequest(model, segments[index], voice);
+          const url = await audioRequest(model, segments[index], voice, projectId, projectName);
           batches[index].status = 'completed';
           batches[index].url = url;
           return;
@@ -132,7 +130,6 @@ export const generateAudio = async (request: AudioGenerationRequest): Promise<Au
           if (attempt >= MAX_RETRIES) {
             batches[index].status = 'error';
             batches[index].error = error.message;
-            // Do not throw, essentially swallowing the error for this batch but recording it
             return;
           }
           await new Promise(r => setTimeout(r, delay));

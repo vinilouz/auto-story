@@ -4,7 +4,7 @@ import { generateAudio } from "@/lib/ai/processors/audio-generator"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { text, voice, model, systemPrompt, targetBatchIndices } = body
+    const { text, voice, model, systemPrompt, targetBatchIndices, projectId, projectName } = body
 
     if (!text) {
       return NextResponse.json(
@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
       voice,
       model,
       systemPrompt,
-      targetBatchIndices
+      targetBatchIndices,
+      projectId,
+      projectName
     })
 
     return NextResponse.json(result)

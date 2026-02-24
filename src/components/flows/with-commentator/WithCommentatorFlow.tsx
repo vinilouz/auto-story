@@ -20,7 +20,7 @@ import { useImageGeneration } from "@/lib/flows/use-image-generation"
 import { useAudioGeneration } from "@/lib/flows/use-audio-generation"
 import { useTranscription } from "@/lib/flows/use-transcription"
 import { useVideoGeneration } from "@/lib/flows/use-video-generation"
-import { useProject, useDownload, LoadedProjectData } from "@/lib/flows/use-project"
+import { useProject, useDownload, LoadedProjectData, determineStage } from "@/lib/flows/use-project"
 import {
   VisualDescription,
   SegmentWithComment,
@@ -102,7 +102,9 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
     type: 'multi',
     getText: () => generatedAudioContent,
     voices: { narrator: audioVoiceNarrator, commentator: audioVoiceCommentator },
-    systemPrompt: audioSystemPrompt
+    systemPrompt: audioSystemPrompt,
+    projectId: projectId || 'temp',
+    projectName: title
   })
 
   const transcription = useTranscription(audioGen.batches, language)
@@ -157,7 +159,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       if (data.audioSystemPrompt) setAudioSystemPrompt(data.audioSystemPrompt)
       if (data.transcriptionResults) transcription.setResults(data.transcriptionResults)
 
-      const stage = project.determineStage(data)
+      const stage = determineStage(data, 'with-commentator')
       if (STAGE_ORDER.includes(stage as Stage)) {
         setCurrentStage(stage as Stage)
       }

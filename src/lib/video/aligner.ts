@@ -65,6 +65,41 @@ function isWordMatch(a: string, b: string): boolean {
 }
 
 
+function findSegmentEnd(
+  segmentText: string,
+  words: FlattenedWord[],
+  startWordIndex: number
+): { index: number; score: number } {
+  const normSeg = normalize(segmentText);
+  const segWords = normSeg.split(" ").filter(Boolean);
+  if (segWords.length === 0) return { index: -1, score: 0 };
+
+  const N = Math.min(segWords.length, 5);
+  const tail = segWords.slice(-N);
+
+  const approxEnd = startWordIndex + segWords.length;
+  const searchFrom = Math.max(startWordIndex, approxEnd - N - 5);
+  const searchTo = Math.min(words.length - 1, approxEnd + N * 3);
+
+  for (let i = searchTo; i >= searchFrom; i--) {
+    if (!isWordMatch(words[i].text, tail[tail.length - 1])) continue;
+
+    let matchCount = 1;
+    for (let j = tail.length - 2; j >= 0; j--) {
+      const pos = i - (tail.length - 1 - j);
+      if (pos < startWordIndex) break;
+      if (isWordMatch(words[pos].text, tail[j])) matchCount++;
+    }
+
+    const requiredMatches = Math.max(1, Math.floor(tail.length * 0.6));
+    if (matchCount >= requiredMatches) {
+      return { index: i, score: matchCount / tail.length };
+    }
+  }
+
+  return { index: -1, score: 0 };
+}
+
 function findSegmentStartWithConfidence(
   segmentText: string,
   words: FlattenedWord[],
@@ -224,82 +259,90 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
     totalDuration: number
   ) {
     const timings: { start: number; end: number; confidence: number; found: boolean }[] = [];
-    let searchStartIndex = 0;
+    let searchStartWordIndex = 0;
 
-    // 2. Find Starts (No Gap Filling)
     for (let i = 0; i < segments.length; i++) {
-      // First segment always starts at 0
-      if (i === 0) {
-        timings.push({ start: 0, end: 0, confidence: 1, found: true });
-        continue;
-      }
-      const match = findSegmentStartWithConfidence(segments[i].text, allWords, searchStartIndex);
+      const isFirst = i === 0;
+      const isLast = i === segments.length - 1;
 
-      if (match.index !== -1) {
-        const startSeconds = allWords[match.index].globalStart;
-        timings.push({
-          start: startSeconds,
-          end: 0,
-          confidence: match.score,
-          found: true
-        });
-        searchStartIndex = match.index;
+      let startSeconds: number;
+      let startWordIndex: number;
+      let startConfidence: number;
+
+      if (isFirst) {
+        startSeconds = 0;
+        startWordIndex = 0;
+        startConfidence = 1;
       } else {
-        console.warn(`Could not find start for segment ${segments[i].id} ("${segments[i].text.substring(0, 20)}...")`);
-        // If not found, mark as such. Its start will be -1.
-        timings.push({ start: -1, end: 0, confidence: 0, found: false });
+        const match = findSegmentStartWithConfidence(segments[i].text, allWords, searchStartWordIndex);
+        if (match.index !== -1) {
+          startWordIndex = match.index;
+          startSeconds = allWords[match.index].globalStart;
+          startConfidence = match.score;
+          searchStartWordIndex = match.index;
+        } else {
+          console.warn(`[Aligner] Start not found for ${segments[i].id}: "${segments[i].text.substring(0, 30)}"`);
+          timings.push({ start: -1, end: -1, confidence: 0, found: false });
+          continue;
+        }
       }
+
+      let endSeconds: number;
+      let endConfidence: number;
+
+      if (isLast) {
+        endSeconds = totalDuration;
+        endConfidence = 1;
+      } else {
+        const endMatch = findSegmentEnd(segments[i].text, allWords, startWordIndex);
+        if (endMatch.index !== -1) {
+          endSeconds = allWords[endMatch.index].globalEnd;
+          endConfidence = endMatch.score;
+        } else {
+          console.warn(`[Aligner] End not found for ${segments[i].id}, will be resolved in gap fill.`);
+          endSeconds = -1;
+          endConfidence = 0;
+        }
+      }
+
+      timings.push({
+        start: startSeconds,
+        end: endSeconds,
+        confidence: (startConfidence + endConfidence) / 2,
+        found: startSeconds !== -1 && endSeconds !== -1
+      });
     }
 
-    // 3. Determine Ends and fill gaps for missing segments
+    // Gap fill: resolve any timings where end or start was not found
     for (let i = 0; i < timings.length; i++) {
-      let nextValidIndex = -1;
+      if (timings[i].found) continue;
+
+      let prevEnd = 0;
+      for (let k = i - 1; k >= 0; k--) {
+        if (timings[k].found) { prevEnd = timings[k].end; break; }
+      }
+
+      let nextStart = totalDuration;
       for (let j = i + 1; j < timings.length; j++) {
-        if (timings[j].found) {
-          nextValidIndex = j;
-          break;
-        }
+        if (timings[j].found) { nextStart = timings[j].start; break; }
       }
 
-      const nextStart = nextValidIndex !== -1 ? timings[nextValidIndex].start : totalDuration;
-
-      if (!timings[i].found) {
-        // Find previous anchor
-        let prevValidIndex = -1;
-        for (let k = i - 1; k >= 0; k--) {
-          if (timings[k].found) {
-            prevValidIndex = k;
-            break;
-          }
-        }
-
-        const rangeStart = prevValidIndex !== -1 ? timings[prevValidIndex].start : 0;
-        const rangeEnd = nextStart;
-
-        // Count missing segments in this gap
-        let missingCountInGap = 0;
-        let myPosInGap = 0;
-        const gapStartIdx = prevValidIndex === -1 ? 0 : prevValidIndex + 1;
-        const gapEndIdx = nextValidIndex === -1 ? timings.length : nextValidIndex;
-
-        for (let k = gapStartIdx; k < gapEndIdx; k++) {
-          if (!timings[k].found) {
-            missingCountInGap++;
-            if (k === i) myPosInGap = missingCountInGap - 1;
-          }
-        }
-
-        const gapDuration = rangeEnd - rangeStart;
-        const perSegmentDuration = gapDuration / (missingCountInGap + (prevValidIndex === -1 && i === 0 ? 0 : 0));
-
-        timings[i].start = rangeStart + (myPosInGap * perSegmentDuration);
-        timings[i].end = rangeStart + ((myPosInGap + 1) * perSegmentDuration);
-      } else {
-        timings[i].end = nextStart;
+      const missingInGap: number[] = [];
+      for (let k = i; k < timings.length; k++) {
+        if (!timings[k].found) missingInGap.push(k);
+        else break;
       }
 
-      // Sanity check
-      if (timings[i].end < timings[i].start) timings[i].end = timings[i].start;
+      const perSlot = (nextStart - prevEnd) / missingInGap.length;
+      missingInGap.forEach((idx, pos) => {
+        timings[idx].start = prevEnd + pos * perSlot;
+        timings[idx].end = prevEnd + (pos + 1) * perSlot;
+        timings[idx].found = true;
+      });
+    }
+
+    for (const t of timings) {
+      if (t.end < t.start) t.end = t.start;
     }
 
     return timings;
@@ -362,10 +405,8 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
           const prevScene = scenes[i - 1];
           if (prevScene.transition) {
             prevScene.transition = undefined;
-            // Remove the padding we added to the previous scene for the outgoing transition
             prevScene.durationInFrames -= HALF_TRANSITION;
-            // Ensure we didn't make previous scene too short (unlikely unless it was also edge case)
-            if (prevScene.durationInFrames < 1) prevScene.durationInFrames = 1;
+            if (prevScene.durationInFrames < TRANSITION_FRAMES) prevScene.durationInFrames = TRANSITION_FRAMES;
           }
         }
       }

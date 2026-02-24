@@ -19,7 +19,7 @@ import { useImageGeneration } from "@/lib/flows/use-image-generation"
 import { useAudioGeneration } from "@/lib/flows/use-audio-generation"
 import { useTranscription } from "@/lib/flows/use-transcription"
 import { useVideoGeneration } from "@/lib/flows/use-video-generation"
-import { useProject, useDownload, LoadedProjectData } from "@/lib/flows/use-project"
+import { useProject, useDownload, LoadedProjectData, determineStage } from "@/lib/flows/use-project"
 import { GENERATE_ENTITY_IMAGE_PROMPT, GENERATE_SEGMENT_IMAGE_PROMPT } from "@/lib/ai/prompts/prompts"
 import {
   VisualDescription,
@@ -80,7 +80,9 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
   const audioGen = useAudioGeneration({
     type: 'single',
     getText: () => scriptText,
-    voice: audioVoice
+    voice: audioVoice,
+    projectId: projectId || 'temp', // using state variable since project.currentProjectId isn't available yet
+    projectName: title
   })
 
   const transcription = useTranscription(audioGen.batches, language)
@@ -129,7 +131,7 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       if (data.audioBatches) audioGen.setBatches(data.audioBatches)
       if (data.transcriptionResults) transcription.setResults(data.transcriptionResults)
 
-      const stage = project.determineStage({ ...data, consistency: data.consistency !== undefined ? data.consistency : consistency })
+      const stage = determineStage({ ...data, consistency: data.consistency !== undefined ? data.consistency : consistency }, 'simple')
       const stageOrder = getStageOrder(data.consistency !== undefined ? data.consistency : consistency)
       if (stageOrder.includes(stage as Stage)) {
         setCurrentStage(stage as Stage)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { ProjectData, AudioBatch, TranscriptionResult, VisualDescription, SegmentWithComment, CommentatorConfig, EntityAsset } from "./types"
+import { cleanTitle } from "@/lib/utils"
 
 interface UseProjectConfig {
   projectId?: string
@@ -84,7 +85,7 @@ export function useProject(config: UseProjectConfig) {
     try {
       let resolvedName = projectPayload.name?.trim();
       if (!resolvedName) {
-        resolvedName = projectPayload.scriptText.substring(0, 30) + (projectPayload.scriptText.length > 30 ? '...' : '');
+        resolvedName = cleanTitle(projectPayload.scriptText);
       }
 
       const projectData: ProjectData = {
@@ -116,39 +117,40 @@ export function useProject(config: UseProjectConfig) {
     }
   }
 
-  const determineStage = (data: LoadedProjectData): string => {
-    if (data.transcriptionResults && data.transcriptionResults.length > 0) {
-      return 'TRANSCRIPTION'
-    }
-    if (data.audioBatches && data.audioBatches.some(b => b.status === 'completed')) {
-      return 'AUDIO'
-    }
-    if (data.consistency && data.entities && data.entities.length > 0 && !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
-      return 'ENTITIES'
-    }
-    if (data.visualDescriptions && data.visualDescriptions.length > 0) {
-      return 'IMAGES'
-    }
-    if (data.segmentsWithComments && data.segmentsWithComments.length > 0) {
-      return 'DESCRIPTIONS'
-    }
-    if (data.commentator && config.flowType === 'with-commentator') {
-      return 'COMMENTS'
-    }
-    if (data.segments && data.segments.length > 0) {
-      return config.flowType === 'with-commentator' ? 'COMMENTATOR' : 'DESCRIPTIONS'
-    }
-    return 'INPUT'
-  }
+
 
   return {
     currentProjectId,
     save,
     loadProject,
-    determineStage,
     isSaving,
     isLoading
   }
+}
+
+export function determineStage(data: LoadedProjectData, flowType: 'simple' | 'with-commentator'): string {
+  if (data.transcriptionResults && data.transcriptionResults.length > 0) {
+    return 'TRANSCRIPTION'
+  }
+  if (data.audioBatches && data.audioBatches.some(b => b.status === 'completed')) {
+    return 'AUDIO'
+  }
+  if (data.consistency && data.entities && data.entities.length > 0 && !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
+    return 'ENTITIES'
+  }
+  if (data.visualDescriptions && data.visualDescriptions.length > 0) {
+    return 'IMAGES'
+  }
+  if (data.segmentsWithComments && data.segmentsWithComments.length > 0) {
+    return 'DESCRIPTIONS'
+  }
+  if (data.commentator && flowType === 'with-commentator') {
+    return 'COMMENTS'
+  }
+  if (data.segments && data.segments.length > 0) {
+    return flowType === 'with-commentator' ? 'COMMENTATOR' : 'DESCRIPTIONS'
+  }
+  return 'INPUT'
 }
 
 export function useDownload() {
