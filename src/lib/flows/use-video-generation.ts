@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react"
 import { RemotionVideoProps } from "@/lib/video/types"
 import { alignVideoProps } from "@/lib/video/aligner"
-import { VisualDescription, AudioBatch, TranscriptionResult, CaptionStyle, VideoSegment, TranscriptionWord } from "./types"
+import { AudioBatch, TranscriptionResult, CaptionStyle, TranscriptionWord } from "./types"
 
 interface VideoGenerationConfig {
-  getSegments: () => VideoSegment[]
+  getSegments: () => { id: string; text: string; imageUrl: string }[]
   audioBatches: AudioBatch[]
   transcriptionResults: TranscriptionResult[]
   projectId?: string

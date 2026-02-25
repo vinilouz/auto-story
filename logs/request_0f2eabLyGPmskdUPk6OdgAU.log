@@ -1,0 +1,757 @@
+[
+  {
+    "id": "1",
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3406,
+  "total_tokens": 4760
+}
+    "imagePrompt": "Plano geral, iluminação sombria e distópica com névoa dens
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3430,
+  "total_tokens": 4784
+}
+a, silhuetas de arranha-céus futuristas em chamas, ruínas de uma <<CidadeEm
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3454,
+  "total_tokens": 4808
+}
+Ruinas>> coberta de cinzas sob um céu avermelhado."
+  },
+  {
+    "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3478,
+  "total_tokens": 4832
+}
+id": "2",
+    "imagePrompt": "Plano de detalhe em ângulo baixo, iluminação fri
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3502,
+  "total_tokens": 4856
+}
+a e metálica, um míssil militar de onde vaza um gás brilhante e etéreo, cain
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3526,
+  "total_tokens": 4880
+}
+do sobre prédios destruídos da <<CidadeEmRuinas>> no fundo escuro."
+  },
+  {
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3550,
+  "total_tokens": 4904
+}
+
+    "id": "3",
+    "imagePrompt": "Plano médio, luz dourada e artificial
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3574,
+  "total_tokens": 4928
+}
+mente divina, grupo de <<InfectadosZelo>> com sorrisos largos e assustadores olhando para cima
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3598,
+  "total_tokens": 4952
+}
+, no meio das ruas devastadas da <<CidadeEmRuinas>> envolta em fumaça."
+  },
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3622,
+  "total_tokens": 4976
+}
+
+  {
+    "id": "4",
+    "imagePrompt": "Plano geral em nível dos
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3646,
+  "total_tokens": 5000
+}
+ olhos, iluminação de fim de tarde contrastante, <<InfectadosZelo>> marchando e cantando enquanto
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3670,
+  "total_tokens": 5024
+}
+ seguram fuzis, fumaça escura e escombros espalhados pelas ruas ao fundo."
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3694,
+  "total_tokens": 5048
+}
+  },
+  {
+    "id": "5",
+    "imagePrompt": "Primeiro plano,
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3718,
+  "total_tokens": 5072
+}
+ iluminação dura e cinzenta, o rosto estoico e sem emoção do <<SoldadoCinza>> usando
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3742,
+  "total_tokens": 5096
+}
+ um traje tático opaco e poeirento, vestígios de uma zona de guerra desfocada no
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3766,
+  "total_tokens": 5120
+}
+ fundo."
+  },
+  {
+    "id": "6",
+    "imagePrompt": "Pl
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3790,
+  "total_tokens": 5144
+}
+ano inteiro, iluminação opressiva com poeira suspensa no ar, <<SoldadoCinza>> caminhando
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3815,
+  "total_tokens": 5169
+}
+ sozinho com sua <<ArmaDoCinza>> em repouso, restos de barricadas e fumaça química
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3839,
+  "total_tokens": 5193
+}
+ cobrindo o chão."
+  },
+  {
+    "id": "7",
+    "image
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3863,
+  "total_tokens": 5217
+}
+Prompt": "Plano geral em grande angular, luz melancólica de um dia nublado, <<SoldadoCin
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3887,
+  "total_tokens": 5241
+}
+za>> de costas observando a vasta destruição, prédios caídos e ruas fragmentadas da <<CidadeEmRu
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3911,
+  "total_tokens": 5265
+}
+inas>> estendendo-se até o horizonte."
+  },
+  {
+    "id": "8
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3935,
+  "total_tokens": 5289
+}
+",
+    "imagePrompt": "Plano médio, iluminação dramática de fogo ardente, <<Infect
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3959,
+  "total_tokens": 5313
+}
+adosZelo>> arremessando tochas em pilhas de livros e macas de hospital, labaredas
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3983,
+  "total_tokens": 5337
+}
+ laranjas iluminando as paredes de tijolos rachados no fundo."
+  },
+  {
+    "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4007,
+  "total_tokens": 5361
+}
+id": "9",
+    "imagePrompt": "Close-up extremo, iluminação brilhante refletindo no
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4031,
+  "total_tokens": 5385
+}
+ metal, o rosto de um dos <<InfectadosZelo>> exibindo um sorriso eufórico com olhos totalmente
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4055,
+  "total_tokens": 5409
+}
+ brancos e vazios, usando um grande medalhão de ouro sobre roupas rasgadas."
+  },
+  {
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4079,
+  "total_tokens": 5433
+}
+
+    "id": "10",
+    "imagePrompt": "Plano médio, sombras alongadas e
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4103,
+  "total_tokens": 5457
+}
+ atmosfera tensa, <<InfectadosZelo>> com expressões de falsa compaixão apontando armas para figuras
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4127,
+  "total_tokens": 5481
+}
+ caídas no chão, poças escuras e escombros espalhados ao redor."
+  },
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4151,
+  "total_tokens": 5505
+}
+  {
+    "id": "11",
+    "imagePrompt": "Plano geral, luz fr
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4175,
+  "total_tokens": 5529
+}
+aca filtrada por buracos no teto, <<SoldadoCinza>> descendo escadas de pedra em direção
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4199,
+  "total_tokens": 5553
+}
+ a uma cripta subterrânea poeirenta, estátuas quebradas e vitrais despedaçados no fundo
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4223,
+  "total_tokens": 5577
+}
+."
+  },
+  {
+    "id": "12",
+    "imagePrompt": "Pl
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4247,
+  "total_tokens": 5601
+}
+ano médio, iluminação suave e natural vinda de cima, <<VelhoCurandeiro>> ajoelhado no
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4271,
+  "total_tokens": 5625
+}
+ chão aplicando ataduras, feridos enfaixados deitados sobre cobertores finos em um ambiente de
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4295,
+  "total_tokens": 5649
+}
+ pedra crua."
+  },
+  {
+    "id": "13",
+    "imagePrompt
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4319,
+  "total_tokens": 5673
+}
+": "Primeiro plano, luz lateral marcando as rugas de expressão, o rosto calmo e exausto do <<
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4345,
+  "total_tokens": 5699
+}
+VelhoCurandeiro>> com olhos humanos e profundos, vestindo uma túnica simples de tecido desgast
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4369,
+  "total_tokens": 5723
+}
+ado e sem adornos."
+  },
+  {
+    "id": "14",
+    "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4393,
+  "total_tokens": 5747
+}
+imagePrompt": "Plano de detalhe, iluminação focada nas mãos, mãos calejadas do <<Vel
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4417,
+  "total_tokens": 5771
+}
+hoCurandeiro>> rasgando um pedaço de tecido de linho para pressionar o ferimento no om
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4441,
+  "total_tokens": 5795
+}
+bro de um jovem soldado, gotas de sangue manchando o chão de terra."
+  },
+  {
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4465,
+  "total_tokens": 5819
+}
+    "id": "15",
+    "imagePrompt": "Plano médio sobre o ombro, luz
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4489,
+  "total_tokens": 5843
+}
+ dura criando forte contraste, <<SoldadoCinza>> mirando sua <<ArmaDoCinza>> em direção ao <<
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4513,
+  "total_tokens": 5867
+}
+VelhoCurandeiro>> que continua ajoelhado, paredes úmidas do subsolo ao redor."
+  
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4537,
+  "total_tokens": 5891
+}
+},
+  {
+    "id": "16",
+    "imagePrompt": "Close-up,
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4561,
+  "total_tokens": 5915
+}
+ iluminação fria militar, o dedo enluvado do <<SoldadoCinza>> no gatilho da <<
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4585,
+  "total_tokens": 5939
+}
+ArmaDoCinza>>, visor tático brilhando levemente contra as pedras escuras da igreja ao fundo
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4609,
+  "total_tokens": 5963
+}
+."
+  },
+  {
+    "id": "17",
+    "imagePrompt": "Pl
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4633,
+  "total_tokens": 5987
+}
+ano médio, iluminação quente e suave no centro, <<VelhoCurandeiro>> levantando os olhos com uma
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4657,
+  "total_tokens": 6011
+}
+ expressão de total serenidade, poeira suspensa no ar formando halos de luz na velha igreja subterrânea."
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4681,
+  "total_tokens": 6035
+}
+  },
+  {
+    "id": "18",
+    "imagePrompt": "Primeiro plano, luz
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4707,
+  "total_tokens": 6061
+}
+ direcional destacando a ação, mãos do <<VelhoCurandeiro>> estendendo um copo de barro
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4731,
+  "total_tokens": 6085
+}
+ com água em direção ao <<SoldadoCinza>>, coturnos desgastados sujos do concreto da <<Cidade
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4755,
+  "total_tokens": 6109
+}
+EmRuinas>> visíveis no chão."
+  },
+  {
+    "id": "19",
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4779,
+  "total_tokens": 6133
+}
+
+    "imagePrompt": "Plano geral, luz externa ofuscante e caótica, <<Infectados
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4803,
+  "total_tokens": 6157
+}
+Zelo>> batendo com barras de ferro contra as grossas portas de madeira e pedras da igreja, fuma
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4827,
+  "total_tokens": 6181
+}
+ça e poeira voando pelo impacto violento."
+  },
+  {
+    "id": "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4851,
+  "total_tokens": 6205
+}
+20",
+    "imagePrompt": "Plano médio em ângulo baixo, iluminação dramática de sol a
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4875,
+  "total_tokens": 6229
+}
+ pino, <<InfectadosZelo>> levantando bandeiras vermelhas esfarrapadas com uma silhu
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4899,
+  "total_tokens": 6253
+}
+eta de rosto desenhada, sorrisos frenéticos contra um céu carregado de cinzas."
+  },
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4923,
+  "total_tokens": 6277
+}
+  {
+    "id": "21",
+    "imagePrompt": "Plano aberto, iluminação
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4947,
+  "total_tokens": 6301
+}
+ bipartida contrastando a paz interna com a luz dura externa, o <<SoldadoCinza>> no centro olhando alternadamente entre o
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4974,
+  "total_tokens": 6328
+}
+ pacífico <<VelhoCurandeiro>> e as frestas da pesada porta de madeira por onde os <<
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4998,
+  "total_tokens": 6352
+}
+InfectadosZelo>> tentam entrar."
+  },
+  {
+    "id": "22
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5022,
+  "total_tokens": 6376
+}
+",
+    "imagePrompt": "Primeiro plano, sombra cruzando os olhos, rosto pensativo e exa
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5046,
+  "total_tokens": 6400
+}
+usto do <<SoldadoCinza>> refletindo sobre sua própria existência, poeira caindo lentamente do t
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5070,
+  "total_tokens": 6424
+}
+eto rachado no subsolo sombrio."
+  },
+  {
+    "id": "23
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5094,
+  "total_tokens": 6448
+}
+",
+    "imagePrompt": "Plano médio, iluminação de transição suave, <<SoldadoCinza
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5118,
+  "total_tokens": 6472
+}
+>> baixando e prendendo sua <<ArmaDoCinza>> ao coldre magnético de seu traje, postura
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5142,
+  "total_tokens": 6496
+}
+ relaxada em meio à penumbra sagrada do subsolo."
+  },
+  {
+    "id":
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5166,
+  "total_tokens": 6520
+}
+ "24",
+    "imagePrompt": "Plano de detalhe, feixe de luz quente iluminando
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5190,
+  "total_tokens": 6544
+}
+ as mãos, a mão enluvada e suja do <<SoldadoCinza>> segurando o copo de
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5214,
+  "total_tokens": 6568
+}
+ barro oferecido pelas mãos envelhecidas do <<VelhoCurandeiro>>, tijolos antigos e desfocados ao fundo
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5240,
+  "total_tokens": 6594
+}
+."
+  },
+  {
+    "id": "25",
+    "imagePrompt": "Pl
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5264,
+  "total_tokens": 6618
+}
+ano geral, iluminação melancólica e focada nos personagens, <<SoldadoCinza>> sentando-se
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5288,
+  "total_tokens": 6642
+}
+ no chão de pedra ao lado do <<VelhoCurandeiro>> para ajudar com os feridos, enquanto a barric
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5312,
+  "total_tokens": 6666
+}
+ada de madeira na entrada resiste firme no fundo esgotado."
+  }
+]
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5331,
+  "total_tokens": 6685
+}
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5331,
+  "total_tokens": 6685
+}

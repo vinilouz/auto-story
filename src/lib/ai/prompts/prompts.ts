@@ -112,22 +112,16 @@ Create a high-fidelity visual asset, with this description ${description} and fo
 
 export const GENERATE_SEGMENT_IMAGE_PROMPT = (
   description: string,
-  styleId: string | undefined,
-  isStyleReference: boolean,
   visualPrompt?: string
 ) => {
-  const stylePrompt = visualPrompt ?? styleId ?? "default";
-
-  const instruction = isStyleReference
-    ? "MIMIC THE ARTISTIC TECHNIQUE of the Style Reference (brushstrokes, line weight, shading method), but apply it to the Subject Description. Do NOT copy the reference image content blindly. Adapt the technique to the new subject."
-    : "Create a composition merging the Subject with the Visual Style.";
+  const stylePrompt = visualPrompt ?? "default";
 
   return `<role>
 ACT AS AN EXPERT ART DIRECTOR
 </role>
 
 <objective>
-Create a scene with this description ${description} matching the visual style of ${stylePrompt} and using the composiotion logic of ${instruction}.
+Create a scene with this description ${description} matching the visual style of ${stylePrompt}.
 </objective>
 
 <rules>
@@ -139,21 +133,21 @@ Create a scene with this description ${description} matching the visual style of
 
 export const COMMENTATOR_PROMPT = (commentatorDescription: string, segmentsJson: string) =>
   `Given this commentator profile: "${commentatorDescription}",
-generate natural and engaging comments for a story with the following segments.
+    generate natural and engaging comments for a story with the following segments.
 
 Story segments:
 ${segmentsJson}
 
-Guidelines:
-- Add comments between segments where contextually appropriate
-- Comments must reflect the commentator's personality
-- Comments should enhance the story, not just repeat it
-- Include an introduction presenting the story without spoilers and a hook to engage the listener
-- Include a closing with a conclusion and a hook for commentary
-- Keep comments concise (2-4 sentences each)
-- Not every segment needs a comment
-- Return a JSON array of objects: { type: "scene_text" | "comment", content: string }`
+  Guidelines:
+  - Add comments between segments where contextually appropriate
+    - Comments must reflect the commentator's personality
+      - Comments should enhance the story, not just repeat it
+        - Include an introduction presenting the story without spoilers and a hook to engage the listener
+          - Include a closing with a conclusion and a hook for commentary
+            - Keep comments concise(2 - 4 sentences each)
+    - Not every segment needs a comment
+      - Return a JSON array of objects: { type: "scene_text" | "comment", content: string } `
 
 export const COMMENTATOR_IMAGE_GENERATION_PROMPT = (description: string) =>
-  `Generate a high-fidelity scene based on the provided reference image.
-${description}`
+  `Generate a high - fidelity scene based on the provided reference image.
+    ${description} `

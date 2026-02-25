@@ -1,9 +1,11 @@
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
 
-export interface VisualDescription {
-  imagePrompt: string
-  imageUrl?: string
-  status: 'pending' | 'generating' | 'completed' | 'error'
+export interface Segment {
+  text: string
+  type?: 'scene_text' | 'comment'
+  entities?: string[]
+  imagePrompt?: string
+  imagePath?: string
 }
 
 export interface EntityAsset {
@@ -56,20 +58,13 @@ export interface ProjectData {
   language: string
   style?: string
   voice?: string
-  segments?: string[]
+  segments?: Segment[]
   entities?: EntityAsset[]
-  visualDescriptions?: VisualDescription[]
-  segmentsWithComments?: SegmentWithComment[]
   audioUrls?: string[]
   audioBatches?: AudioBatch[]
   audioSystemPrompt?: string
   transcriptionResults?: TranscriptionResult[]
   commentator?: CommentatorConfig
-}
-
-export interface SegmentWithComment {
-  type: 'scene_text' | 'comment'
-  content: string
 }
 
 export interface CommentatorConfig {
@@ -83,12 +78,6 @@ export interface CommentatorConfig {
     description?: string
   }
   voice?: string
-}
-
-export interface VideoSegment {
-  id: string
-  text: string
-  imageUrl: string
 }
 
 export interface VoiceConfig {

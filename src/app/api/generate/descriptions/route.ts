@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { generateSceneDescriptions } from "@/lib/ai/processors/scene-visualizer"
+import { Segment } from "@/lib/flows/types"
 
 interface DescriptionsRequest {
-  segments: string[]
+  segments: Segment[]
   context?: 'story' | 'commentator'
   commentatorImage?: string
   commentatorName?: string

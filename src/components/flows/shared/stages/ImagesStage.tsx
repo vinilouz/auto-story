@@ -4,12 +4,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCw, Pencil, Check, X } from "lucide-react"
-import { StageControls } from "@/components/shared/StageControls"
-import { VisualDescription } from "@/lib/flows/types"
+import { Segment } from "@/lib/flows/types"
 
 interface ImagesStageProps {
-  descriptions: VisualDescription[]
-  segments?: string[]
+  segments: Segment[]
+  imageStatuses: Map<number, 'generating' | 'error'>
   onGenerateAll: () => Promise<void>
   onRegenerate: (index: number) => Promise<void>
   onEditPrompt?: (index: number, newPrompt: string) => void
@@ -20,8 +19,8 @@ interface ImagesStageProps {
 }
 
 export function ImagesStage({
-  descriptions,
   segments,
+  imageStatuses,
   onGenerateAll,
   onRegenerate,
   onEditPrompt,
@@ -50,7 +49,7 @@ export function ImagesStage({
     setEditingIndex(null)
   }
 
-  const allCompleted = descriptions.length > 0 && descriptions.every(d => d.status === 'completed')
+  const allCompleted = segments.length > 0 && segments.every(s => s.imagePath)
 
   return (
     <>
@@ -68,7 +67,7 @@ export function ImagesStage({
         </CardContent>
       </Card>
 
-      {!allCompleted && descriptions.length === 0 && (
+      {!allCompleted && segments.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Clique em "Gerar Imagens" para iniciar
@@ -77,72 +76,75 @@ export function ImagesStage({
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        {descriptions.map((desc, i) => (
-          <Card key={i}>
-            <CardContent className="p-4 space-y-2">
-              {showSegmentText && segments?.[i] && (
-                <div className="text-sm text-muted-foreground mb-2">
-                  <span className="font-semibold">Cena {i + 1}:</span> {segments[i]}
-                </div>
-              )}
+        {segments.map((seg, i) => {
+          const status = imageStatuses.get(i)
+          return (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-2">
+                {showSegmentText && (
+                  <div className="text-sm text-muted-foreground mb-2">
+                    <span className="font-semibold">Cena {i + 1}:</span> {seg.text}
+                  </div>
+                )}
 
-              {editingIndex === i ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={editedPrompt}
-                    onChange={(e) => setEditedPrompt(e.target.value)}
-                    className="min-h-[80px]"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                      <X className="w-4 h-4 mr-1" /> Cancelar
-                    </Button>
-                    <Button size="sm" onClick={() => savePrompt(i)}>
-                      <Check className="w-4 h-4 mr-1" /> Salvar
+                {editingIndex === i ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editedPrompt}
+                      onChange={(e) => setEditedPrompt(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                        <X className="w-4 h-4 mr-1" /> Cancelar
+                      </Button>
+                      <Button size="sm" onClick={() => savePrompt(i)}>
+                        <Check className="w-4 h-4 mr-1" /> Salvar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="group relative">
+                    <p className="text-xs text-muted-foreground italic mb-2">{seg.imagePrompt}</p>
+                    {onEditPrompt && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        onClick={() => startEditing(i, seg.imagePrompt || '')}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {seg.imagePath && status !== 'generating' ? (
+                  <img src={seg.imagePath} alt={`Scene ${i + 1}`} className="w-full rounded" />
+                ) : status === 'generating' ? (
+                  <Skeleton className="w-full h-48" />
+                ) : status === 'error' ? (
+                  <div className="w-full h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
+                    <span className="text-sm text-muted-foreground">Erro ao gerar</span>
+                    <Button variant="outline" size="sm" onClick={() => onRegenerate(i)}>
+                      <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="group relative">
-                  <p className="text-xs text-muted-foreground italic mb-2">{desc.imagePrompt}</p>
-                  {onEditPrompt && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                      onClick={() => startEditing(i, desc.imagePrompt)}
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed border-muted-foreground/30">
+                    <span className="text-sm font-medium text-muted-foreground/50">Aguardando geração...</span>
+                  </div>
+                )}
 
-              {desc.status === 'completed' && desc.imageUrl ? (
-                <img src={desc.imageUrl} alt={`Scene ${i + 1}`} className="w-full rounded" />
-              ) : desc.status === 'generating' ? (
-                <Skeleton className="w-full h-48" />
-              ) : desc.status === 'error' ? (
-                <div className="w-full h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
-                  <span className="text-sm text-muted-foreground">Erro ao gerar</span>
-                  <Button variant="outline" size="sm" onClick={() => onRegenerate(i)}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
+                {seg.imagePath && status !== 'generating' && (
+                  <Button variant="ghost" size="sm" onClick={() => onRegenerate(i)}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
                   </Button>
-                </div>
-              ) : (
-                <div className="w-full h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed border-muted-foreground/30">
-                  <span className="text-sm font-medium text-muted-foreground/50">Aguardando geração...</span>
-                </div>
-              )}
-
-              {desc.status === 'completed' && desc.imageUrl && (
-                <Button variant="ghost" size="sm" onClick={() => onRegenerate(i)}>
-                  <RefreshCw className="w-4 h-4 mr-2" /> Regenerar
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </>
   )

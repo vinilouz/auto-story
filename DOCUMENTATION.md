@@ -18,6 +18,9 @@
 - `use-video-generation.ts` - Video alignment and rendering
 - `use-project.ts` - Project persistence (save/load/download)
 
+### Shared Utils (`src/lib/utils.ts`)
+- `cleanTitle` - Formats a script string into a safe, normalized project title (lowercase, no accents, alphanumeric, hyphen-separated, 10 chars max).
+
 ### Shared Stages (`src/components/flows/shared/stages/`)
 - `InputStage.tsx` - Script input, segment size, language
 - `ImagesStage.tsx` - Visual description and image grid
@@ -29,7 +32,7 @@
 ### Creating New Flows
 To create a new flow, compose existing hooks and stages:
 ```typescript
-const imageGen = useImageGeneration(descriptions, setDescriptions, { systemPrompt })
+const imageGen = useImageGeneration(segments, setSegments, { systemPrompt })
 const audioGen = useAudioGeneration({ type: 'single', getText, voice })
 const transcription = useTranscription(audioGen.batches, language)
 const videoGen = useVideoGeneration({ getSegments, audioBatches, transcriptionResults })
@@ -76,17 +79,19 @@ export interface AudioGenerationResponse {
 In `SimpleStoryFlow`, `audioBatches` is used for display and the URLs are extracted for downstream stages (Transcription, Video).
 In `ScriptForm`, the response is mapped to the legacy `audioUrls` structure for compatibility.
 
-### Visual Descriptions
+### Segment (unified data structure)
 ```typescript
-interface VisualDescription {
-  imagePrompt: string;
-  imageUrl?: string;
-  status: 'pending' | 'generating' | 'completed' | 'error';
+interface Segment {
+  text: string;
+  type?: 'scene_text' | 'comment';  // undefined = simple flow
+  entities?: string[];
+  imagePrompt?: string;
+  imagePath?: string;
 }
 ```
-Images are generated using a specific epic cinematic pre-prompt. The `imagePrompt` is cleaned to remove any "Scene X:" prefixes before being wrapped in the style template. In case of failure (e.g., safety filters), the error message now includes the `finish_reason` and the full response message for easier debugging.
+Replaces the previous `VisualDescription`, `SegmentWithComment`, and `VideoSegment` types. Status is derived from data: `imagePath` present = completed, absent = pending. `generating`/`error` are client-side only states tracked via `imageStatuses: Map<number, string>` in `useImageGeneration`.
 
-The `useImageGeneration` hook leverages functional state updates (`setDescriptions(prev => ...)`) to prevent concurrent image generation results from overwriting each other. Additionally, base64 API responses in logs are automatically truncated to prevent console pollution.
+The `useImageGeneration` hook works directly with `Segment[]` and `setSegments`, using functional state updates to prevent concurrent results from overwriting each other.
 
 ### Text Generation
 The AI client (`custom-client.ts`) uses native `fetch` for all providers, completely removing dependency on the `openai` library. The `generateText` function implements streaming (`stream: true`) to keep connections alive and prevent `504 Gateway Timeout` errors from Cloudflare during long-running generations. Chunks are accumulated and returned as a single string to maintain compatibility with existing processors.

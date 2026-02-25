@@ -23,6 +23,14 @@ export interface CommentatorConfig {
   voice?: string;
 }
 
+export interface Segment {
+  text: string;
+  type?: 'scene_text' | 'comment';
+  entities?: string[];
+  imagePrompt?: string;
+  imagePath?: string;
+}
+
 export interface ProjectData {
   id: string;
   name: string;
@@ -35,12 +43,10 @@ export interface ProjectData {
   style?: string;
   voice?: string;
   consistency?: boolean;
-  segments?: string[];
+  segments?: Segment[];
   entities?: Array<{ name: string; description?: string; imageUrl?: string; status: string }>;
-  visualDescriptions?: Array<{ imagePrompt: string; imageUrl?: string; status: string }>;
   audioUrls?: string[];
   commentator?: CommentatorConfig;
-  segmentsWithComments?: Array<{ type: 'scene_text' | 'comment'; content: string }>;
   audioSystemPrompt?: string;
   audioBatches?: Array<{
     index: number;
@@ -111,24 +117,21 @@ export const StorageService = {
       }
     };
 
-    if (project.visualDescriptions && project.visualDescriptions.length > 0) {
+    if (project.segments && project.segments.length > 0) {
       ensureImagesDir();
-      for (let i = 0; i < project.visualDescriptions.length; i++) {
-        const desc = project.visualDescriptions[i];
-        if (desc.imageUrl && desc.imageUrl.startsWith('data:image/')) {
-          // It's a base64 string
-          const matches = desc.imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+      for (let i = 0; i < project.segments.length; i++) {
+        const seg = project.segments[i];
+        if (seg.imagePath && seg.imagePath.startsWith('data:image/')) {
+          const matches = seg.imagePath.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
           if (matches && matches.length === 3) {
             const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1];
             const base64Data = matches[2];
             const fileName = `scene-${i}-${Date.now()}.${extension}`;
             const filePath = path.join(imagesDir, fileName);
 
-            // Write payload to disk
             await fs.writeFile(filePath, Buffer.from(base64Data, 'base64'));
 
-            // Update the JSON to point to the saved file via URL
-            desc.imageUrl = `/projects/${dirName}/images/${fileName}`;
+            seg.imagePath = `/projects/${dirName}/images/${fileName}`;
           }
         }
       }

@@ -22,14 +22,12 @@ import { useVideoGeneration } from "@/lib/flows/use-video-generation"
 import { useProject, useDownload, LoadedProjectData, determineStage } from "@/lib/flows/use-project"
 import { GENERATE_ENTITY_IMAGE_PROMPT, GENERATE_SEGMENT_IMAGE_PROMPT } from "@/lib/ai/prompts/prompts"
 import {
-  VisualDescription,
+  Segment,
   DEFAULT_SEGMENT_SIZE,
   CaptionStyle,
-  VideoSegment,
   EntityAsset,
   ProjectData
 } from "@/lib/flows/types"
-
 
 import { toast } from "sonner"
 
@@ -56,9 +54,8 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
   const [scriptText, setScriptText] = useState("")
   const [segmentSize, setSegmentSize] = useState([DEFAULT_SEGMENT_SIZE])
   const [language, setLanguage] = useState("english")
-  const [segments, setSegments] = useState<string[]>([])
+  const [segments, setSegments] = useState<Segment[]>([])
   const [entities, setEntities] = useState<EntityAsset[]>([])
-  const [visualDescriptions, setVisualDescriptions] = useState<VisualDescription[]>([])
   const [imageSystemPrompt, setImageSystemPrompt] = useState("")
   const [audioVoice, setAudioVoice] = useState("nPczCjzI2devNBz1zQrb")
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>(DEFAULT_CAPTION_STYLE)
@@ -68,12 +65,12 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
   const STEPS = getSteps(consistency)
 
   const imageGen = useImageGeneration(
-    visualDescriptions,
-    setVisualDescriptions,
+    segments,
+    setSegments,
     {
       systemPrompt: "",
       entities,
-      buildPrompt: (original) => GENERATE_SEGMENT_IMAGE_PROMPT(original, undefined, false, imageSystemPrompt)
+      buildPrompt: (original) => GENERATE_SEGMENT_IMAGE_PROMPT(original, imageSystemPrompt)
     }
   )
 
@@ -81,17 +78,17 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
     type: 'single',
     getText: () => scriptText,
     voice: audioVoice,
-    projectId: projectId || 'temp', // using state variable since project.currentProjectId isn't available yet
+    projectId: projectId || 'temp',
     projectName: title
   })
 
   const transcription = useTranscription(audioGen.batches, language)
 
   const videoGen = useVideoGeneration({
-    getSegments: () => segments.map((text, i) => ({
+    getSegments: () => segments.map((seg, i) => ({
       id: `seg-${i}`,
-      text,
-      imageUrl: visualDescriptions[i]?.imageUrl || ''
+      text: seg.text,
+      imageUrl: seg.imagePath || ''
     })),
     audioBatches: audioGen.batches,
     transcriptionResults: transcription.results
@@ -112,7 +109,6 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       voice: audioVoice,
       segments,
       entities,
-      visualDescriptions,
       audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
       audioBatches: audioGen.batches,
       transcriptionResults: transcription.results
@@ -127,7 +123,6 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       if (data.voice) setAudioVoice(data.voice)
       if (data.segments) setSegments(data.segments)
       if (data.entities) setEntities(data.entities)
-      if (data.visualDescriptions) setVisualDescriptions(data.visualDescriptions)
       if (data.audioBatches) audioGen.setBatches(data.audioBatches)
       if (data.transcriptionResults) transcription.setResults(data.transcriptionResults)
 
@@ -145,13 +140,12 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
     }
   }, [projectId])
 
-  // Self-healing effect: if user toggled consistency AFTER generating descriptions, or loaded an old project
   useEffect(() => {
-    if (consistency && entities.length === 0 && visualDescriptions.length > 0) {
+    if (consistency && entities.length === 0 && segments.some(s => s.imagePrompt)) {
       const extracted = new Set<string>();
-      visualDescriptions.forEach(desc => {
-        if (!desc.imagePrompt) return;
-        const matches = desc.imagePrompt.match(/<<([^>]+)>>/g);
+      segments.forEach(seg => {
+        if (!seg.imagePrompt) return;
+        const matches = seg.imagePrompt.match(/<<([^>]+)>>/g);
         if (matches) {
           matches.forEach(m => extracted.add(m.replace(/<<|>>/g, '')));
         }
@@ -165,7 +159,7 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         setTimeout(() => project.save({ entities: recoveredEntities }), 100);
       }
     }
-  }, [consistency, visualDescriptions, entities.length]);
+  }, [consistency, segments, entities.length]);
 
   const saveProject = async (overrides?: Partial<ProjectData>, autoAdvance: boolean = false) => {
     if (!scriptText.trim()) return;
@@ -175,7 +169,6 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         style: { backgroundColor: '#16a34a', color: 'white', border: 'none' }
       });
       if (autoAdvance) {
-        // Find next step safely
         const nextIdx = STAGE_ORDER.indexOf(currentStage) + 1;
         if (nextIdx <= maxAllowedStep && STAGE_ORDER[nextIdx]) {
           setCurrentStage(STAGE_ORDER[nextIdx]);
@@ -186,20 +179,23 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
 
   const currentStepIndex = STAGE_ORDER.indexOf(currentStage)
 
+  const hasImagePrompts = segments.some(s => s.imagePrompt)
+  const hasImages = segments.some(s => s.imagePath)
+
   const maxAllowedStep = useMemo(() => {
     let offset = consistency ? 1 : 0;
-    if (videoGen.videoProps) return 6 + offset; // DOWNLOAD
-    if (transcription.results.length > 0) return 5 + offset; // VIDEO
-    if (audioGen.batches.some(b => b.status === 'completed' && b.url)) return 4 + offset; // TRANSCRIPTION
-    if (visualDescriptions.length > 0 && (!consistency || (entities.length > 0 && entities.every(e => e.status === 'completed')))) return 3 + offset; // AUDIO -> Even if IMAGES are pending, visually they reached AUDIO
-    if (visualDescriptions.length > 0 && consistency) return 2; // ENTITIES -> generated descriptions but working on entities
-    if (segments.length > 0) return 1; // DESCRIPTIONS -> generated segments
-    return 0; // INPUT
+    if (videoGen.videoProps) return 6 + offset;
+    if (transcription.results.length > 0) return 5 + offset;
+    if (audioGen.batches.some(b => b.status === 'completed' && b.url)) return 4 + offset;
+    if (hasImagePrompts && (!consistency || (entities.length > 0 && entities.every(e => e.status === 'completed')))) return 3 + offset;
+    if (hasImagePrompts && consistency) return 2;
+    if (segments.length > 0) return 1;
+    return 0;
   }, [
     videoGen.videoProps,
     transcription.results.length,
     audioGen.batches,
-    visualDescriptions.length,
+    hasImagePrompts,
     segments.length,
     consistency,
     entities
@@ -229,10 +225,10 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       if (!splitRes.ok) throw new Error("Failed to split script")
       const splitData = await splitRes.json()
 
-      setSegments(splitData.segments)
-      setVisualDescriptions([]) // Clear old to force regen if changed script
+      const newSegments: Segment[] = splitData.segments.map((text: string) => ({ text }))
+      setSegments(newSegments)
       setCurrentStage('DESCRIPTIONS')
-      await saveProject({ segments: splitData.segments, visualDescriptions: [] })
+      await saveProject({ segments: newSegments })
     } catch (error) {
       console.error("Splitting error:", error)
       alert("Failed to split scenes")
@@ -253,12 +249,8 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       if (!descRes.ok) throw new Error("Failed to generate descriptions")
       const descData = await descRes.json()
 
-      const descriptions = (descData.visualDescriptions || []).map((desc: VisualDescription) => ({
-        ...desc,
-        status: 'completed' as const
-      }))
-
-      setVisualDescriptions(descriptions)
+      const updatedSegments: Segment[] = descData.segments || segments
+      setSegments(updatedSegments)
 
       if (consistency && descData.entities && Array.isArray(descData.entities)) {
         const initialEntities: EntityAsset[] = descData.entities.map((name: string) => ({
@@ -267,10 +259,10 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         }))
         setEntities(initialEntities)
         setCurrentStage('ENTITIES')
-        await saveProject({ visualDescriptions: descriptions, entities: initialEntities })
+        await saveProject({ segments: updatedSegments, entities: initialEntities })
       } else {
-        setCurrentStage('DESCRIPTIONS') // stays on scenes to review descriptions
-        await saveProject({ visualDescriptions: descriptions })
+        setCurrentStage('DESCRIPTIONS')
+        await saveProject({ segments: updatedSegments })
       }
     } catch (error) {
       console.error("Generation error:", error)
@@ -292,16 +284,14 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         activeProjectId = savedProject?.id
       }
 
-      // Step 1: Generate character sheets (descriptions)
       const descRes = await fetch("/api/generate/entities/descriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entities: entityNames, segments }),
+        body: JSON.stringify({ entities: entityNames, segments: segments.map(s => s.text) }),
       })
       if (!descRes.ok) throw new Error("Failed to generate entity descriptions")
       const descData = await descRes.json()
 
-      // Update state with descriptions and mark as generating images
       const enhancedEntities = entities.map(e => {
         const generated = descData.entities.find((ge: any) => ge.name === e.name)
         if (generated) {
@@ -311,8 +301,7 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       })
       setEntities(enhancedEntities)
 
-      // Step 2: Concurrently generate an image for each entity using `/api/generate/images`
-      const imagePromises = enhancedEntities.map(async (e, idx) => {
+      const imagePromises = enhancedEntities.map(async (e) => {
         if (!e.description) return e
 
         try {
@@ -391,7 +380,6 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
   const handleDownloadZip = async () => {
     try {
       await download.downloadZip({
-        visualDescriptions,
         segments,
         audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
         transcriptionResults: transcription.results,
@@ -402,7 +390,6 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
     }
   }
 
-  // Execution and Navigation State Setup
   let onExecute: (() => void) | undefined
   let isExecuting = false
   let canExecute = false
@@ -421,8 +408,8 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       onExecute = handleGenerateDescriptions
       isExecuting = isLoading
       canExecute = segments.length > 0
-      executeLabel = visualDescriptions.length > 0 ? "Regerar Descrições" : "Gerar Descrições"
-      canNext = visualDescriptions.length > 0
+      executeLabel = hasImagePrompts ? "Regerar Descrições" : "Gerar Descrições"
+      canNext = hasImagePrompts
       break
     case 'ENTITIES':
       onExecute = handleGenerateEntities
@@ -434,9 +421,9 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
     case 'IMAGES':
       onExecute = handleGenerateImages
       isExecuting = imageGen.isLoading
-      canExecute = visualDescriptions.length > 0
-      executeLabel = visualDescriptions.every(d => d.status === 'completed') ? "Regerar Imagens" : "Gerar Imagens"
-      canNext = visualDescriptions.length > 0
+      canExecute = hasImagePrompts
+      executeLabel = hasImages ? "Regerar Imagens" : "Gerar Imagens"
+      canNext = hasImagePrompts
       break
     case 'AUDIO':
       onExecute = handleGenerateAudio
@@ -514,19 +501,19 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
               <CardTitle>Cenas Divididas</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">O texto foi dividido em {segments.length} cenas. Para prosseguir, clique em "{visualDescriptions.length > 0 ? 'Regerar Descrições' : 'Gerar Descrições'}" abaixo para criar prompts visuais baseados nelas.</p>
+              <p className="text-sm text-muted-foreground">O texto foi dividido em {segments.length} cenas. Para prosseguir, clique em "{hasImagePrompts ? 'Regerar Descrições' : 'Gerar Descrições'}" abaixo para criar prompts visuais baseados nelas.</p>
             </CardContent>
           </Card>
 
-          {segments.map((segment, i) => (
+          {segments.map((seg, i) => (
             <Card key={i}>
               <CardContent className="p-4 space-y-3">
                 <div className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Cena {i + 1}</div>
-                <p className="text-sm">{segment}</p>
-                {visualDescriptions[i] && (
+                <p className="text-sm">{seg.text}</p>
+                {seg.imagePrompt && (
                   <div className="bg-muted p-3 rounded-md text-sm italic text-muted-foreground border border-border/50">
                     <span className="font-semibold not-italic block mb-1 text-xs">Prompt Visual:</span>
-                    {visualDescriptions[i].imagePrompt}
+                    {seg.imagePrompt}
                   </div>
                 )}
               </CardContent>
@@ -545,8 +532,8 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
 
       {currentStage === 'IMAGES' && (
         <ImagesStage
-          descriptions={visualDescriptions}
           segments={segments}
+          imageStatuses={imageGen.imageStatuses}
           onGenerateAll={handleGenerateImages}
           onRegenerate={async (idx) => { await imageGen.regenerate(idx, { projectId: project.currentProjectId, projectName: title }); saveProject(); }}
           onEditPrompt={imageGen.updatePrompt}

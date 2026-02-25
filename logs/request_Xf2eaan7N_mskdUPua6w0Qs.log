@@ -1,0 +1,781 @@
+[
+  {
+    "id": "1",
+    "imagePrompt": "Pl
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3701,
+  "total_tokens": 5055
+}
+ano geral, iluminação sombria e distópica, campo de batalha futurista silencioso coberto por destro
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3725,
+  "total_tokens": 5079
+}
+ços metálicos, céu cinzento carregado de fumaça sobre uma metrópole futurista em ruínas
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3749,
+  "total_tokens": 5103
+}
+."
+  },
+  {
+    "id": "2",
+    "imagePrompt": "Close-
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3773,
+  "total_tokens": 5127
+}
+up, iluminação dramática de fim de tarde, um míssil cibernético se rompendo no ar e
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3797,
+  "total_tokens": 5151
+}
+ liberando a <<NevoaSantuario>> dourada, pairando sobre os arranha-céus de concreto
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3821,
+  "total_tokens": 5175
+}
+ rachados."
+  },
+  {
+    "id": "3",
+    "imagePrompt": "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3845,
+  "total_tokens": 5199
+}
+Plano geral em ângulo alto, iluminação etérea e brilhante misturada com poeira, a <<
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3869,
+  "total_tokens": 5223
+}
+MultidaoInfectada>> parada nas ruas com rostos voltados para o céu em êxtase, cerc
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3893,
+  "total_tokens": 5247
+}
+ados por prédios caídos e fumaça densa."
+  },
+  {
+    "id": "4",
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3920,
+  "total_tokens": 5274
+}
+
+    "imagePrompt": "Plano médio, luzes de incêndio contrastantes, a <<Multidao
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3944,
+  "total_tokens": 5298
+}
+Infectada>> sorrindo de forma macabra enquanto marcha e atira com rifles futuristas, chamas intens
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3968,
+  "total_tokens": 5322
+}
+as consumindo veículos capotados ao fundo."
+  },
+  {
+    "id": "5",
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 3993,
+  "total_tokens": 5347
+}
+    "imagePrompt": "Close-up de perfil, iluminação fria e azulada, o <<Soldado
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4017,
+  "total_tokens": 5371
+}
+Cinza>> vestindo armadura tática militar desgastada com expressão séria e olhar analítico, reflexo de cin
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4043,
+  "total_tokens": 5397
+}
+zas caindo ao redor das placas metálicas."
+  },
+  {
+    "id": "6",
+    
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4070,
+  "total_tokens": 5424
+}
+"imagePrompt": "Plano americano, luz filtrada pela densidade do ar, o <<SoldadoCinza
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4094,
+  "total_tokens": 5448
+}
+>> caminhando firmemente com uma arma de grosso calibre em mãos através da <<NevoaSantuario>> cintilante, corpos
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4121,
+  "total_tokens": 5475
+}
+ inertes e destroços espalhados pelo asfalto esburacado."
+  },
+  {
+    
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4146,
+  "total_tokens": 5500
+}
+"id": "7",
+    "imagePrompt": "Plano geral, luz natural pálida e nub
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4170,
+  "total_tokens": 5524
+}
+lada, o <<SoldadoCinza>> de costas observando um horizonte de edifícios desmoronados,
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4194,
+  "total_tokens": 5548
+}
+ pontes caídas e vegetação morta engolindo o concreto."
+  },
+  {
+    "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4218,
+  "total_tokens": 5572
+}
+id": "8",
+    "imagePrompt": "Plano aberto, forte luz laranja de chamas vivas
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4242,
+  "total_tokens": 5596
+}
+, a <<MultidaoInfectada>> atirando pilhas de livros e macas em fogueiras imensas
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4269,
+  "total_tokens": 5623
+}
+, fachadas de antigas bibliotecas e hospitais ardendo na noite escura."
+  },
+  {
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4294,
+  "total_tokens": 5648
+}
+
+    "id": "9",
+    "imagePrompt": "Extreme close-up frontal, luz dura revel
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4318,
+  "total_tokens": 5672
+}
+ando texturas, um membro da <<MultidaoInfectada>> ostentando um pesado medalhão de ouro
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4342,
+  "total_tokens": 5696
+}
+ no peito com olhos vítreos e sorridentes, fuligem cobrindo o rosto suado."
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4366,
+  "total_tokens": 5720
+}
+
+  },
+  {
+    "id": "10",
+    "imagePrompt": "Plano
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4390,
+  "total_tokens": 5744
+}
+ médio em ângulo baixo, iluminação impiedosa de holofotes, a <<MultidaoInfectada>>
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4414,
+  "total_tokens": 5768
+}
+ apontando suas armas para figuras civis encolhidas no chão, paredes crivadas de balas e sangue seco man
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4439,
+  "total_tokens": 5793
+}
+chando o beco escuro."
+  },
+  {
+    "id": "11",
+    "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4465,
+  "total_tokens": 5819
+}
+imagePrompt": "Plano geral, luz fraca penetrando por frestas no teto desmoronado
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4489,
+  "total_tokens": 5843
+}
+, o <<SoldadoCinza>> descendo velhas escadas de pedra cobertas de entulho, vitrais est
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4514,
+  "total_tokens": 5868
+}
+ilhaçados colorindo o chão de uma cripta empoeirada."
+  },
+  {
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4538,
+  "total_tokens": 5892
+}
+    "id": "12",
+    "imagePrompt": "Plano médio, iluminação quente e suave
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4562,
+  "total_tokens": 5916
+}
+ de lampiões antigos, o <<HomemVelho>> ajoelhado enfaixando o braço de um
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4587,
+  "total_tokens": 5941
+}
+ soldado deitado no chão, catres improvisados e caixas médicas enferrujadas espalhadas pela parede de al
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4612,
+  "total_tokens": 5966
+}
+venaria rústica."
+  },
+  {
+    "id": "13",
+    "imagePrompt":
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4639,
+  "total_tokens": 5993
+}
+ "Close-up, iluminação intimista revelando as marcas do tempo, o <<HomemVelho>> com rosto
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4664,
+  "total_tokens": 6018
+}
+ sereno e expressão focada em seu trabalho sem qualquer medalhão no pescoço, sombras dançando suavemente sobre
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4688,
+  "total_tokens": 6042
+}
+ sua pele cansada."
+  },
+  {
+    "id": "14",
+    "image
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4712,
+  "total_tokens": 6066
+}
+Prompt": "Plano detalhe, luz dourada de lamparina a óleo, as mãos enrugadas do
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4736,
+  "total_tokens": 6090
+}
+ <<HomemVelho>> rasgando um pedaço de sua túnica de algodão rústico para apertar
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4762,
+  "total_tokens": 6116
+}
+ a perna ensanguentada de um jovem ferido, retalhos sujos descartados pelo chão de pedra."
+  
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4789,
+  "total_tokens": 6143
+}
+},
+  {
+    "id": "15",
+    "imagePrompt": "Plano americano em
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4813,
+  "total_tokens": 6167
+}
+ sobre-ombro, iluminação tensa com sombras alongadas, o <<SoldadoCinza>> erguendo
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4837,
+  "total_tokens": 6191
+}
+ seu fuzil de assalto escuro apontado rigidamente para o <<HomemVelho>>, poeira
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4861,
+  "total_tokens": 6215
+}
+ grossa flutuando no ar estagnado do subsolo."
+  },
+  {
+    "id": "1
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4888,
+  "total_tokens": 6242
+}
+6",
+    "imagePrompt": "Plano detalhe, luz fria e clínica de néon fraco, uma sering
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4915,
+  "total_tokens": 6269
+}
+a mecânica futurista descartada brilhando entre poças d'água suja, cápsulas vazias de
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4939,
+  "total_tokens": 6293
+}
+ compostos químicos espalhadas pelos escombros de concreto."
+  },
+  {
+    "id": "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4964,
+  "total_tokens": 6318
+}
+17",
+    "imagePrompt": "Plano médio frontal, luz difusa e poética vinda de cima
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 4989,
+  "total_tokens": 6343
+}
+, o <<HomemVelho>> olhando tranquilamente de volta em direção ao cano da arma do <<SoldadoCinza
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5015,
+  "total_tokens": 6369
+}
+>>, paciência inabalável em sua postura curvada e simples."
+  },
+  {
+    "id": "
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5041,
+  "total_tokens": 6395
+}
+18",
+    "imagePrompt": "Plano próximo, iluminação de contraste suave, o <<Homem
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5065,
+  "total_tokens": 6419
+}
+Velho>> estendendo um copo amassado de alumínio com água limpa em direção ao <<SoldadoCinza>>,
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5092,
+  "total_tokens": 6446
+}
+ a armadura pesada do soldado contrastando fortemente com as vestes gastas do ancião."
+  },
+  {
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5119,
+  "total_tokens": 6473
+}
+    "id": "19",
+    "imagePrompt": "Plano geral de fora para dentro, il
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5143,
+  "total_tokens": 6497
+}
+uminação noturna rasgada por lanternas potentes e flashes de tiro, a <<MultidaoInfectada>> batendo
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5169,
+  "total_tokens": 6523
+}
+ com barras de ferro pesadas contra os portões de madeira grossa da igreja, pedaços de alvenaria c
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5194,
+  "total_tokens": 6548
+}
+aindo sob a fúria."
+  },
+  {
+    "id": "20",
+    
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5219,
+  "total_tokens": 6573
+}
+"imagePrompt": "Plano médio, luz de fogo cintilante e avermelhada, a <<Multidao
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5244,
+  "total_tokens": 6598
+}
+Infectada>> agitando estandartes rasgados com o rosto severo de um líder religioso bordado no
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5268,
+  "total_tokens": 6622
+}
+ tecido, fumaça escura de incêndios subindo contra o céu sem estrelas."
+  },
+  
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5292,
+  "total_tokens": 6646
+}
+{
+    "id": "21",
+    "imagePrompt": "Plano conjunto em perfil, luz
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5316,
+  "total_tokens": 6670
+}
+ dividida entre o tom quente interno e o azul caótico externo, o <<SoldadoCinza>> no meio aba
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5340,
+  "total_tokens": 6694
+}
+ixando sua guarda diante do <<HomemVelho>> sereno de um lado, enquanto as silhuetas frenéticas
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5365,
+  "total_tokens": 6719
+}
+ da <<MultidaoInfectada>> são projetadas pelas janelas arqueadas do outro."
+  },
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5389,
+  "total_tokens": 6743
+}
+  {
+    "id": "22",
+    "imagePrompt": "Plano aberto simbólico,
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5413,
+  "total_tokens": 6767
+}
+ iluminação artificial em tons de néon roxo e azul piscante, um enorme outdoor holográfico parcialmente destruído mostrando
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5438,
+  "total_tokens": 6792
+}
+ pessoas sorridentes em êxtase sob gotas cintilantes, escombros abandonados e silenciosos na base do pain
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5465,
+  "total_tokens": 6819
+}
+el de metal."
+  },
+  {
+    "id": "23",
+    "imagePrompt
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5489,
+  "total_tokens": 6843
+}
+": "Plano médio, iluminação suave de aceitação e alívio, o <<SoldadoCinza>> prend
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5514,
+  "total_tokens": 6868
+}
+endo definitivamente seu pesado rifle escuro em sua bandoleira soltando os ombros tensos, pilares de
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5538,
+  "total_tokens": 6892
+}
+ pedra antigos e serenos cercando-o na cripta."
+  },
+  {
+    "id": "2
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5563,
+  "total_tokens": 6917
+}
+4",
+    "imagePrompt": "Plano americano, luz dourada melancólica de amanhecer ras
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5587,
+  "total_tokens": 6941
+}
+gando as frestas superiores, o <<SoldadoCinza>> segurando o copo de água oferecido
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5611,
+  "total_tokens": 6965
+}
+ pelo <<HomemVelho>> longe das garras da <<NevoaSantuario>> no exterior, ar pacífico e int
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5638,
+  "total_tokens": 6992
+}
+ocado no interior sombreado da ruína."
+  },
+  {
+    "id": "25
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5662,
+  "total_tokens": 7016
+}
+",
+    "imagePrompt": "Plano geral, luz quente do sol nascente banhando a cena sagrada, o
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5688,
+  "total_tokens": 7042
+}
+ <<HomemVelho>> caminhando devagar pelo corredor da nave da igreja destruída amparando um ferido nos om
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5714,
+  "total_tokens": 7068
+}
+bros, estátuas quebradas de grandes divindades caídas aos seus pés entre montanhas de detritos."
+  
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5741,
+  "total_tokens": 7095
+}
+}
+]
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5744,
+  "total_tokens": 7098
+}
+
+
+[USAGE]
+{
+  "prompt_tokens": 1354,
+  "completion_tokens": 5744,
+  "total_tokens": 7098
+}

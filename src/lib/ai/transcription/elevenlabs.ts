@@ -1,6 +1,7 @@
 import fs from "fs";
 import https from "node:https";
-import { getVerifiedProxy } from "@/lib/networking/proxy-service";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import { executeWithAnonymousProxy } from "@/lib/networking/proxy-service";
 
 interface ElevenLabsWord {
   text: string;
@@ -20,7 +21,7 @@ interface ElevenLabsResponse {
 function postMultipart(
   url: string,
   formData: FormData,
-  agent?: InstanceType<typeof import("https-proxy-agent").HttpsProxyAgent>
+  agent: InstanceType<typeof HttpsProxyAgent>
 ): Promise<{ status: number; body: string }> {
   return new Promise(async (resolve, reject) => {
     const boundary = `----BunBoundary${Date.now()}${Math.random().toString(36).slice(2)}`;
@@ -62,11 +63,10 @@ function postMultipart(
         "Content-Type": `multipart/form-data; boundary=${boundary}`,
         "Content-Length": fullBody.length,
       },
+      agent,
     };
 
-    if (agent) options.agent = agent;
-
-    const timeout = setTimeout(() => reject(new Error("Request timeout")), 60000);
+    const timeout = setTimeout(() => reject(new Error("Request timeout")), 120000);
 
     const req = https.request(options, (res) => {
       let data = "";
@@ -99,22 +99,23 @@ export const transcribeWithElevenLabs = async (
   (form as any)._filePath = filePath;
   (form as any)._fileName = fileName;
 
-  console.log(`[ElevenLabs STT] Getting verified anonymous proxy...`);
-  const proxy = await getVerifiedProxy();
-  console.log(`[ElevenLabs STT] Using proxy IP: ${proxy.ip}`);
-  console.log(`[ElevenLabs STT] Transcribing ${fileName}...`);
+  console.log(`[ElevenLabs STT] Transcribing ${fileName} via anonymous proxy...`);
 
-  const result = await postMultipart(
-    "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1",
-    form,
-    proxy.agent
-  );
-
-  if (result.status !== 200) {
-    throw new Error(
-      `ElevenLabs STT failed: ${result.status} - ${result.body}`
+  const result = await executeWithAnonymousProxy(async (agent) => {
+    const res = await postMultipart(
+      "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1",
+      form,
+      agent
     );
-  }
+
+    if (res.status !== 200) {
+      throw new Error(
+        `ElevenLabs STT failed: ${res.status} - ${res.body}`
+      );
+    }
+
+    return res;
+  });
 
   const data: ElevenLabsResponse = JSON.parse(result.body);
 

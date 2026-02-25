@@ -40,11 +40,9 @@ export async function POST(request: NextRequest) {
       // Simple flow fields
       segments: body.segments || [],
       entities: body.entities,
-      visualDescriptions: body.visualDescriptions,
       audioUrls: body.audioUrls,
       // Commentator flow fields
       commentator: body.commentator,
-      segmentsWithComments: body.segmentsWithComments,
       audioSystemPrompt: body.audioSystemPrompt,
       audioBatches: body.audioBatches,
       transcriptionResults: body.transcriptionResults

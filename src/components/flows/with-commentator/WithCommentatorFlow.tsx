@@ -22,12 +22,10 @@ import { useTranscription } from "@/lib/flows/use-transcription"
 import { useVideoGeneration } from "@/lib/flows/use-video-generation"
 import { useProject, useDownload, LoadedProjectData, determineStage } from "@/lib/flows/use-project"
 import {
-  VisualDescription,
-  SegmentWithComment,
+  Segment,
   CommentatorConfig,
   DEFAULT_SEGMENT_SIZE_COMMENTATOR,
-  CaptionStyle,
-  VideoSegment
+  CaptionStyle
 } from "@/lib/flows/types"
 
 import { COMMENTATOR_IMAGE_GENERATION_PROMPT } from "@/lib/ai/prompts/prompts"
@@ -52,10 +50,8 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   const [scriptText, setScriptText] = useState("")
   const [segmentSize, setSegmentSize] = useState([DEFAULT_SEGMENT_SIZE_COMMENTATOR])
   const [language, setLanguage] = useState("portuguese brasilian")
-  const [segments, setSegments] = useState<string[]>([])
+  const [segments, setSegments] = useState<Segment[]>([])
   const [commentator, setCommentator] = useState<CommentatorConfig | undefined>()
-  const [segmentsWithComments, setSegmentsWithComments] = useState<SegmentWithComment[]>([])
-  const [commentVisualDescriptions, setCommentVisualDescriptions] = useState<VisualDescription[]>([])
   const [imageSystemPrompt, setImageSystemPrompt] = useState("")
   const [audioSystemPrompt, setAudioSystemPrompt] = useState("")
   const [audioVoiceNarrator, setAudioVoiceNarrator] = useState("nPczCjzI2devNBz1zQrb")
@@ -66,17 +62,17 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   const hasAutoCheckedTranscription = useRef(false)
 
   const generatedAudioContent = useMemo(() => {
-    if (!segmentsWithComments.length) return ""
+    if (!segments.some(s => s.type)) return ""
     let content = ""
-    segmentsWithComments.forEach(item => {
-      if (item.type === 'scene_text') {
-        content += `narrator: ${item.content}\n`
-      } else if (item.type === 'comment') {
-        content += `commentator: ${item.content}\n`
+    segments.forEach(seg => {
+      if (seg.type === 'scene_text') {
+        content += `narrator: ${seg.text}\n`
+      } else if (seg.type === 'comment') {
+        content += `commentator: ${seg.text}\n`
       }
     })
     return content
-  }, [segmentsWithComments])
+  }, [segments])
 
   const expectedBatches = useMemo(() => {
     if (!generatedAudioContent) return []
@@ -84,8 +80,8 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   }, [generatedAudioContent, audioSystemPrompt])
 
   const imageGen = useImageGeneration(
-    commentVisualDescriptions,
-    setCommentVisualDescriptions,
+    segments,
+    setSegments,
     {
       systemPrompt: imageSystemPrompt,
       referenceImage: commentator?.appearance?.imageUrl,
@@ -110,10 +106,10 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   const transcription = useTranscription(audioGen.batches, language)
 
   const videoGen = useVideoGeneration({
-    getSegments: () => segmentsWithComments.map((seg, i) => ({
+    getSegments: () => segments.map((seg, i) => ({
       id: `seg-${i}`,
-      text: seg.content,
-      imageUrl: commentVisualDescriptions[i]?.imageUrl || ''
+      text: seg.text,
+      imageUrl: seg.imagePath || ''
     })),
     audioBatches: audioGen.batches,
     transcriptionResults: transcription.results
@@ -134,8 +130,6 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       voice: audioVoiceNarrator,
       segments,
       commentator: commentator ? { ...commentator, voice: audioVoiceCommentator } : undefined,
-      segmentsWithComments,
-      visualDescriptions: commentVisualDescriptions,
       audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
       audioBatches: audioGen.batches,
       audioSystemPrompt,
@@ -153,8 +147,6 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
         setCommentator(data.commentator)
         if (data.commentator.voice) setAudioVoiceCommentator(data.commentator.voice)
       }
-      if (data.segmentsWithComments) setSegmentsWithComments(data.segmentsWithComments)
-      if (data.visualDescriptions) setCommentVisualDescriptions(data.visualDescriptions)
       if (data.audioBatches) audioGen.setBatches(data.audioBatches)
       if (data.audioSystemPrompt) setAudioSystemPrompt(data.audioSystemPrompt)
       if (data.transcriptionResults) transcription.setResults(data.transcriptionResults)
@@ -185,21 +177,25 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
     }
   }, [currentStage, audioGen.batches, transcription.results, transcription.isLoading])
 
+  const hasComments = segments.some(s => s.type === 'comment')
+  const hasImagePrompts = segments.some(s => s.imagePrompt)
+  const hasImages = segments.some(s => s.imagePath)
+
   const maxAllowedStep = useMemo(() => {
-    if (videoGen.videoProps) return 7; // DOWNLOAD
-    if (transcription.results.length > 0) return 6; // VIDEO
-    if (audioGen.batches.some(b => b.status === 'completed' && b.url)) return 5; // TRANSCRIPTION
-    if (commentVisualDescriptions.length > 0) return 4; // AUDIO 
-    if (segmentsWithComments.length > 0) return 3; // DESCRIPTIONS 
-    if (commentator) return 2; // COMMENTS (after picking commentator)
-    if (segments.length > 0) return 1; // COMMENTATOR (after splitting)
-    return 0; // INPUT
+    if (videoGen.videoProps) return 7;
+    if (transcription.results.length > 0) return 6;
+    if (audioGen.batches.some(b => b.status === 'completed' && b.url)) return 5;
+    if (hasImagePrompts) return 4;
+    if (hasComments) return 3;
+    if (commentator) return 2;
+    if (segments.length > 0) return 1;
+    return 0;
   }, [
     videoGen.videoProps,
     transcription.results.length,
     audioGen.batches,
-    commentVisualDescriptions.length,
-    segmentsWithComments.length,
+    hasImagePrompts,
+    hasComments,
     commentator,
     segments.length
   ])
@@ -230,13 +226,10 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       if (!splitRes.ok) throw new Error("Failed to split script")
       const splitData = await splitRes.json()
 
-      setSegments(splitData.segments)
-      // Clear dependent downstream states since base text changed
-      setSegmentsWithComments([])
-      setCommentVisualDescriptions([])
-
-      setCurrentStage('COMMENTATOR') // Pick commentator next
-      await project.save({ segments: splitData.segments, segmentsWithComments: [], visualDescriptions: [] })
+      const newSegments: Segment[] = splitData.segments.map((text: string) => ({ text }))
+      setSegments(newSegments)
+      setCurrentStage('COMMENTATOR')
+      await project.save({ segments: newSegments })
     } catch (error) {
       console.error("Splitting error:", error)
       alert("Failed to split scenes")
@@ -255,13 +248,13 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          segments: segments,
-          commentatorDescription: commentatorDescription
+          segments: segments.map(s => s.text),
+          commentatorDescription
         }),
       })
       if (!res.ok) throw new Error("Failed to generate comments")
       const data = await res.json()
-      setSegmentsWithComments(data.segmentsWithComments)
+      setSegments(data.segments)
       setCurrentStage('COMMENTS')
     } catch (e) {
       console.error(e)
@@ -272,18 +265,20 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   }
 
   const handleGenerateDescriptions = async () => {
-    if (!segmentsWithComments.length) return
+    if (!hasComments) return
     setIsLoading(true)
     try {
+      const segmentsForApi: Segment[] = segments.map(s =>
+        s.type === 'comment'
+          ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
+          : s
+      )
+
       const res = await fetch("/api/generate/descriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          segments: segmentsWithComments.map(s =>
-            s.type === 'comment'
-              ? `[Commentary by ${commentator?.name}]: ${s.content}`
-              : s.content
-          ),
+          segments: segmentsForApi,
           commentatorName: commentator?.name,
           commentatorPersonality: commentator?.personality,
           commentatorImage: commentator?.appearance?.imageUrl,
@@ -293,10 +288,10 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       })
       if (!res.ok) throw new Error("Failed")
       const data = await res.json()
-      const newDescriptions = data.visualDescriptions.map((d: VisualDescription) => ({ ...d, status: 'completed' }))
-      setCommentVisualDescriptions(newDescriptions)
+      const updatedSegments: Segment[] = data.segments || segments
+      setSegments(updatedSegments)
       setCurrentStage('DESCRIPTIONS')
-      await project.save({ visualDescriptions: newDescriptions })
+      await project.save({ segments: updatedSegments })
     } catch (e) {
       console.error(e)
       alert("Error generating descriptions")
@@ -351,9 +346,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
   const handleDownloadZip = async () => {
     try {
       await download.downloadZip({
-        visualDescriptions: commentVisualDescriptions,
         segments,
-        segmentsWithComments,
         audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
         transcriptionResults: transcription.results,
         filename: `story-with-commentator-${Date.now()}.zip`
@@ -363,7 +356,6 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
     }
   }
 
-  // Execution and Navigation State Setup
   let onExecute: (() => void) | undefined
   let isExecuting = false
   let canExecute = false
@@ -389,27 +381,27 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       onExecute = handleGenerateComments
       isExecuting = isLoading
       canExecute = !!commentator
-      executeLabel = segmentsWithComments.length > 0 ? "Regerar Comentários" : "Gerar Comentários"
-      canNext = segmentsWithComments.length > 0
+      executeLabel = hasComments ? "Regerar Comentários" : "Gerar Comentários"
+      canNext = hasComments
       break
     case 'DESCRIPTIONS':
       onExecute = handleGenerateDescriptions
       isExecuting = isLoading
-      canExecute = segmentsWithComments.length > 0
-      executeLabel = commentVisualDescriptions.length > 0 ? "Regerar Descrições" : "Gerar Descrições"
-      canNext = commentVisualDescriptions.length > 0
+      canExecute = hasComments
+      executeLabel = hasImagePrompts ? "Regerar Descrições" : "Gerar Descrições"
+      canNext = hasImagePrompts
       break
     case 'IMAGES':
       onExecute = handleGenerateImages
       isExecuting = imageGen.isLoading
-      canExecute = commentVisualDescriptions.length > 0
+      canExecute = hasImagePrompts
       executeLabel = "Gerar Imagens"
-      canNext = commentVisualDescriptions.length > 0
+      canNext = hasImagePrompts
       break
     case 'AUDIO':
       onExecute = handleGenerateAudio
       isExecuting = audioGen.isLoading
-      canExecute = segmentsWithComments.length > 0
+      canExecute = hasComments
       executeLabel = "Gerar Áudio"
       canNext = audioGen.batches.some(b => b.status === 'completed' && b.url)
       break
@@ -492,22 +484,22 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
             onNext={() => setCurrentStage('DESCRIPTIONS')}
             nextLabel="Próxima Etapa: Descrições Visuais"
             isRegenerating={isLoading}
-            canGoNext={!!segmentsWithComments.length}
+            canGoNext={hasComments}
           />
           <Card>
             <CardHeader><CardTitle>Gerar Comentários</CardTitle></CardHeader>
             <CardContent className="text-center py-8">
               <p className="text-muted-foreground mb-4">Clique em "Regerar Etapa" para que o comentador analise e comente.</p>
-              {segmentsWithComments.length > 0 && (
+              {hasComments && (
                 <div className="text-left mt-6 space-y-4">
-                  {segmentsWithComments.map((item, index) => (
-                    <div key={index} className={cn("p-4 rounded-lg", item.type === 'comment' ? "bg-blue-50 border border-blue-100" : "bg-muted/50")}>
+                  {segments.filter(s => s.type).map((seg, index) => (
+                    <div key={index} className={cn("p-4 rounded-lg", seg.type === 'comment' ? "bg-blue-50 border border-blue-100" : "bg-muted/50")}>
                       <div className="flex gap-3">
-                        {item.type === 'comment' && commentator?.appearance?.imageUrl && (
+                        {seg.type === 'comment' && commentator?.appearance?.imageUrl && (
                           <img src={commentator.appearance.imageUrl} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
                         )}
                         <div>
-                          <p className={cn("text-sm", item.type === 'comment' ? "text-blue-800 italic" : "")}>{item.content}</p>
+                          <p className={cn("text-sm", seg.type === 'comment' ? "text-blue-800 italic" : "")}>{seg.text}</p>
                         </div>
                       </div>
                     </div>
@@ -526,41 +518,38 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
             onNext={() => setCurrentStage('IMAGES')}
             nextLabel="Próxima Etapa: Imagens"
             isRegenerating={isLoading}
-            canGoNext={commentVisualDescriptions.length > 0}
+            canGoNext={hasImagePrompts}
           />
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Descrições Geradas</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                {commentVisualDescriptions.length === 0 ? (
+                {!hasImagePrompts ? (
                   <div className="text-center py-4 text-muted-foreground">Clique em "Regerar Etapa" para criar as descrições.</div>
                 ) : (
-                  segmentsWithComments.map((item, i) => {
-                    const desc = commentVisualDescriptions[i]
-                    return (
-                      <div key={i} className={cn("p-4 rounded-lg flex flex-col gap-3", item.type === 'comment' ? "bg-blue-50 border border-blue-100" : "bg-muted/50")}>
-                        <div className="flex gap-3 border-b pb-3 border-border/10">
-                          {item.type === 'comment' && commentator?.appearance?.imageUrl && (
-                            <img src={commentator.appearance.imageUrl} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
-                          )}
-                          <div>
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
-                              {item.type === 'comment' ? 'Comentário' : `Cena ${i + 1}`}
-                            </span>
-                            <p className={cn("text-sm", item.type === 'comment' ? "text-blue-800 italic" : "")}>{item.content}</p>
-                          </div>
-                        </div>
-                        {desc && (
-                          <div>
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                              <Pencil className="w-3 h-3" /> Descrição Visual
-                            </span>
-                            <p className="text-sm italic text-muted-foreground bg-background/50 p-2 rounded">{desc.imagePrompt}</p>
-                          </div>
+                  segments.filter(s => s.type).map((seg, i) => (
+                    <div key={i} className={cn("p-4 rounded-lg flex flex-col gap-3", seg.type === 'comment' ? "bg-blue-50 border border-blue-100" : "bg-muted/50")}>
+                      <div className="flex gap-3 border-b pb-3 border-border/10">
+                        {seg.type === 'comment' && commentator?.appearance?.imageUrl && (
+                          <img src={commentator.appearance.imageUrl} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
                         )}
+                        <div>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
+                            {seg.type === 'comment' ? 'Comentário' : `Cena ${i + 1}`}
+                          </span>
+                          <p className={cn("text-sm", seg.type === 'comment' ? "text-blue-800 italic" : "")}>{seg.text}</p>
+                        </div>
                       </div>
-                    )
-                  })
+                      {seg.imagePrompt && (
+                        <div>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <Pencil className="w-3 h-3" /> Descrição Visual
+                          </span>
+                          <p className="text-sm italic text-muted-foreground bg-background/50 p-2 rounded">{seg.imagePrompt}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>
@@ -575,37 +564,37 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
             onNext={() => setCurrentStage('AUDIO')}
             nextLabel="Próxima Etapa: Gerar Áudios"
             isRegenerating={imageGen.isLoading}
-            canGoNext={!imageGen.isLoading && commentVisualDescriptions.every(d => d.status === 'completed')}
+            canGoNext={!imageGen.isLoading && hasImagePrompts}
           />
           <div className="space-y-6">
             <div className="grid gap-6">
-              {segmentsWithComments.map((item, index) => {
-                const visualDesc = commentVisualDescriptions[index]
+              {segments.filter(s => s.type).map((seg, index) => {
+                const status = imageGen.imageStatuses.get(index)
                 return (
-                  <Card key={index} className={item.type === 'comment' ? 'border-blue-200' : ''}>
+                  <Card key={index} className={seg.type === 'comment' ? 'border-blue-200' : ''}>
                     <CardContent className="pt-6 space-y-4">
                       <div className="flex gap-3">
-                        {item.type === 'comment' && commentator?.appearance?.imageUrl && (
+                        {seg.type === 'comment' && commentator?.appearance?.imageUrl && (
                           <img src={commentator.appearance.imageUrl} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
                         )}
-                        <p className={cn("text-sm", item.type === 'comment' ? "text-blue-800 italic" : "")}>{item.content}</p>
+                        <p className={cn("text-sm", seg.type === 'comment' ? "text-blue-800 italic" : "")}>{seg.text}</p>
                       </div>
-                      {visualDesc && (
+                      {seg.imagePrompt && (
                         <div className="border-t pt-4 mt-4">
-                          <p className="text-xs text-muted-foreground italic mb-2">{visualDesc.imagePrompt}</p>
+                          <p className="text-xs text-muted-foreground italic mb-2">{seg.imagePrompt}</p>
                           <div className="mt-4">
-                            {visualDesc.status === 'completed' && visualDesc.imageUrl ? (
+                            {seg.imagePath && status !== 'generating' ? (
                               <div className="relative group">
-                                <img src={visualDesc.imageUrl} alt="Scene" className="w-full rounded-lg" />
+                                <img src={seg.imagePath} alt="Scene" className="w-full rounded-lg" />
                                 <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title })}>
                                   <RefreshCw className="w-4 h-4" />
                                 </Button>
                               </div>
-                            ) : visualDesc.status === 'generating' ? (
+                            ) : status === 'generating' ? (
                               <div className="w-full h-48 bg-muted rounded-lg animate-pulse" />
                             ) : (
                               <div className="w-full h-48 bg-muted rounded-lg flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
-                                {visualDesc.status === 'error' ? (
+                                {status === 'error' ? (
                                   <>
                                     <span>Erro ao gerar</span>
                                     <Button variant="outline" size="sm" onClick={() => imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title })}>

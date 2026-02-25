@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import { VisualDescription } from "./types"
+import { Segment } from "./types"
 
 interface ImageGenerationConfig {
   systemPrompt: string
@@ -9,36 +9,50 @@ interface ImageGenerationConfig {
 }
 
 export function useImageGeneration(
-  descriptions: VisualDescription[],
-  setDescriptions: React.Dispatch<React.SetStateAction<VisualDescription[]>>,
+  segments: Segment[],
+  setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
   config: ImageGenerationConfig
 ) {
   const [isLoading, setIsLoading] = useState(false)
+  const [imageStatuses, setImageStatuses] = useState<Map<number, 'generating' | 'error'>>(new Map())
 
-  const updateAtIndex = useCallback((index: number, updates: Partial<VisualDescription>) => {
-    setDescriptions(prev => {
+  const updateSegmentAtIndex = useCallback((index: number, updates: Partial<Segment>) => {
+    setSegments(prev => {
       const next = [...prev]
       if (next[index]) {
         next[index] = { ...next[index], ...updates }
       }
       return next
     })
-  }, [setDescriptions])
+  }, [setSegments])
+
+  const setStatus = useCallback((index: number, status: 'generating' | 'error' | null) => {
+    setImageStatuses(prev => {
+      const next = new Map(prev)
+      if (status === null) {
+        next.delete(index)
+      } else {
+        next.set(index, status)
+      }
+      return next
+    })
+  }, [])
 
   const generateAll = async (params?: { projectId?: string | null, projectName?: string }) => {
     setIsLoading(true)
 
-    const isRegeneratingAll = descriptions.every(d => d.status === 'completed' && d.imageUrl)
+    const isRegeneratingAll = segments.every(s => s.imagePath)
 
-    const promises = descriptions.map(async (desc, index) => {
-      if (!isRegeneratingAll && desc.status === 'completed' && desc.imageUrl) return
+    const promises = segments.map(async (seg, index) => {
+      if (!seg.imagePrompt) return
+      if (!isRegeneratingAll && seg.imagePath) return
 
-      updateAtIndex(index, { status: 'generating' })
+      setStatus(index, 'generating')
 
       try {
         const finalPrompt = config.buildPrompt
-          ? config.buildPrompt(desc.imagePrompt)
-          : desc.imagePrompt
+          ? config.buildPrompt(seg.imagePrompt)
+          : seg.imagePrompt
 
         const payload: any = {
           imagePrompt: finalPrompt,
@@ -48,8 +62,11 @@ export function useImageGeneration(
           projectName: params?.projectName
         }
 
-        if (config.entities && config.entities.length > 0) {
-          const mentionedEntities = config.entities.filter(e => finalPrompt.includes(`<<${e.name}>>`) && e.imageUrl)
+        const matches = finalPrompt.match(/<<([^>]+)>>/g)
+        const extractedEntities = matches ? matches.map(m => m.replace(/<<|>>/g, '')) : []
+
+        if (extractedEntities.length > 0 && config.entities) {
+          const mentionedEntities = config.entities.filter(e => extractedEntities.includes(e.name) && e.imageUrl)
           if (mentionedEntities.length > 0) {
             payload.referenceImages = mentionedEntities.map(e => e.imageUrl)
           } else if (config.referenceImage) {
@@ -67,9 +84,10 @@ export function useImageGeneration(
 
         if (!res.ok) throw new Error('Failed to generate image')
         const data = await res.json()
-        updateAtIndex(index, { imageUrl: data.imageUrl, status: 'completed' })
+        updateSegmentAtIndex(index, { imagePath: data.imageUrl })
+        setStatus(index, null)
       } catch {
-        updateAtIndex(index, { status: 'error' })
+        setStatus(index, 'error')
       }
     })
 
@@ -78,15 +96,15 @@ export function useImageGeneration(
   }
 
   const regenerate = async (index: number, params?: { projectId?: string | null, projectName?: string }) => {
-    const desc = descriptions[index]
-    if (!desc) return
+    const seg = segments[index]
+    if (!seg?.imagePrompt) return
 
-    updateAtIndex(index, { status: 'generating' })
+    setStatus(index, 'generating')
 
     try {
       const finalPrompt = config.buildPrompt
-        ? config.buildPrompt(desc.imagePrompt)
-        : desc.imagePrompt
+        ? config.buildPrompt(seg.imagePrompt)
+        : seg.imagePrompt
 
       const payload: any = {
         imagePrompt: finalPrompt,
@@ -96,8 +114,11 @@ export function useImageGeneration(
         projectName: params?.projectName
       }
 
-      if (config.entities && config.entities.length > 0) {
-        const mentionedEntities = config.entities.filter(e => finalPrompt.includes(`<<${e.name}>>`) && e.imageUrl)
+      const matches = finalPrompt.match(/<<([^>]+)>>/g)
+      const extractedEntities = matches ? matches.map(m => m.replace(/<<|>>/g, '')) : []
+
+      if (extractedEntities.length > 0 && config.entities) {
+        const mentionedEntities = config.entities.filter(e => extractedEntities.includes(e.name) && e.imageUrl)
         if (mentionedEntities.length > 0) {
           payload.referenceImages = mentionedEntities.map(e => e.imageUrl)
         } else if (config.referenceImage) {
@@ -115,20 +136,22 @@ export function useImageGeneration(
 
       if (!res.ok) throw new Error('Failed to regenerate image')
       const data = await res.json()
-      updateAtIndex(index, { imageUrl: data.imageUrl, status: 'completed' })
+      updateSegmentAtIndex(index, { imagePath: data.imageUrl })
+      setStatus(index, null)
     } catch {
-      updateAtIndex(index, { status: 'error' })
+      setStatus(index, 'error')
     }
   }
 
   const updatePrompt = (index: number, newPrompt: string) => {
-    updateAtIndex(index, { imagePrompt: newPrompt })
+    updateSegmentAtIndex(index, { imagePrompt: newPrompt })
   }
 
   return {
     generateAll,
     regenerate,
     updatePrompt,
+    imageStatuses,
     isLoading
   }
 }

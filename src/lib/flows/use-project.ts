@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { ProjectData, AudioBatch, TranscriptionResult, VisualDescription, SegmentWithComment, CommentatorConfig, EntityAsset } from "./types"
+import { ProjectData, AudioBatch, TranscriptionResult, CommentatorConfig, EntityAsset, Segment } from "./types"
 import { cleanTitle } from "@/lib/utils"
 
 interface UseProjectConfig {
@@ -17,10 +17,8 @@ export interface LoadedProjectData {
   language: string
   style?: string
   voice?: string
-  segments?: string[]
+  segments?: Segment[]
   entities?: EntityAsset[]
-  visualDescriptions?: VisualDescription[]
-  segmentsWithComments?: SegmentWithComment[]
   audioBatches?: AudioBatch[]
   audioSystemPrompt?: string
   transcriptionResults?: TranscriptionResult[]
@@ -55,14 +53,7 @@ export function useProject(config: UseProjectConfig) {
           voice: project.voice,
           segments: project.segments,
           entities: project.entities,
-          visualDescriptions: project.visualDescriptions,
-          segmentsWithComments: project.segmentsWithComments,
-          audioBatches: project.audioBatches || (project.audioUrls?.map((url: string, i: number) => ({
-            index: i,
-            text: `Legacy ${i}`,
-            status: 'completed' as const,
-            url
-          }))),
+          audioBatches: project.audioBatches,
           audioSystemPrompt: project.audioSystemPrompt,
           transcriptionResults: project.transcriptionResults,
           commentator: project.commentator
@@ -117,8 +108,6 @@ export function useProject(config: UseProjectConfig) {
     }
   }
 
-
-
   return {
     currentProjectId,
     save,
@@ -138,10 +127,10 @@ export function determineStage(data: LoadedProjectData, flowType: 'simple' | 'wi
   if (data.consistency && data.entities && data.entities.length > 0 && !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
     return 'ENTITIES'
   }
-  if (data.visualDescriptions && data.visualDescriptions.length > 0) {
+  if (data.segments && data.segments.some(s => s.imagePrompt)) {
     return 'IMAGES'
   }
-  if (data.segmentsWithComments && data.segmentsWithComments.length > 0) {
+  if (data.segments && data.segments.some(s => s.type === 'comment') && flowType === 'with-commentator') {
     return 'DESCRIPTIONS'
   }
   if (data.commentator && flowType === 'with-commentator') {
@@ -157,9 +146,7 @@ export function useDownload() {
   const [isDownloading, setIsDownloading] = useState(false)
 
   const downloadZip = async (payload: {
-    visualDescriptions: VisualDescription[]
-    segments?: string[]
-    segmentsWithComments?: SegmentWithComment[]
+    segments: Segment[]
     audioUrls: string[]
     transcriptionResults: TranscriptionResult[]
     filename?: string
@@ -171,9 +158,7 @@ export function useDownload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          visualDescriptions: payload.visualDescriptions,
           segments: payload.segments,
-          segmentsWithComments: payload.segmentsWithComments,
           audioUrls: payload.audioUrls,
           transcriptionResults: payload.transcriptionResults
         })

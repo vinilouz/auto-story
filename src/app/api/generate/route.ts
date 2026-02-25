@@ -3,23 +3,15 @@ import { splitText } from "@/lib/text-segmentation"
 import { generateSceneDescriptions } from "@/lib/ai/processors/scene-visualizer"
 import { generateSingleImage } from "@/lib/ai/processors/image-generator"
 import { pipe } from "@/lib/pipeline"
+import { Segment } from "@/lib/flows/types"
 
 interface GenerateRequest {
   text: string
   segmentLength: number
 }
 
-interface GenerateResponse {
-  segments: string[]
-  visualDescriptions?: Array<{ imagePrompt: string; imageUrl?: string; status: 'pending' | 'generating' | 'completed' | 'error' }>
-}
-
 interface ProcessedSegments {
-  segments: string[]
-}
-
-interface ProcessedVisuals extends ProcessedSegments {
-  visualDescriptions?: Array<{ imagePrompt: string }>
+  segments: Segment[]
 }
 
 const validateRequest = (data: GenerateRequest): GenerateRequest => {
@@ -33,81 +25,46 @@ const validateRequest = (data: GenerateRequest): GenerateRequest => {
 }
 
 const generateSegments = (data: GenerateRequest): ProcessedSegments => {
-  const segments = splitText(data.text, data.segmentLength)
-  return { segments }
+  const rawSegments = splitText(data.text, data.segmentLength)
+  return { segments: rawSegments.map(text => ({ text })) }
 }
 
-const processVisualDescriptions = async (data: ProcessedSegments): Promise<ProcessedVisuals> => {
-  const visualResult = await generateSceneDescriptions({ segments: data.segments }) as any
-  return {
-    ...data,
-    visualDescriptions: visualResult.visualDescriptions
-  }
+const processVisualDescriptions = async (data: ProcessedSegments): Promise<ProcessedSegments> => {
+  const visualResult = await generateSceneDescriptions({ segments: data.segments }) as { segments: Segment[] }
+  return { segments: visualResult.segments }
 }
 
-const processImageGeneration = async (data: ProcessedVisuals): Promise<ProcessedVisuals> => {
-  if (!data.visualDescriptions) {
-    return data
-  }
-
-  console.log('Starting image generation for', data.visualDescriptions.length, 'descriptions')
-
-  const updatedDescriptions = await Promise.all(data.visualDescriptions.map(async (desc: any) => {
+const processImageGeneration = async (data: ProcessedSegments): Promise<ProcessedSegments> => {
+  const updatedSegments = await Promise.all(data.segments.map(async (seg) => {
+    if (!seg.imagePrompt) return seg
     try {
-      const imageUrl = await generateSingleImage({ imagePrompt: desc.imagePrompt })
-      return { ...desc, imageUrl, status: 'completed' }
+      const imageUrl = await generateSingleImage({ imagePrompt: seg.imagePrompt })
+      return { ...seg, imagePath: imageUrl }
     } catch (e) {
       console.error("Image gen error:", e)
-      return { ...desc, status: 'error' }
+      return seg
     }
   }))
 
-  return {
-    ...data,
-    visualDescriptions: updatedDescriptions
-  }
-}
-
-const formatResponse = (data: ProcessedVisuals): GenerateResponse => {
-  const response: GenerateResponse = { segments: data.segments }
-  if (data.visualDescriptions) {
-    response.visualDescriptions = data.visualDescriptions.map((desc: any) => ({
-      ...desc,
-      status: desc.status || 'pending'
-    }))
-  }
-  return response
+  return { segments: updatedSegments }
 }
 
 const processGenerate = pipe(
   validateRequest,
   generateSegments,
   processVisualDescriptions,
-  processImageGeneration,
-  formatResponse
+  processImageGeneration
 )
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Request body:', body)
-
     const result = await processGenerate(body)
-    console.log('Pipeline result:', result)
-
     return NextResponse.json(result)
   } catch (error) {
-    console.error('API Error:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      error: error
-    })
-
+    console.error('API Error:', error)
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Internal server error',
-        details: error instanceof Error ? error.stack : undefined
-      },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     )
   }

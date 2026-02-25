@@ -49,7 +49,7 @@ function truncateBase64(obj: any): any {
 
 export async function generateText(prompt: string): Promise<string> {
   const payload = {
-    model: 'gemini-3.1-pro-preview',
+    model: 'gemini-3-flash-preview',
     messages: [{ role: 'user', content: prompt }],
     stream: true,
   };

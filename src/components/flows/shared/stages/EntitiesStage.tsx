@@ -48,7 +48,7 @@ export function EntitiesStage({
       {entities.some(e => e.status === 'completed' || e.imageUrl || e.description) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {entities.map((e, idx) => (
-            <Card key={idx} className="overflow-hidden flex flex-col">
+            <Card key={idx} className="overflow-hidden flex flex-col p-0">
               <div className="aspect-square bg-muted flex items-center justify-center relative overflow-hidden">
                 {e.imageUrl ? (
                   <img
@@ -69,7 +69,7 @@ export function EntitiesStage({
                   </div>
                 )}
               </div>
-              <CardContent className="p-4 flex-1">
+              <CardContent className="flex-1">
                 <h3 className="font-bold mb-2">{e.name}</h3>
                 {e.description ? (
                   <p className="text-sm text-muted-foreground text-pretty">
