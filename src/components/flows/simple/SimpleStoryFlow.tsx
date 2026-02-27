@@ -111,7 +111,7 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
       entities,
       audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
       audioBatches: audioGen.batches,
-      transcriptionResults: transcription.results
+      transcriptionResults: transcription.results.filter(r => audioGen.batches.some(b => b.url === r.url))
     }),
     onLoad: (data: LoadedProjectData) => {
       if (data.name) setTitle(data.name)
@@ -336,6 +336,61 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
     }
   }
 
+  const handleRegenerateEntityImage = async (index: number) => {
+    setIsLoading(true)
+    try {
+      const entityToRegen = entities[index]
+      if (!entityToRegen || !entityToRegen.description) return
+
+      let activeProjectId = project.currentProjectId
+      if (!activeProjectId) {
+        const savedProject = await project.save()
+        activeProjectId = savedProject?.id
+      }
+
+      setEntities(prev => prev.map((e, i) => i === index ? { ...e, status: 'generating' } : e))
+
+      const imgRes = await fetch("/api/generate/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(entityToRegen.description, undefined, imageSystemPrompt),
+          imageConfig: { aspect_ratio: "1:1" },
+          projectId: activeProjectId,
+          projectName: title
+        }),
+      })
+      if (!imgRes.ok) throw new Error("Image gen failed")
+
+      const imgData = await imgRes.json()
+
+      setEntities(prev => {
+        const newEntities = prev.map((e, i) => i === index ? { ...e, imageUrl: imgData.imageUrl, status: 'completed' as const } : e)
+        saveProject({ entities: newEntities })
+        return newEntities
+      })
+
+      toast.success(`Imagem de ${entityToRegen.name} regerada!`, {
+        style: { backgroundColor: '#16a34a', color: 'white', border: 'none' }
+      })
+
+    } catch (error) {
+      console.error("Entity image regeneration error", error)
+      setEntities(prev => prev.map((e, i) => i === index ? { ...e, status: 'error' as const } : e))
+      toast.error("Falha ao regerar imagem do personagem")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleUpdateEntityDescription = (index: number, newDescription: string) => {
+    const newEntities = [...entities]
+    newEntities[index] = { ...newEntities[index], description: newDescription }
+    setEntities(newEntities)
+    saveProject({ entities: newEntities })
+    toast.success(`Descrição de ${newEntities[index].name} salva!`)
+  }
+
   const handleGenerateImages = async () => {
     let activeProjectId = project.currentProjectId
     if (!activeProjectId) {
@@ -348,9 +403,19 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
   }
 
   const handleGenerateAudio = async () => {
-    await audioGen.generate()
+    let activeProjectId = project.currentProjectId
+    if (!activeProjectId) {
+      const savedProject = await project.save()
+      activeProjectId = savedProject?.id
+    }
+    const generatedBatches = await audioGen.generate({ projectId: activeProjectId, projectName: title })
     setCurrentStage('AUDIO')
-    setTimeout(() => saveProject(), 100)
+    setTimeout(() => {
+      project.save({
+        audioBatches: generatedBatches,
+        audioUrls: generatedBatches.filter((b: any) => b.status === 'completed' && b.url).map((b: any) => b.url!)
+      })
+    }, 100)
   }
 
   const handleTranscribe = async () => {
@@ -526,6 +591,8 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         <EntitiesStage
           entities={entities}
           onGenerate={handleGenerateEntities}
+          onRegenerateEntityImage={handleRegenerateEntityImage}
+          onUpdateEntityDescription={handleUpdateEntityDescription}
           isLoading={isLoading}
         />
       )}
@@ -535,7 +602,12 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
           segments={segments}
           imageStatuses={imageGen.imageStatuses}
           onGenerateAll={handleGenerateImages}
-          onRegenerate={async (idx) => { await imageGen.regenerate(idx, { projectId: project.currentProjectId, projectName: title }); saveProject(); }}
+          onRegenerate={async (idx) => {
+            const newImagePath = await imageGen.regenerate(idx, { projectId: project.currentProjectId, projectName: title });
+            const updatedSegments = [...segments];
+            updatedSegments[idx] = { ...updatedSegments[idx], imagePath: newImagePath };
+            saveProject({ segments: updatedSegments });
+          }}
           onEditPrompt={imageGen.updatePrompt}
           isLoading={imageGen.isLoading}
           systemPrompt={imageSystemPrompt}
@@ -547,7 +619,17 @@ export default function SimpleStoryFlow({ onBack, projectId }: SimpleStoryFlowPr
         <AudioStage
           batches={audioGen.batches}
           onGenerate={handleGenerateAudio}
-          onRegenerateBatch={async (idx) => { await audioGen.regenerateBatch(idx); saveProject(); }}
+          onRegenerateBatch={async (index) => {
+            const updatedBatches = await audioGen.regenerateBatch(index, undefined, { projectId: project.currentProjectId, projectName: title });
+            if (updatedBatches) {
+              project.save({
+                audioBatches: updatedBatches,
+                audioUrls: updatedBatches.filter((b: any) => b.status === 'completed' && b.url).map((b: any) => b.url!)
+              });
+            } else {
+              project.save();
+            }
+          }}
           isLoading={audioGen.isLoading}
         />
       )}

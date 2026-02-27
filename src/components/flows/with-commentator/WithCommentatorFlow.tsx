@@ -133,7 +133,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       audioUrls: audioGen.batches.filter(b => b.status === 'completed' && b.url).map(b => b.url!),
       audioBatches: audioGen.batches,
       audioSystemPrompt,
-      transcriptionResults: transcription.results
+      transcriptionResults: transcription.results.filter(r => audioGen.batches.some(b => b.url === r.url))
     }),
     onLoad: (data: LoadedProjectData) => {
       if (data.name) setTitle(data.name)
@@ -316,7 +316,12 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
       setCurrentStage('AUDIO')
       return
     }
-    await audioGen.generate()
+    let activeProjectId = project.currentProjectId
+    if (!activeProjectId) {
+      const savedProject = await project.save()
+      activeProjectId = savedProject?.id
+    }
+    await audioGen.generate({ projectId: activeProjectId, projectName: title })
     setCurrentStage('AUDIO')
   }
 
@@ -586,7 +591,12 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
                             {seg.imagePath && status !== 'generating' ? (
                               <div className="relative group">
                                 <img src={seg.imagePath} alt="Scene" className="w-full rounded-lg" />
-                                <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title })}>
+                                <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={async () => {
+                                  const newImagePath = await imageGen.regenerate(index, { projectId: project.currentProjectId, projectName: title });
+                                  const updatedSegments = [...segments];
+                                  updatedSegments[index] = { ...updatedSegments[index], imagePath: newImagePath };
+                                  project.save({ segments: updatedSegments });
+                                }}>
                                   <RefreshCw className="w-4 h-4" />
                                 </Button>
                               </div>
@@ -622,7 +632,7 @@ export default function WithCommentatorFlow({ onBack, projectId }: WithCommentat
           batches={audioGen.batches}
           expectedBatches={expectedBatches}
           onGenerate={handleGenerateAudio}
-          onRegenerateBatch={(index) => audioGen.regenerateBatch(index, expectedBatches)}
+          onRegenerateBatch={(index) => audioGen.regenerateBatch(index, expectedBatches, { projectId: project.currentProjectId, projectName: title })}
           isLoading={audioGen.isLoading}
           voiceNarrator={audioVoiceNarrator}
           setVoiceNarrator={setAudioVoiceNarrator}

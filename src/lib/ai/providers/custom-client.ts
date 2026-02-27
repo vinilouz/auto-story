@@ -218,3 +218,134 @@ export async function audioRequest(
     console.error("Error:", error);
   }
 }
+
+import { VideoModelConfig } from "@/config/video-models"
+
+const VIDEO_LIMITS: Record<string, number> = {
+  "grok-imagine-video": 10,
+  "veo-3.1-fast": 2,
+  "default": 10,
+}
+
+const videoQueues: Record<string, { count: number; pending: ((value: void | PromiseLike<void>) => void)[] }> = {}
+
+function getVideoQueue(modelId: string) {
+  if (!videoQueues[modelId]) videoQueues[modelId] = { count: 0, pending: [] }
+  return videoQueues[modelId]
+}
+
+export async function generateVideoClip(
+  prompt: string,
+  referenceImageUrl: string,
+  model: VideoModelConfig
+): Promise<string> {
+  const BASE_URL = process.env.AIR_BASE_URL
+  const API_KEY = process.env.AIR_API_KEY
+
+  if (!BASE_URL || !API_KEY) {
+    throw new Error('AIR_BASE_URL and AIR_API_KEY environment variables are required')
+  }
+
+  const q = getVideoQueue(model.id)
+  const limit = VIDEO_LIMITS[model.id] ?? VIDEO_LIMITS.default
+
+  if (q.count >= limit) {
+    await new Promise<void>((resolve) => q.pending.push(resolve))
+  }
+  q.count++
+
+  try {
+    const payload: Record<string, unknown> = {
+      model: model.id,
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      response_format: 'url',
+      sse: true,
+      ...model.extraParams
+    }
+
+    if (model.referenceImageField === 'image_urls') {
+      payload.image_urls = [referenceImageUrl]
+    } else {
+      payload[model.referenceImageField] = referenceImageUrl
+    }
+
+    const reqId = Date.now().toString()
+
+    if (process.env.DEBUG_LOG === 'true') {
+      const logDir = path.join(process.cwd(), 'logs')
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+      fs.writeFileSync(path.join(logDir, `video_payload_${reqId}.json`), JSON.stringify(truncateBase64(payload), null, 2))
+    }
+
+    console.log(`[generateVideoClip] BASE_URL: ${BASE_URL}/v1`)
+    console.log(`[generateVideoClip] Model: ${model.id}`)
+    console.log(`[generateVideoClip] API Payload:`, JSON.stringify(truncateBase64(payload), null, 2))
+
+    const response = await fetch(`${BASE_URL}/v1/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[generateVideoClip] API Error Response:`, errorText)
+      if (process.env.DEBUG_LOG === 'true') {
+        const logDir = path.join(process.cwd(), 'logs')
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+        fs.writeFileSync(path.join(logDir, `video_error_${reqId}.log`), errorText)
+      }
+      throw new Error(`Video API Error: ${response.statusText} - ${errorText}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response body for video generation')
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let videoUrl = ''
+    let debugStreamData = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunkText = decoder.decode(value)
+      if (process.env.DEBUG_LOG === 'true') {
+        debugStreamData += chunkText
+      }
+      buffer += chunkText
+      const chunks = buffer.split('\n\n')
+      buffer = chunks.pop() || ''
+      for (const chunk of chunks) {
+        if (!chunk.startsWith('data: ')) continue
+        const dataStr = chunk.slice(6)
+        if (dataStr === '[DONE]' || dataStr === ': keepalive') continue
+        try {
+          const data = JSON.parse(dataStr)
+          const url = data.data?.[0]?.url || data.url
+          if (url) videoUrl = url
+        } catch { }
+      }
+    }
+
+    if (process.env.DEBUG_LOG === 'true') {
+      const logDir = path.join(process.cwd(), 'logs')
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+      fs.writeFileSync(path.join(logDir, `video_stream_${reqId}.log`), debugStreamData)
+    }
+
+    if (!videoUrl) throw new Error('No video URL in response')
+
+    console.log(`[generateVideoClip] API Response: ${videoUrl.substring(0, 80)}...`)
+    return videoUrl
+  } finally {
+    q.count--
+    const next = q.pending.shift()
+    if (next) next()
+  }
+}

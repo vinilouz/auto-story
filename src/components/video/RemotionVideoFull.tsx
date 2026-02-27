@@ -1,12 +1,10 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, Audio, Sequence, Video } from 'remotion';
 import { TransitionSeries, linearTiming } from '@remotion/transitions';
 import { fade } from '@remotion/transitions/fade';
 import { wipe } from '@remotion/transitions/wipe';
 import { slide } from '@remotion/transitions/slide';
 import { RemotionVideoProps } from '@/lib/video/types';
-import { REMOTION_DEFAULT_FPS } from '@/remotion/constants';
-import { Scene } from './Scene';
 import { CaptionsLayer } from './CaptionsLayer';
 
 const PRESENTATIONS: Record<string, any> = {
@@ -15,16 +13,11 @@ const PRESENTATIONS: Record<string, any> = {
   slide: slide(),
 };
 
-export const RemotionVideo: React.FC<RemotionVideoProps> = ({ scenes, audioTracks, captions, captionStyle, transitionOverride, videoVolume }) => {
+export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({ scenes, audioTracks, captions, captionStyle, transitionOverride, videoVolume }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
       {/* Audio Tracks */}
-
-
-      {/* We need to sequence audio tracks properly */}
       {audioTracks.map((track, i) => (
-        // Remotion <Audio> by itself plays from frame 0 relative to parent.
-        // We can wrap in Sequence to delay start.
         <Sequence key={`audio-${i}`} from={track.startFrame} durationInFrames={track.durationInFrames}>
           <Audio src={track.src} volume={track.volume || 1} />
         </Sequence>
@@ -32,15 +25,23 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({ scenes, audioTrack
 
       {/* Visual Track with Transitions */}
       <TransitionSeries>
-        {scenes.map((scene, i) => {
-          // Determine Transition
-          // The transition is applied AFTER this sequence, connecting to the NEXT.
-          // The data model has `transition` on the scene object.
-
+        {scenes.map((scene) => {
           return (
             <React.Fragment key={scene.id}>
               <TransitionSeries.Sequence durationInFrames={scene.durationInFrames}>
-                <Scene scene={scene} videoVolume={videoVolume} />
+                <AbsoluteFill style={{ overflow: 'hidden', backgroundColor: 'black' }}>
+                  <Video
+                    src={scene.imageUrl}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                    playbackRate={1}
+                    volume={videoVolume ?? 0.5}
+                    loop={true}
+                  />
+                </AbsoluteFill>
               </TransitionSeries.Sequence>
 
               {scene.transition && scene.transition.type !== 'none' && transitionOverride !== 'none' && PRESENTATIONS[transitionOverride === 'random' || !transitionOverride ? scene.transition.type : transitionOverride] && (

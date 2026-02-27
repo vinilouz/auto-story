@@ -56,6 +56,7 @@ export interface ProjectData {
     error?: string;
   }>;
   transcriptionResults?: any[];
+  videoModel?: string;
 }
 
 export interface ProjectSummary {

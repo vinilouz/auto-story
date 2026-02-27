@@ -59,13 +59,13 @@ const normalizeProps = (props: any, origin: string): any => ({
   audioTracks: props.audioTracks?.map((t: any) => ({ ...t, src: toAbsoluteUrl(t.src, origin) })) ?? [],
 });
 
-const RENDER_CONCURRENCY = Math.max(1, Math.ceil(os.cpus().length / 2));
+const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
 
 export async function POST(req: NextRequest) {
   let tempOutput = "";
   try {
     const body = await req.json();
-    const { videoProps, projectId, projectName } = body;
+    const { videoProps, projectId, projectName, compositionId = "CaptionedVideo" } = body;
 
     if (!videoProps) {
       return NextResponse.json(
@@ -78,7 +78,6 @@ export async function POST(req: NextRequest) {
     const normalizedProps = normalizeProps(videoProps, origin);
 
     const bundleLocation = await ensureBundle();
-    const compositionId = "CaptionedVideo";
 
     console.log(`Rendering video (concurrency: ${RENDER_CONCURRENCY})...`);
     tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
@@ -124,7 +123,7 @@ export async function POST(req: NextRequest) {
               ignoreCertificateErrors: true,
               enableMultiProcessOnLinux: true,
               disableWebSecurity: true,
-              gl: "swangle",
+              gl: "angle-egl",
             },
             onStart: (data: OnStartData) => {
               totalFrames = data.frameCount;
@@ -156,7 +155,7 @@ export async function POST(req: NextRequest) {
           let videoUrl: string;
 
           if (projectId && projectName) {
-            const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 10);
+            const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 40);
             const slug = cleanTitle(projectName) || 'untitled';
             const shortId = projectId.split('-')[0] || projectId.substring(0, 8);
             const dirName = `${slug}-${shortId}`;

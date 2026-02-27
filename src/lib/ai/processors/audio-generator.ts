@@ -68,7 +68,7 @@ async function audioRequest(
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `audio_${timestamp}_${Math.random().toString(36).substring(7)}.mp3`;
 
-  const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 10);
+  const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 40);
   const slug = cleanTitle(projectName) || 'untitled';
   const shortId = projectId.split('-')[0] || projectId.substring(0, 8);
   const dirName = `${slug}-${shortId}`;

@@ -16,5 +16,5 @@ export function cleanTitle(text: string): string {
     .trim()
     .replace(/[^a-z0-9 -]/g, '')
     .replace(/\s+/g, '-')
-    .substring(0, 10)
+    .substring(0, 40)
 }

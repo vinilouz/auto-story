@@ -13,6 +13,7 @@ export interface VideoScene {
   durationInFrames: number;
   effect: SceneEffect;
   transition?: VideoTransition;
+  playbackRate?: number;
   // Metadata for debugging/display
   textFragment?: string;
   debug?: {
@@ -55,4 +56,6 @@ export interface RemotionVideoProps {
   audioTracks: AudioTrackConfig[];
   captions: Caption[];
   captionStyle?: CaptionStyle;
+  transitionOverride?: "random" | "none" | "fade" | "wipe" | "slide" | "";
+  videoVolume?: number;
 }

@@ -138,8 +138,10 @@ export function useImageGeneration(
       const data = await res.json()
       updateSegmentAtIndex(index, { imagePath: data.imageUrl })
       setStatus(index, null)
+      return data.imageUrl as string
     } catch {
       setStatus(index, 'error')
+      throw new Error('Regeneration failed')
     }
   }
 

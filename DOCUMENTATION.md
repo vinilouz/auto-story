@@ -176,14 +176,14 @@ Renders the story with synchronized audio and subtitles using Remotion.
 
 ### Render Performance
 - Server-side MP4 render (`src/app/api/render/route.ts`) caches the Remotion bundle at module level — first request bundles, subsequent requests reuse.
-- Render concurrency is set to `cpus - 1` for parallel frame rendering.
+- Render concurrency uses all CPU cores for parallel frame rendering.
+- GL renderer: `angle-egl` (GPU-accelerated via EGL on Linux).
 - Transition presentations (`fade`, `wipe`, `slide`) are cached as module-level constants in `RemotionVideo.tsx`.
 - `SimpleStoryFlow` uses `useMemo` to stabilize `playerProps` passed to the Remotion Player, preventing re-mounts on unrelated state changes.
-- **Optimized video rendering constants** (`src/remotion/constants.ts`):
-  - Cache size: 1GB (up from 256MB) - reduces disk I/O for 15-minute videos
-  - CRF: 24 (down from 28) - better quality with 20% smaller files
-  - X264 preset: 'fast' (up from 'veryfast') - 10-20% better compression efficiency
-  - Expected results: 30-50% faster rendering, 20% smaller file size with acceptable quality tradeoff
+- **Video rendering constants** (`src/remotion/constants.ts`):
+  - Cache size: 1GB
+  - CRF: 24
+  - X264 preset: `ultrafast` — maximum encoding speed, acceptable quality for YouTube 1080p
 
 ### Transcription
 The system uses **ElevenLabs STT** (`src/lib/ai/transcription/elevenlabs.ts`):
@@ -191,3 +191,27 @@ The system uses **ElevenLabs STT** (`src/lib/ai/transcription/elevenlabs.ts`):
 - No API key required.
 - Cache: `*.elevenlabs.json`.
 - Requires a verified anonymous proxy for bypass.
+
+### Full Video Flow (`FullVideoFlow.tsx`)
+A video-first flow that generates complete video stories:
+1. Entrada (Input) — Script, video model selector, voice, image style, consistency
+2. Áudio (Audio) — Generate narration from full script
+3. Transcrição (Transcription) — Transcribe audio
+4. Divisão (Split) — Time-based split using transcription timestamps + video model clip duration (no character-based segmentation)
+5. Descrições (Visual Prompts) — Generate visual descriptions for each time segment
+6. Entidades (Entities) — Character consistency images (if enabled)
+7. Cenas (Images) — Generate scene images
+8. Vídeos (Video Clips) — img-to-video for each segment via AIR provider (`AIR_BASE_URL`/`AIR_API_KEY`)
+9. Render — Remotion composition concatenating video clips + audio + captions
+10. Download — ZIP export
+
+**Video Models** (`src/config/video-models.ts`):
+- `grok-imagine-video` — 6s clips
+- `veo-3.1-fast` — 8s clips
+- `wan-2.6` — 15s clips
+
+**Key difference from SimpleStoryFlow**: audio is generated **before** splitting (audio → transcription → time-based split), and the render concatenates video clips instead of static images.
+
+### Storage APIs
+- `src/lib/networking/s3-client.ts` implements a dedicated client instance for a custom S3-like object storage service that exposes REST endpoints for file uploads, chunked uploads, and file edits. It requires `S3_BASE_URL` and `S3_API_KEY` environment variables.
+

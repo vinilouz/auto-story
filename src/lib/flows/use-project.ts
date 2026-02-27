@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ProjectData, AudioBatch, TranscriptionResult, CommentatorConfig, EntityAsset, Segment } from "./types"
 import { cleanTitle } from "@/lib/utils"
 
 interface UseProjectConfig {
   projectId?: string
-  flowType: 'simple' | 'with-commentator'
+  flowType: 'simple' | 'with-commentator' | 'full-video'
   getProjectData: () => Omit<ProjectData, 'id' | 'flowType' | 'name'> & { name?: string }
   onLoad?: (data: LoadedProjectData) => void
 }
@@ -23,10 +23,12 @@ export interface LoadedProjectData {
   audioSystemPrompt?: string
   transcriptionResults?: TranscriptionResult[]
   commentator?: CommentatorConfig
+  videoModel?: string
 }
 
 export function useProject(config: UseProjectConfig) {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(config.projectId || null)
+  const projectIdRef = useRef<string | null>(config.projectId || null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(!!config.projectId)
 
@@ -43,6 +45,7 @@ export function useProject(config: UseProjectConfig) {
       if (res.ok) {
         const project = await res.json()
         setCurrentProjectId(project.id)
+        projectIdRef.current = project.id
         config.onLoad?.({
           name: project.name,
           consistency: project.consistency || false,
@@ -56,7 +59,8 @@ export function useProject(config: UseProjectConfig) {
           audioBatches: project.audioBatches,
           audioSystemPrompt: project.audioSystemPrompt,
           transcriptionResults: project.transcriptionResults,
-          commentator: project.commentator
+          commentator: project.commentator,
+          videoModel: project.videoModel
         })
       }
     } catch (error) {
@@ -80,7 +84,7 @@ export function useProject(config: UseProjectConfig) {
       }
 
       const projectData: ProjectData = {
-        id: currentProjectId || undefined,
+        id: projectIdRef.current || undefined,
         name: resolvedName,
         flowType: config.flowType,
         ...projectPayload,
@@ -96,6 +100,7 @@ export function useProject(config: UseProjectConfig) {
       if (res.ok) {
         const savedProject = await res.json()
         setCurrentProjectId(savedProject.id)
+        projectIdRef.current = savedProject.id
         return savedProject
       } else {
         throw new Error('Failed to save')
@@ -117,17 +122,35 @@ export function useProject(config: UseProjectConfig) {
   }
 }
 
-export function determineStage(data: LoadedProjectData, flowType: 'simple' | 'with-commentator'): string {
+export function determineStage(data: LoadedProjectData, flowType: 'simple' | 'with-commentator' | 'full-video'): string {
+  if (flowType === 'full-video') {
+    if (data.segments?.some(s => s.videoPath)) return 'RENDER'
+    if (data.segments?.some(s => s.imagePath)) return 'VIDEOS'
+    if (data.segments?.some(s => s.imagePrompt)) {
+      if (data.consistency) {
+        if (!data.entities || data.entities.length === 0 || !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
+          return 'ENTITIES'
+        }
+      }
+      return 'IMAGES'
+    }
+    if (data.segments && data.segments.length > 0) return 'DESCRIPTIONS'
+    if (data.transcriptionResults && data.transcriptionResults.length > 0) return 'SPLIT'
+    if (data.audioBatches && data.audioBatches.some(b => b.status === 'completed')) return 'TRANSCRIPTION'
+    return 'INPUT'
+  }
   if (data.transcriptionResults && data.transcriptionResults.length > 0) {
     return 'TRANSCRIPTION'
   }
   if (data.audioBatches && data.audioBatches.some(b => b.status === 'completed')) {
     return 'AUDIO'
   }
-  if (data.consistency && data.entities && data.entities.length > 0 && !data.entities.every((e: EntityAsset) => e.status === 'completed')) {
-    return 'ENTITIES'
-  }
   if (data.segments && data.segments.some(s => s.imagePrompt)) {
+    if (data.consistency) {
+      if (!data.entities || data.entities.length === 0 || !data.entities.every(e => e.status === 'completed')) {
+        return 'ENTITIES'
+      }
+    }
     return 'IMAGES'
   }
   if (data.segments && data.segments.some(s => s.type === 'comment') && flowType === 'with-commentator') {

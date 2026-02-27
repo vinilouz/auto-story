@@ -4,6 +4,13 @@ import { Slider } from "@/components/ui/slider"
 import { Download, Loader2 } from "lucide-react"
 import { StageControls } from "@/components/shared/StageControls"
 import { VideoPlayer } from "@/components/video/VideoPlayer"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { RemotionVideoProps } from "@/lib/video/types"
 import { CaptionStyle } from "@/lib/flows/types"
 import { cn } from "@/lib/utils"
@@ -24,6 +31,12 @@ interface VideoStageProps {
     totalFrames?: number
   } | null
   colors?: string[]
+  transitionOverride?: "random" | "none" | "fade" | "wipe" | "slide" | ""
+  setTransitionOverride?: (val: "random" | "none" | "fade" | "wipe" | "slide" | "") => void
+  videoVolume?: number
+  setVideoVolume?: (val: number) => void
+  showVideoVolume?: boolean
+  compositionId?: "CaptionedVideo" | "CaptionedVideoFull"
 }
 
 export function VideoStage({
@@ -35,7 +48,13 @@ export function VideoStage({
   isGenerating,
   isRendering,
   renderProgress,
-  colors = ["#FFE81F", "#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF"]
+  colors = ["#FFE81F", "#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF"],
+  transitionOverride = "random",
+  setTransitionOverride,
+  videoVolume = 0.5,
+  setVideoVolume,
+  showVideoVolume = false,
+  compositionId = "CaptionedVideo"
 }: VideoStageProps) {
   const wordsPerLineOptions = [1, 2, 3, 4, 5, 6]
 
@@ -87,6 +106,38 @@ export function VideoStage({
                 ))}
               </div>
             </div>
+            {setTransitionOverride && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Transição Global</label>
+                <Select
+                  value={transitionOverride}
+                  onValueChange={(val) => setTransitionOverride(val as any)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="random">Aleatório</SelectItem>
+                    <SelectItem value="fade">Fade</SelectItem>
+                    <SelectItem value="wipe">Wipe</SelectItem>
+                    <SelectItem value="slide">Slide</SelectItem>
+                    <SelectItem value="none">Sem transições (Corte Seco)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {showVideoVolume && setVideoVolume && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Volume dos Vídeos: {Math.round(videoVolume * 100)}%</label>
+                <Slider
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={[videoVolume]}
+                  onValueChange={(val) => setVideoVolume(val[0])}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 mb-4">
@@ -125,7 +176,7 @@ export function VideoStage({
           )}
 
           {videoProps && (
-            <VideoPlayer props={{ ...videoProps, captionStyle }} />
+            <VideoPlayer props={{ ...videoProps, captionStyle, transitionOverride: transitionOverride as any || 'random', videoVolume }} compositionId={compositionId} />
           )}
 
           {videoProps && (

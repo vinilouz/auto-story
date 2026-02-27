@@ -9,6 +9,7 @@ interface VideoGenerationConfig {
   transcriptionResults: TranscriptionResult[]
   projectId?: string
   projectName?: string
+  compositionId?: "CaptionedVideo" | "CaptionedVideoFull"
 }
 
 export function useVideoGeneration(config: VideoGenerationConfig) {
@@ -78,11 +79,37 @@ export function useVideoGeneration(config: VideoGenerationConfig) {
         }))
       )
 
+      const videoDurations = await Promise.all(
+        segments.map(seg => {
+          if (seg.imageUrl && (seg.imageUrl.endsWith('.mp4') || seg.imageUrl.endsWith('.webm'))) {
+            return new Promise<number>((resolve) => {
+              const timeout = setTimeout(() => {
+                console.warn(`Timeout waiting for video metadata: ${seg.imageUrl}`);
+                resolve(5); // fallback
+              }, 5000);
+
+              const video = document.createElement('video');
+              video.src = seg.imageUrl;
+              video.onloadedmetadata = () => {
+                clearTimeout(timeout);
+                resolve(video.duration || 5);
+              };
+              video.onerror = () => {
+                clearTimeout(timeout);
+                resolve(5);
+              };
+            });
+          }
+          return Promise.resolve(5);
+        })
+      );
+
       const props = alignVideoProps(
         segments,
         orderedTranscriptions,
         validAudioUrls,
-        audioDurations
+        audioDurations,
+        videoDurations
       )
 
       if (props.durationInFrames <= 0) {
@@ -99,7 +126,7 @@ export function useVideoGeneration(config: VideoGenerationConfig) {
     }
   }
 
-  const renderVideo = async (captionStyle: CaptionStyle) => {
+  const renderVideo = async (captionStyle: CaptionStyle, transitionOverride?: string, videoVolume?: number) => {
     if (!videoProps) return
 
     setIsRendering(true)
@@ -110,9 +137,10 @@ export function useVideoGeneration(config: VideoGenerationConfig) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          videoProps: { ...videoProps, captionStyle },
+          videoProps: { ...videoProps, captionStyle, transitionOverride, videoVolume },
           projectId: config.projectId,
-          projectName: config.projectName
+          projectName: config.projectName,
+          compositionId: config.compositionId || "CaptionedVideo"
         })
       })
 

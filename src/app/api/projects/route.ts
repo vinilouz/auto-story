@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
       commentator: body.commentator,
       audioSystemPrompt: body.audioSystemPrompt,
       audioBatches: body.audioBatches,
-      transcriptionResults: body.transcriptionResults
+      transcriptionResults: body.transcriptionResults,
+      videoModel: body.videoModel
     }
 
     await StorageService.saveProject(project)

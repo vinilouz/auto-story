@@ -6,6 +6,7 @@ export interface Segment {
   entities?: string[]
   imagePrompt?: string
   imagePath?: string
+  videoPath?: string
 }
 
 export interface EntityAsset {
@@ -51,7 +52,7 @@ export interface CaptionStyle {
 export interface ProjectData {
   id?: string | null
   name: string
-  flowType: 'simple' | 'with-commentator'
+  flowType: 'simple' | 'with-commentator' | 'full-video'
   consistency: boolean
   scriptText: string
   segmentSize: number
@@ -65,6 +66,7 @@ export interface ProjectData {
   audioSystemPrompt?: string
   transcriptionResults?: TranscriptionResult[]
   commentator?: CommentatorConfig
+  videoModel?: string
 }
 
 export interface CommentatorConfig {

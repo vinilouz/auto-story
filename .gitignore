@@ -48,3 +48,5 @@ public/renders
 .agents/
 data/projects/
 public/projects/
+
+logs/*

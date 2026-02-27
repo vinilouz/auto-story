@@ -24,7 +24,7 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
   const [batches, setBatches] = useState<AudioBatch[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const generate = async () => {
+  const generate = async (overrideConfig?: { projectId?: string | null, projectName?: string }) => {
 
     setIsLoading(true)
 
@@ -35,8 +35,8 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
         payload = {
           text: config.getText(),
           voice: config.voice,
-          projectId: config.projectId,
-          projectName: config.projectName
+          projectId: overrideConfig?.projectId || config.projectId,
+          projectName: overrideConfig?.projectName || config.projectName
         }
       } else {
         payload = {
@@ -46,8 +46,8 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
             { speaker: 'narrator', voice: config.voices.narrator },
             { speaker: 'commentator', voice: config.voices.commentator }
           ],
-          projectId: config.projectId,
-          projectName: config.projectName
+          projectId: overrideConfig?.projectId || config.projectId,
+          projectName: overrideConfig?.projectName || config.projectName
         }
       }
 
@@ -73,7 +73,7 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
     }
   }
 
-  const regenerateBatch = useCallback(async (index: number, expectedBatches?: string[]) => {
+  const regenerateBatch = useCallback(async (index: number, expectedBatches?: string[], overrideConfig?: { projectId?: string | null, projectName?: string }) => {
     setBatches(prev => {
       const exists = prev.find(b => b.index === index)
       if (exists) {
@@ -97,8 +97,8 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
           text: config.getText(),
           voice: config.voice,
           targetBatchIndices: [index],
-          projectId: config.projectId,
-          projectName: config.projectName
+          projectId: overrideConfig?.projectId || config.projectId,
+          projectName: overrideConfig?.projectName || config.projectName
         }
       } else {
         payload = {
@@ -109,8 +109,8 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
             { speaker: 'commentator', voice: config.voices.commentator }
           ],
           targetBatchIndices: [index],
-          projectId: config.projectId,
-          projectName: config.projectName
+          projectId: overrideConfig?.projectId || config.projectId,
+          projectName: overrideConfig?.projectName || config.projectName
         }
       }
 
@@ -128,6 +128,7 @@ export function useAudioGeneration(config: AudioGenerationConfig) {
         if (updatedBatch) {
           setBatches(prev => prev.map(b => b.index === index ? updatedBatch : b))
         }
+        return data.batches
       }
     } catch (error) {
       console.error('Batch regeneration error:', error)

@@ -9,6 +9,15 @@ export interface VoiceConfig {
 
 export const NAGA_VOICES: VoiceConfig[] = [
   {
+    name: "Ana Alice",
+    id: "ana",
+    externalId: "ORgG8rwdAiMYRug8RJwR",
+    provider: "n",
+    description: "Friendly & Clear",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/user/zXiMrdBpbhZdW6zwEr7dRDdkNb02/voices/ORgG8rwdAiMYRug8RJwR/FFBswkEF5GGaucjRSvU6.mp3",
+  },
+  {
     name: "Adam",
     id: "adam",
     externalId: "pNInz6obpgDQGcFmaJgB",

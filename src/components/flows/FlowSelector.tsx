@@ -3,20 +3,21 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trash2, BookOpen, MessageSquare } from 'lucide-react'
+import { Trash2, BookOpen, MessageSquare, Film } from 'lucide-react'
 import SimpleStoryFlow from './simple/SimpleStoryFlow'
 import WithCommentatorFlow from './with-commentator/WithCommentatorFlow'
+import FullVideoFlow from './full-video/FullVideoFlow'
 
 interface Project {
   id: string
   name: string
-  flowType: 'simple' | 'with-commentator'
+  flowType: 'simple' | 'with-commentator' | 'full-video'
   createdAt: string
   updatedAt: string
 }
 
 export default function FlowSelector() {
-  const [selectedFlow, setSelectedFlow] = useState<'simple' | 'with-commentator' | null>(null)
+  const [selectedFlow, setSelectedFlow] = useState<'simple' | 'with-commentator' | 'full-video' | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
 
@@ -71,8 +72,10 @@ export default function FlowSelector() {
   if (selectedFlow) {
     if (selectedFlow === 'simple') {
       return <SimpleStoryFlow onBack={() => { setSelectedFlow(null); setSelectedProject(null) }} projectId={selectedProject?.id} />
-    } else {
+    } else if (selectedFlow === 'with-commentator') {
       return <WithCommentatorFlow onBack={() => { setSelectedFlow(null); setSelectedProject(null) }} projectId={selectedProject?.id} />
+    } else {
+      return <FullVideoFlow onBack={() => { setSelectedFlow(null); setSelectedProject(null) }} projectId={selectedProject?.id} />
     }
   }
 
@@ -102,11 +105,13 @@ export default function FlowSelector() {
                       <div className="flex items-center gap-2">
                         {project.flowType === 'simple' ? (
                           <BookOpen className="w-5 h-5 text-blue-500" />
+                        ) : project.flowType === 'full-video' ? (
+                          <Film className="w-5 h-5 text-purple-500" />
                         ) : (
                           <MessageSquare className="w-5 h-5 text-green-500" />
                         )}
                         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                          {project.flowType === 'simple' ? 'Simples' : 'Com Comentador'}
+                          {project.flowType === 'simple' ? 'Simples' : project.flowType === 'full-video' ? 'Vídeo Completo' : 'Com Comentador'}
                         </span>
                       </div>
                       <Button
@@ -165,6 +170,25 @@ export default function FlowSelector() {
               <CardContent>
                 <Button
                   onClick={() => setSelectedFlow('with-commentator')}
+                  className="w-full"
+                  size="lg"
+                >
+                  Começar
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer transition-all hover:scale-105 hover:shadow-lg">
+              <CardHeader>
+                <div className="text-4xl mb-4">🎬</div>
+                <CardTitle className="text-2xl">História em Vídeo</CardTitle>
+                <CardDescription className="text-base">
+                  Gere vídeos a partir de imagens com modelos de IA, criando uma história visual completa
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setSelectedFlow('full-video')}
                   className="w-full"
                   size="lg"
                 >

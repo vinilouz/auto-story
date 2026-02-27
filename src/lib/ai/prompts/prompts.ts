@@ -151,3 +151,6 @@ ${segmentsJson}
 export const COMMENTATOR_IMAGE_GENERATION_PROMPT = (description: string) =>
   `Generate a high - fidelity scene based on the provided reference image.
     ${description} `
+
+export const GENERATE_VIDEO_PROMPT = (prompt: string) =>
+  `${prompt} no voice, no speak, only sfx`

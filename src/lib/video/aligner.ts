@@ -448,19 +448,165 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 
 // --- Main Export ---
 
+export class ContinuousAlignmentStrategy implements AlignmentStrategy {
+  private static EFFECTS: SceneEffect[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
+  private static TRANSITIONS: VideoTransition['type'][] = ['fade', 'wipe', 'slide'];
+  private static TRANSITION_DURATION = 30; // 30 frames
+
+  align(context: AlignmentContext & { videoDurations?: number[] }): RemotionVideoProps {
+    const { segments, transcriptionResults, audioUrls, audioDurations, videoDurations, fps } = context;
+
+    // 1. Calculate Audio Duration
+    let totalAudioDurationSeconds = 0;
+    const audioTracks: AudioTrackConfig[] = [];
+
+    transcriptionResults.forEach((result, batchIndex) => {
+      const words = Array.isArray(result) ? result : (result.words || []);
+      const lastWord = words[words.length - 1];
+
+      let durationSeconds = 0;
+      if (audioDurations && audioDurations[batchIndex]) {
+        durationSeconds = audioDurations[batchIndex];
+      } else {
+        durationSeconds = lastWord ? lastWord.endMs / 1000 : 0;
+      }
+
+      const durationFrames = Math.ceil(durationSeconds * fps);
+
+      audioTracks.push({
+        src: audioUrls[batchIndex],
+        startFrame: Math.round(totalAudioDurationSeconds * fps),
+        durationInFrames: durationFrames
+      });
+
+      totalAudioDurationSeconds += durationSeconds;
+    });
+
+    // 2. Calculate Video Duration
+    let totalRawVideoSeconds = 0;
+    const rawVideoDurationsSeconds: number[] = [];
+    segments.forEach((seg, i) => {
+      let dur = 5; // Default 5 seconds se nao vier nada
+      if (videoDurations && videoDurations[i]) {
+        dur = videoDurations[i];
+      }
+      rawVideoDurationsSeconds.push(dur);
+      totalRawVideoSeconds += dur;
+    });
+
+    const TRANSITION_FRAMES = ContinuousAlignmentStrategy.TRANSITION_DURATION;
+    const transitionSeconds = TRANSITION_FRAMES / fps;
+    const totalOverlapSeconds = segments.length > 1 ? (segments.length - 1) * transitionSeconds : 0;
+
+    const totalVideoDurationSeconds = Math.max(0, totalRawVideoSeconds - totalOverlapSeconds);
+
+    // 3. O tempo total é max(audio, video)
+    const targetTotalSeconds = Math.max(totalAudioDurationSeconds, totalVideoDurationSeconds);
+    const targetTotalFrames = Math.round(targetTotalSeconds * fps);
+
+    const totalVideoFrames = Math.max(0, Math.round(totalRawVideoSeconds * fps) - Math.round(totalOverlapSeconds * fps));
+    const framesToAdd = Math.max(0, targetTotalFrames - totalVideoFrames);
+
+    const scenes: VideoScene[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      let allocatedFrames = Math.round(rawVideoDurationsSeconds[i] * fps);
+      const isLast = i === segments.length - 1;
+
+      if (isLast) {
+        allocatedFrames += framesToAdd;
+      }
+
+      // Minimum frames safeguard (Remotion requires sequence >= transition)
+      if (allocatedFrames < TRANSITION_FRAMES + 1) allocatedFrames = TRANSITION_FRAMES + 1;
+
+      const effect: SceneEffect = 'static'; // Sem efeitos mirabolantes, mantemos "o trecho do vídeo exatamente como é"
+      const transitionType = ContinuousAlignmentStrategy.TRANSITIONS[i % ContinuousAlignmentStrategy.TRANSITIONS.length];
+
+      const playbackRate = 1.0; // Sem slowmo ou distorções no playback original
+
+      scenes.push({
+        id: seg.id,
+        imageUrl: seg.imageUrl || "",
+        startFrame: 0,
+        durationInFrames: allocatedFrames,
+        effect,
+        transition: !isLast ? {
+          type: transitionType,
+          durationInFrames: TRANSITION_FRAMES
+        } : undefined,
+        textFragment: seg.text,
+        playbackRate,
+        debug: {
+          startSeconds: 0,
+          endSeconds: 0,
+          durationSeconds: allocatedFrames / fps,
+        } as any
+      });
+    }
+
+    // Se no final sobrou frames para o final porque o audio é maior, vamos embutir no último vídeo extendendo a duração da Sequência?
+    // Remotion `<Video>` na verdade congela no último frame natural dele quando a sequência é maior que o dur do vídeo.
+    // O usuário pediu "em hipótese alguma vídeos pausarem".
+    // Isso significa que se audios.length > videos.length, e não tem material de vídeo suficiente, eles tem que loopar!
+    // A tag <Video> do remotion tem a prop loop default pra false, mas podemos setar loop no Scene.tsx se a cena estourar mas vamos resolver apenas respeitando max().
+
+    // 4. Captions (Strictly aligned to Audio)
+    let globalTimeOffset = 0;
+    const captions: any[] = [];
+
+    transcriptionResults.forEach((result, batchIndex) => {
+      const words = Array.isArray(result) ? result : (result.words || []);
+      const durationSeconds = audioTracks[batchIndex]?.durationInFrames / fps || 0;
+
+      words.forEach((w: any) => {
+        if (!w.text.trim()) return;
+        captions.push({
+          text: w.text,
+          startMs: Math.round((globalTimeOffset + (w.startMs / 1000)) * 1000),
+          endMs: Math.round((globalTimeOffset + (w.endMs / 1000)) * 1000)
+        });
+      });
+      globalTimeOffset += durationSeconds;
+    });
+
+    console.log("[Video] Continuous Alignment Complete.", {
+      scenes: scenes.length,
+      captions: captions.length,
+      durationFrames: targetTotalFrames,
+      durationSeconds: targetTotalSeconds
+    });
+
+    return {
+      fps,
+      durationInFrames: Math.max(1, targetTotalFrames), // Ensure > 0
+      width: REMOTION_CROPPED_WIDTH,
+      height: REMOTION_CROPPED_HEIGHT,
+      scenes,
+      audioTracks,
+      captions
+    };
+  }
+}
+
+// --- Main Export ---
+
 export function alignVideoProps(
   segments: { id: string; text: string; imageUrl: string }[],
   transcriptionResults: { words: Word[] }[],
   audioUrls: string[],
   audioDurations: number[] = [],
+  videoDurations: number[] = [],
   fps: number = REMOTION_DEFAULT_FPS
 ): RemotionVideoProps {
-  const strategy = new PrecisionAlignmentStrategy();
+  const strategy = new ContinuousAlignmentStrategy();
   return strategy.align({
     segments,
     transcriptionResults,
     audioUrls,
     audioDurations,
+    videoDurations,
     fps
   });
 }
