@@ -1,0 +1,356 @@
+{
+  "name": "Provider System Refactor",
+  "branchName": "ralph/provider-system-refactor",
+  "description": "Refactor AI provider architecture with auto-fallback registry system, consolidate UI components into single StoryFlow, and update processors to use new registry pattern.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Delete obsolete files",
+      "description": "As a developer, I want to remove obsolete files so that the codebase is clean and maintainable.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Delete src/lib/pipeline.ts",
+        "Delete src/lib/ai/providers/custom-client.ts",
+        "Delete src/components/createForm.tsx",
+        "Delete src/components/flows/ directory entirely",
+        "Delete src/components/shared/ directory entirely",
+        "Delete src/lib/flows/use-audio-generation.ts",
+        "Delete src/lib/flows/use-image-generation.ts",
+        "Delete src/lib/flows/use-transcription.ts",
+        "Delete src/lib/flows/use-video-generation.ts",
+        "Delete src/lib/flows/use-project.ts",
+        "Delete src/app/api/generate/route.ts",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-002",
+      "title": "Create env example",
+      "description": "As a developer, I want an updated .env.example so that new providers are documented.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Update .env.example with VOID_BASE_URL and VOID_API_KEY",
+        "Add NAGA_BASE_URL and NAGA_API_KEY",
+        "Add AIR_BASE_URL and AIR_API_KEY",
+        "Add DEBUG_LOG option",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-003",
+      "title": "Create AI config module",
+      "description": "As a developer, I want a centralized config module so that provider/model mappings are the single source of truth.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/config.ts with ActionType and ModelConfig types",
+        "Export ACTIONS record mapping action types to provider/model arrays",
+        "Export getCredentials function that reads env vars by provider name",
+        "Support generateText, generateImage, generateAudio action types",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-004",
+      "title": "Create AI registry module",
+      "description": "As a developer, I want a registry module so that providers can be registered and executed with automatic fallback.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/registry.ts with request/response types",
+        "Define TextRequest/TextResponse, ImageRequest/ImageResponse, AudioRequest/AudioResponse interfaces",
+        "Define Provider interface with optional handlers for each action",
+        "Implement registerProvider function to add providers to map",
+        "Implement execute function that tries providers in order from config",
+        "Log provider attempts and failures to console",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-003"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Create void provider",
+      "description": "As a developer, I want a void provider so that text and image generation works via void API.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/providers/void.ts",
+        "Implement generateText handler with streaming SSE response parsing",
+        "Implement generateImage handler with multimodal content support",
+        "Register provider with name 'void'",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Create naga provider",
+      "description": "As a developer, I want a naga provider so that audio generation works via naga API.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/providers/naga.ts",
+        "Implement generateAudio handler returning ArrayBuffer",
+        "Register provider with name 'naga'",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Create air provider",
+      "description": "As a developer, I want an air provider so that image generation fallback works via air API.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/providers/air.ts",
+        "Implement generateImage handler supporting base64 and URL responses",
+        "Register provider with name 'air'",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Create providers index",
+      "description": "As a developer, I want a providers index file so that all providers are auto-registered on import.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/providers/index.ts",
+        "Import void, naga, and air providers",
+        "Re-export execute function from registry",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-005",
+        "US-006",
+        "US-007"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Create flows types",
+      "description": "As a developer, I want consolidated types so that all flow-related types are in one place.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/flows/types.ts",
+        "Define Segment interface with text, type, entities, imagePrompt, imagePath",
+        "Define EntityAsset interface",
+        "Define AudioBatch interface",
+        "Define TranscriptionResult interface",
+        "Define CaptionStyle interface",
+        "Define CommentatorConfig interface",
+        "Export DEFAULT_CAPTION_STYLE constant",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "",
+      "dependsOn": []
+    },
+    {
+      "id": "US-010",
+      "title": "Create scene-visualizer processor",
+      "description": "As a developer, I want a scene visualizer processor so that scene descriptions are generated from segments.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/processors/scene-visualizer.ts",
+        "Define SceneVisualizationRequest interface",
+        "Implement generateSceneDescriptions function using execute",
+        "Parse JSON response with markdown code block extraction",
+        "Extract entities from image prompts when consistency enabled",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-008",
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "Create image-generator processor",
+      "description": "As a developer, I want an image generator processor so that images are generated using the registry.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/processors/image-generator.ts",
+        "Define GenerateImageRequest interface",
+        "Implement resolveImage helper for local file conversion to data URL",
+        "Implement generateSingleImage function using execute",
+        "Handle reference images and system prompts",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-008",
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "Create audio-generator processor",
+      "description": "As a developer, I want an audio generator processor so that audio is generated and saved to disk.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/processors/audio-generator.ts",
+        "Define AudioBatch interface",
+        "Implement audioDir helper for project-scoped paths",
+        "Implement generateAndSave helper for single audio generation",
+        "Implement generateAudio function with batch processing and retries",
+        "Process batches in parallel with staggered delays",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-008",
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "Create commentator processor",
+      "description": "As a developer, I want a commentator processor so that comments are generated with commentator personality.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/ai/processors/commentator.ts",
+        "Implement generateCommentsWithCommentator function using execute",
+        "Parse JSON response with markdown code block extraction",
+        "Map response items to Segment types (comment or scene_text)",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-008",
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-014",
+      "title": "Create consolidated hooks",
+      "description": "As a developer, I want all hooks in one file so that they are easy to maintain and import.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/lib/flows/hooks.ts",
+        "Implement useAudio hook with generate and regenerateBatch",
+        "Implement useTranscription hook with transcribe and retry",
+        "Implement useVideo hook with generate and render with SSE progress",
+        "Implement useProject hook with load and save",
+        "Implement useDownload hook with downloadZip",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-015",
+      "title": "Create StoryFlow component",
+      "description": "As a developer, I want a single StoryFlow component so that the UI is consolidated and maintainable.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Create src/components/StoryFlow.tsx",
+        "Define Stage type with all pipeline stages",
+        "Implement getStages helper filtering by mode and consistency",
+        "Implement stage state management with maxStep calculation",
+        "Implement all stage render sections (input, commentator, comments, descriptions, entities, images, audio, transcription, video)",
+        "Implement exec object with per-stage action logic",
+        "Implement bottom bar with back/execute/next buttons",
+        "Support both simple and commentator modes",
+        "bun run typecheck passes",
+        "bun run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-014"
+      ]
+    },
+    {
+      "id": "US-016",
+      "title": "Update Home page",
+      "description": "As a developer, I want an updated home page so that users can select flow type and manage projects.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Update src/app/page.tsx",
+        "Implement project list with delete functionality",
+        "Implement flow type selection cards (simple/commentator)",
+        "Render StoryFlow when flow selected",
+        "Load projects on mount",
+        "bun run typecheck passes",
+        "bun run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-015"
+      ]
+    },
+    {
+      "id": "US-017",
+      "title": "Update API routes",
+      "description": "As a developer, I want updated API routes so that they use the new processors.\n\nContext: Read prd.md in the root directory for the full specification and code references.",
+      "acceptanceCriteria": [
+        "Update src/app/api/generate/audio/route.ts to use generateAudio processor",
+        "Update src/app/api/generate/commentator/route.ts to use generateCommentsWithCommentator",
+        "Update src/app/api/generate/descriptions/route.ts to use generateSceneDescriptions",
+        "Update src/app/api/generate/entities/descriptions/route.ts to use execute directly",
+        "Update src/app/api/generate/images/route.ts to use generateSingleImage with storage",
+        "Update src/app/api/generate/split/route.ts to use splitText",
+        "bun run typecheck passes",
+        "bun run lint passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-010",
+        "US-011",
+        "US-012",
+        "US-013"
+      ]
+    }
+  ]
+}
