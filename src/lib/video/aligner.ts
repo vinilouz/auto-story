@@ -482,11 +482,11 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       totalAudioDurationSeconds += durationSeconds;
     });
 
-    // 2. Calculate Video Duration
+    // 2. Calculate Video Duration (raw, sem subtrair overlaps)
     let totalRawVideoSeconds = 0;
     const rawVideoDurationsSeconds: number[] = [];
     segments.forEach((seg, i) => {
-      let dur = 5; // Default 5 seconds se nao vier nada
+      let dur = 5;
       if (videoDurations && videoDurations[i]) {
         dur = videoDurations[i];
       }
@@ -495,36 +495,23 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     });
 
     const TRANSITION_FRAMES = ContinuousAlignmentStrategy.TRANSITION_DURATION;
-    const transitionSeconds = TRANSITION_FRAMES / fps;
-    const totalOverlapSeconds = segments.length > 1 ? (segments.length - 1) * transitionSeconds : 0;
 
-    const totalVideoDurationSeconds = Math.max(0, totalRawVideoSeconds - totalOverlapSeconds);
-
-    // 3. O tempo total é max(audio, video)
-    const targetTotalSeconds = Math.max(totalAudioDurationSeconds, totalVideoDurationSeconds);
+    const targetTotalSeconds = Math.max(totalAudioDurationSeconds, totalRawVideoSeconds);
     const targetTotalFrames = Math.round(targetTotalSeconds * fps);
-
-    const totalVideoFrames = Math.max(0, Math.round(totalRawVideoSeconds * fps) - Math.round(totalOverlapSeconds * fps));
-    const framesToAdd = Math.max(0, targetTotalFrames - totalVideoFrames);
 
     const scenes: VideoScene[] = [];
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
-      let allocatedFrames = Math.round(rawVideoDurationsSeconds[i] * fps);
+      const naturalFrames = Math.round(rawVideoDurationsSeconds[i] * fps);
       const isLast = i === segments.length - 1;
 
-      if (isLast) {
-        allocatedFrames += framesToAdd;
-      }
+      let allocatedFrames = naturalFrames;
 
-      // Minimum frames safeguard (Remotion requires sequence >= transition)
       if (allocatedFrames < TRANSITION_FRAMES + 1) allocatedFrames = TRANSITION_FRAMES + 1;
 
-      const effect: SceneEffect = 'static'; // Sem efeitos mirabolantes, mantemos "o trecho do vídeo exatamente como é"
+      const effect: SceneEffect = 'static';
       const transitionType = ContinuousAlignmentStrategy.TRANSITIONS[i % ContinuousAlignmentStrategy.TRANSITIONS.length];
-
-      const playbackRate = 1.0; // Sem slowmo ou distorções no playback original
 
       scenes.push({
         id: seg.id,
@@ -537,7 +524,6 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
           durationInFrames: TRANSITION_FRAMES
         } : undefined,
         textFragment: seg.text,
-        playbackRate,
         debug: {
           startSeconds: 0,
           endSeconds: 0,
@@ -545,12 +531,6 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
         } as any
       });
     }
-
-    // Se no final sobrou frames para o final porque o audio é maior, vamos embutir no último vídeo extendendo a duração da Sequência?
-    // Remotion `<Video>` na verdade congela no último frame natural dele quando a sequência é maior que o dur do vídeo.
-    // O usuário pediu "em hipótese alguma vídeos pausarem".
-    // Isso significa que se audios.length > videos.length, e não tem material de vídeo suficiente, eles tem que loopar!
-    // A tag <Video> do remotion tem a prop loop default pra false, mas podemos setar loop no Scene.tsx se a cena estourar mas vamos resolver apenas respeitando max().
 
     // 4. Captions (Strictly aligned to Audio)
     let globalTimeOffset = 0;

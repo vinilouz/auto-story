@@ -13,6 +13,9 @@ export function splitByTranscriptionTime(
   if (words.length === 0) return []
 
   const segments: TranscriptionSegment[] = []
+  const audioDurationMs = words[words.length - 1].endMs
+  const minSegments = Math.ceil(audioDurationMs / clipDurationMs)
+
   let currentWords: TranscriptionWord[] = []
   let segmentStartMs = words[0].startMs
   let nextBoundary = segmentStartMs + clipDurationMs
@@ -36,6 +39,15 @@ export function splitByTranscriptionTime(
       text: currentWords.map(w => w.text).join(' '),
       startMs: segmentStartMs,
       endMs: currentWords[currentWords.length - 1].endMs
+    })
+  }
+
+  while (segments.length < minSegments) {
+    const lastEnd = segments.length > 0 ? segments[segments.length - 1].endMs : 0
+    segments.push({
+      text: '',
+      startMs: lastEnd,
+      endMs: Math.min(lastEnd + clipDurationMs, audioDurationMs)
     })
   }
 

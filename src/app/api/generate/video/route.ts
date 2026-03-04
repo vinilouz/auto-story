@@ -79,30 +79,25 @@ export async function POST(request: NextRequest) {
     const videoUrl = await generateVideoClip(body.prompt, imageUrl, model)
 
     if (body.projectId && body.projectName && videoUrl.startsWith('http')) {
-      try {
-        const videoResponse = await fetch(videoUrl)
-        if (!videoResponse.ok) throw new Error('Failed to download video')
+      const videoResponse = await fetch(videoUrl)
+      if (!videoResponse.ok) throw new Error('Failed to download video')
 
-        const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
-        const slug = cleanTitle(body.projectName)
-        const shortId = body.projectId.split('-')[0] || body.projectId.substring(0, 8)
-        const dirName = `${slug}-${shortId}`
-        const videosDir = path.join(process.cwd(), 'public', 'projects', dirName, 'videos')
+      const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
+      const slug = cleanTitle(body.projectName)
+      const shortId = body.projectId.split('-')[0] || body.projectId.substring(0, 8)
+      const dirName = `${slug}-${shortId}`
+      const videosDir = path.join(process.cwd(), 'public', 'projects', dirName, 'videos')
 
-        if (!fs.existsSync(videosDir)) {
-          await fs.promises.mkdir(videosDir, { recursive: true })
-        }
-
-        const fileName = `clip-${Date.now()}.mp4`
-        const outputPath = path.join(videosDir, fileName)
-        await fs.promises.writeFile(outputPath, videoBuffer)
-
-        const localUrl = `/projects/${dirName}/videos/${fileName}`
-        return NextResponse.json({ videoUrl: localUrl })
-      } catch (downloadError) {
-        console.error('[Video API] Download/save error:', downloadError)
-        return NextResponse.json({ videoUrl })
+      if (!fs.existsSync(videosDir)) {
+        await fs.promises.mkdir(videosDir, { recursive: true })
       }
+
+      const fileName = `clip-${Date.now()}.mp4`
+      const outputPath = path.join(videosDir, fileName)
+      await fs.promises.writeFile(outputPath, videoBuffer)
+
+      const localUrl = `/projects/${dirName}/videos/${fileName}`
+      return NextResponse.json({ videoUrl: localUrl })
     }
 
     return NextResponse.json({ videoUrl })

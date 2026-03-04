@@ -51,7 +51,7 @@ export function VideoStage({
   colors = ["#FFE81F", "#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF"],
   transitionOverride = "random",
   setTransitionOverride,
-  videoVolume = 0.5,
+  videoVolume = 0.2,
   setVideoVolume,
   showVideoVolume = false,
   compositionId = "CaptionedVideo"

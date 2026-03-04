@@ -8,23 +8,6 @@ if (!apiKey) {
   throw new Error('VOID_API_KEY environment variable is required')
 }
 
-function debugLog(data: any) {
-  if (process.env.debug_log !== 'true' && process.env.DEBUG_LOG !== 'true') return;
-  const id = data.id;
-  if (!id) return;
-
-  const logDir = path.join(process.cwd(), 'logs');
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-
-  const logFile = path.join(logDir, `request_${id}.log`);
-  const content = data.choices?.[0]?.delta?.content;
-  if (content) fs.appendFileSync(logFile, content);
-
-  if (data.usage) {
-    fs.appendFileSync(logFile, `\n\n[USAGE]\n${JSON.stringify(data.usage, null, 2)}\n`);
-  }
-}
-
 function truncateBase64(obj: any): any {
   if (typeof obj === 'string') {
     if (obj.startsWith('data:image/') && obj.length > 100) {
@@ -47,15 +30,22 @@ function truncateBase64(obj: any): any {
   return obj;
 }
 
-export async function generateText(prompt: string): Promise<string> {
+export async function generateText(prompt: string, model: string = 'gpt-5.2'): Promise<string> {
   const payload = {
-    model: 'gemini-3-flash-preview',
+    model,
     messages: [{ role: 'user', content: prompt }],
-    stream: true,
   };
 
+  const reqId = Date.now().toString();
+
+  if (process.env.DEBUG_LOG === 'true') {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    fs.writeFileSync(path.join(logDir, `text_payload_${reqId}.json`), JSON.stringify(truncateBase64(payload), null, 2));
+  }
+
   console.log(`[generateText] BASE_URL: ${endpoint}/v1`);
-  console.log(`[generateText] API Payload:`, JSON.stringify(payload, null, 2));
+  console.log(`[generateText] API Payload:`, JSON.stringify(truncateBase64(payload), null, 2));
 
   const response = await fetch(`${endpoint}/v1/chat/completions`, {
     method: 'POST',
@@ -67,44 +57,172 @@ export async function generateText(prompt: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Text API Error: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error(`[generateText] API Error Response:`, errorText);
+
+    if (process.env.DEBUG_LOG === 'true') {
+      const logDir = path.join(process.cwd(), 'logs');
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+      fs.writeFileSync(path.join(logDir, `text_error_${reqId}.log`), errorText);
+    }
+
+    throw new Error(`Text API Error: ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (process.env.DEBUG_LOG === 'true') {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    fs.writeFileSync(path.join(logDir, `text_response_${reqId}.json`), JSON.stringify(truncateBase64(data), null, 2));
+  }
+
+  if (!content) {
+    throw new Error('Invalid response from text generation service');
+  }
+
+  console.log(`[generateText] API Response: Content length ${content.length}`);
+  return content;
+}
+
+interface ImageConfig {
+  aspect_ratio?: string
+  image_size?: string
+}
+
+const PROVIDER_RPM = {
+  VOID: 30,
+  AIR: 3
+};
+
+const providerRequests: Record<string, number[]> = {
+  VOID: [],
+  AIR: []
+};
+
+function checkRPM(provider: 'VOID' | 'AIR'): boolean {
+  const now = Date.now();
+  const minuteAgo = now - 60000;
+  providerRequests[provider] = providerRequests[provider].filter(t => t > minuteAgo);
+  return providerRequests[provider].length < PROVIDER_RPM[provider];
+}
+
+function recordRequest(provider: 'VOID' | 'AIR') {
+  providerRequests[provider].push(Date.now());
+}
+
+async function fetchVoidImage(payload: any): Promise<string> {
+  const response = await fetch(`${process.env.VOID_BASE_URL}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.VOID_API_KEY}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Void API Error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const img = data.choices?.[0]?.message?.images?.[0];
+  const url = img?.image_url?.url || img?.url || '';
+
+  if (!url) throw new Error('No image URL in Void response');
+  return url;
+}
+
+async function fetchAirImage(prompt: string, referenceImages?: string | string[]): Promise<string> {
+  const images = Array.isArray(referenceImages) ? referenceImages : (referenceImages ? [referenceImages] : []);
+
+  const payload: any = {
+    model: "nano-banana-2",
+    prompt: prompt,
+    n: 1,
+    size: "1024x1024",
+    response_format: "url",
+    sse: true,
+    aspectRatio: "16:9",
+    resolution: "4K"
+  };
+
+  if (images.length > 0) {
+    payload.image_urls = images;
+  }
+
+  const reqId = Date.now().toString()
+
+  console.log(`[fetchAirImage] BASE_URL: ${process.env.AIR_BASE_URL}/v1`)
+  console.log(`[fetchAirImage] API Payload:`, JSON.stringify(truncateBase64(payload), null, 2))
+
+  if (process.env.DEBUG_LOG === 'true') {
+    const logDir = path.join(process.cwd(), 'logs')
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+    fs.writeFileSync(path.join(logDir, `air_payload_${reqId}.json`), JSON.stringify(truncateBase64(payload), null, 2))
+  }
+
+  const response = await fetch(`${process.env.AIR_BASE_URL}/v1/images/generations`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.AIR_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Air API Error: ${response.status} - ${errorText}`);
   }
 
   const reader = response.body?.getReader();
-  if (!reader) throw new Error('No response body');
+  if (!reader) throw new Error('No response body from Air');
 
   const decoder = new TextDecoder();
-  let fullContent = '';
+  let accumulatedData = '';
+  let imageUrl = '';
+  let debugStreamData = '';
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const chunk = decoder.decode(value);
-    const lines = chunk.split('\n');
+    const chunk = decoder.decode(value, { stream: true });
+    if (process.env.DEBUG_LOG === 'true') {
+      debugStreamData += chunk;
+    }
+    accumulatedData += chunk;
+    const lines = accumulatedData.split('\n\n');
+    accumulatedData = lines.pop() || '';
 
     for (const line of lines) {
       if (line.startsWith('data: ')) {
         const dataStr = line.slice(6);
-        if (dataStr === '[DONE]') continue;
-
+        if (dataStr === '[DONE]' || dataStr === ': keepalive') continue;
         try {
           const data = JSON.parse(dataStr);
-          debugLog(data);
-          const content = data.choices?.[0]?.delta?.content;
-          if (content) fullContent += content;
-        } catch { }
+          const url = data.data?.[0]?.url || data.url;
+          if (url) imageUrl = url;
+        } catch (e) {
+          console.warn(`[fetchAirImage] Failed to parse SSE data:`, dataStr.substring(0, 200));
+        }
       }
     }
   }
 
-  if (!fullContent) throw new Error('Invalid response from text generation service');
-  console.log(`[generateText] API Response: Stream completed, length: ${fullContent.length}`);
-  return fullContent;
-}
-interface ImageConfig {
-  aspect_ratio?: string
-  image_size?: string
+  if (process.env.DEBUG_LOG === 'true') {
+    const logDir = path.join(process.cwd(), 'logs')
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+    fs.writeFileSync(path.join(logDir, `air_stream_${reqId}.log`), debugStreamData)
+  }
+
+  console.log(`[fetchAirImage] Result: ${imageUrl ? imageUrl.substring(0, 80) + '...' : 'NO URL FOUND'}`)
+
+  if (!imageUrl) throw new Error('No image URL in Air SSE stream');
+  return imageUrl;
 }
 
 export async function generateImage(
@@ -112,47 +230,67 @@ export async function generateImage(
   imageConfig?: ImageConfig,
   referenceImages?: string | string[]
 ): Promise<string> {
-  const images = Array.isArray(referenceImages) ? referenceImages : (referenceImages ? [referenceImages] : [])
-  const content: any[] = [{ type: 'text', text: prompt }]
-  images.forEach(url => content.push({ type: 'image_url', image_url: { url } }))
+  const startTime = Date.now();
+  const TIMEOUT_MS = 130000;
+  const excludedProviders = new Set<'VOID' | 'AIR'>();
 
-  const payload: any = {
-    model: 'gemini-3-pro-image-preview',
-    messages: [{ role: 'user', content }],
-    responseModalities: ['IMAGE']
-  }
+  while (Date.now() - startTime < TIMEOUT_MS) {
+    let selectedProvider: 'VOID' | 'AIR' | null = null;
 
-  if (imageConfig) {
-    payload.image_config = {
-      aspect_ratio: imageConfig.aspect_ratio || '16:9',
-      image_size: imageConfig.image_size || '2K'
+    if (!excludedProviders.has('VOID') && checkRPM('VOID')) {
+      selectedProvider = 'VOID';
+    } else if (!excludedProviders.has('AIR') && checkRPM('AIR')) {
+      selectedProvider = 'AIR';
     }
+
+    if (selectedProvider) {
+      recordRequest(selectedProvider);
+      let attempt = 1;
+      const MAX_RETRIES = 3;
+
+      while (attempt <= MAX_RETRIES) {
+        try {
+          console.log(`[generateImage] Using provider: ${selectedProvider} (Attempt ${attempt})`);
+          if (selectedProvider === 'VOID') {
+            const images = Array.isArray(referenceImages) ? referenceImages : (referenceImages ? [referenceImages] : []);
+            const content: any[] = [{ type: 'text', text: prompt }];
+            images.forEach(url => content.push({ type: 'image_url', image_url: { url } }));
+
+            const payload = {
+              model: 'gemini-3.1-flash-image-preview',
+              messages: [{ role: 'user', content }],
+              responseModalities: ['IMAGE'],
+              image_config: {
+                aspect_ratio: imageConfig?.aspect_ratio || '16:9',
+                image_size: imageConfig?.image_size || '4K'
+              }
+            };
+            return await fetchVoidImage(payload);
+          } else {
+            return await fetchAirImage(prompt, referenceImages);
+          }
+        } catch (error) {
+          console.error(`[generateImage] ${selectedProvider} attempt ${attempt} failed:`, error);
+          if (attempt === MAX_RETRIES) {
+            excludedProviders.add(selectedProvider);
+            break;
+          }
+          attempt++;
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      continue;
+    }
+
+    if (excludedProviders.has('VOID') && excludedProviders.has('AIR')) {
+      throw new Error('Image generation failed: All providers exhausted');
+    }
+
+    console.log('[generateImage] No provider available (RPM limit), waiting 2s...');
+    await new Promise(r => setTimeout(r, 2000));
   }
 
-  console.log(`[generateImage] BASE_URL: ${endpoint}/v1`);
-  console.log(`[generateImage] API Payload:`, JSON.stringify(truncateBase64(payload), null, 2));
-
-  const response = await fetch(`${endpoint}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(payload)
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[generateImage] API Error Response:`, errorText);
-    throw new Error(`Image API Error: ${response.statusText} - ${errorText}`)
-  }
-
-  const data = await response.json()
-
-  console.log(`[generateImage] API Response:`, JSON.stringify(truncateBase64(data), null, 2));
-
-  const img = data.choices?.[0]?.message?.images?.[0];
-  return img?.image_url?.url || img?.url || "";
+  throw new Error('Image generation failed: Timeout reaching 130s');
 }
 
 export async function audioRequest(
@@ -170,8 +308,16 @@ export async function audioRequest(
     voice,
   };
 
+  const reqId = Date.now().toString();
+
+  if (process.env.DEBUG_LOG === 'true') {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    fs.writeFileSync(path.join(logDir, `audio_payload_${reqId}.json`), JSON.stringify(truncateBase64(payload), null, 2));
+  }
+
   console.log(`[audioRequest] BASE_URL: ${BASE_URL}/v1`);
-  console.log(`[audioRequest] API Payload:`, JSON.stringify(payload, null, 2));
+  console.log(`[audioRequest] API Payload:`, JSON.stringify(truncateBase64(payload), null, 2));
 
   try {
     const response = await fetch(
@@ -189,10 +335,14 @@ export async function audioRequest(
     if (!response.ok) {
       const text = await response.text();
       console.error(`[audioRequest] API Error Response: ${response.status}: ${text}`);
+      if (process.env.DEBUG_LOG === 'true') {
+        const logDir = path.join(process.cwd(), 'logs');
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        fs.writeFileSync(path.join(logDir, `audio_error_${reqId}.log`), text);
+      }
       return;
     }
     const audioBuffer = await response.arrayBuffer();
-
 
     if (saveToFile) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

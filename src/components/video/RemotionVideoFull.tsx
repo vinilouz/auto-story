@@ -1,5 +1,6 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Sequence, Video } from 'remotion';
+import { AbsoluteFill, Sequence } from 'remotion';
+import { Audio, Video } from '@remotion/media';
 import { TransitionSeries, linearTiming } from '@remotion/transitions';
 import { fade } from '@remotion/transitions/fade';
 import { wipe } from '@remotion/transitions/wipe';
@@ -37,9 +38,8 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({ scenes, audioT
                       height: '100%',
                       objectFit: 'cover'
                     }}
-                    playbackRate={1}
-                    volume={videoVolume ?? 0.5}
-                    loop={true}
+                    playbackRate={scene.playbackRate ?? 1}
+                    volume={videoVolume ?? 0.2}
                   />
                 </AbsoluteFill>
               </TransitionSeries.Sequence>

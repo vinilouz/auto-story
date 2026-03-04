@@ -108,4 +108,39 @@ export class S3Client {
     if (!response.ok) throw new Error('Failed to edit file');
     return response;
   }
+
+  static async uploadBase64(base64Data: string): Promise<string> {
+    if (base64Data.startsWith('http')) return base64Data;
+
+    const matches = base64Data.match(/^data:(.+?);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      throw new Error('Invalid base64 string format');
+    }
+
+    const mime = matches[1];
+    const data = matches[2];
+    const ext = mime.split('/')[1] || 'png';
+    const fileName = `img-${Date.now()}.${ext}`;
+    const buffer = Buffer.from(data, 'base64');
+    const blob = new Blob([new Uint8Array(buffer)], { type: mime });
+
+    const uploadResp = await this.uploadFile(blob, fileName);
+    const htmlText = await uploadResp.text();
+    const hrefMatch = htmlText.match(/href='([^']+)'/);
+
+    if (hrefMatch && hrefMatch[1]) {
+      const pageUrl = hrefMatch[1];
+      const pageResp = await fetch(pageUrl);
+      const pageHtml = await pageResp.text();
+      const filenameMatch = pageHtml.match(/<h2[^>]*>([^<]+)<\/h2>/i);
+
+      if (filenameMatch && filenameMatch[1]) {
+        const finalFilename = filenameMatch[1].trim();
+        return pageUrl.endsWith('/') ? `${pageUrl}${finalFilename}` : `${pageUrl}/${finalFilename}`;
+      } else {
+        return pageUrl.endsWith('/') ? `${pageUrl}${fileName}` : `${pageUrl}/${fileName}`;
+      }
+    }
+    throw new Error('Failed to extract S3 URL from response');
+  }
 }

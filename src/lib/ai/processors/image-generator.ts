@@ -1,4 +1,5 @@
 import { generateImage } from "@/lib/ai/providers/custom-client"
+import { S3Client } from "@/lib/networking/s3-client"
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -16,17 +17,13 @@ export interface GenerateImageRequest {
 const resolveImageUrl = async (url?: string): Promise<string | undefined> => {
   if (!url) return undefined
   if (url.startsWith('/projects/')) {
-    try {
-      const publicDir = path.join(process.cwd(), 'public')
-      const filePath = path.join(publicDir, url)
-      const buffer = await fs.readFile(filePath)
-      const ext = path.extname(filePath).toLowerCase().replace('.', '')
-      const mime = ext === 'jpg' ? 'jpeg' : ext
-      return `data:image/${mime};base64,${buffer.toString('base64')}`
-    } catch (error) {
-      console.error(`Failed to read local reference image ${url}:`, error)
-      return undefined
-    }
+    const publicDir = path.join(process.cwd(), 'public')
+    const filePath = path.join(publicDir, url)
+    const buffer = await fs.readFile(filePath)
+    const ext = path.extname(filePath).toLowerCase().replace('.', '')
+    const mime = ext === 'jpg' ? 'jpeg' : ext
+    const base64 = `data:image/${mime};base64,${buffer.toString('base64')}`
+    return S3Client.uploadBase64(base64)
   }
   return url
 }
