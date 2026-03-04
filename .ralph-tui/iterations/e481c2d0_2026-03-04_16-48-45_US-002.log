@@ -1,0 +1,101 @@
+# Iteration 2 Log
+
+## Metadata
+
+- **Task ID**: US-002
+- **Task Title**: Create AI config and registry modules
+- **Description**: As a developer, I want a centralized config and registry so that providers can be registered and executed with automatic fallback.
+
+Implementation: Create two files using the EXACT code from prd.md:
+1...
+- **Status**: completed
+- **Task Completed**: Yes
+- **Promise Detected**: Yes
+- **Started At**: 2026-03-04T19:48:45.979Z
+- **Ended At**: 2026-03-04T19:51:00.940Z
+- **Duration**: 2m 14s
+- **Input Tokens**: 17526
+- **Output Tokens**: 3140
+- **Total Tokens**: 20666
+- **Agent**: claude
+- **Model**: glm-5
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I'll start by reading the PRD and progress files to understand the context and get the exact code specifications.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/tasks/prd-provider-refactor.json[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/.ralph-tui/progress.md[0m
+[94m[Glob][0m pattern: [96msrc/lib/ai/**/*.ts[0m
+I see that `src/lib/ai/config.ts` already exists. Let me check the existing file and also look for the PRD md file with the exact code specifications.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/config.ts[0m
+[94m[Glob][0m pattern: [96m**/prd.md[0m
+[94m[Grep][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai[0m pattern: [96mregistry[0m
+Let me read the prd.md file to get the exact code specifications.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/prd.md[0m
+Let me read the specific sections from the prd.md file.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/prd.md[0m
+Now I have the exact code specifications. The existing `config.ts` has a different structure. I need to replace it and create the registry file. Let me implement both files.
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/config.ts[0m "export type ActionType = 'generateText' | 'generateImage' | 'generateAudio'
+
+export interface ModelConfig {
+  provider: string
+  model: string
+}
+
+// THE source of truth. Reorder = change priority. Add... (907 chars)"
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/registry.ts[0m "import { ActionType, ACTIONS, getCredentials } from './config'
+
+// ── Request/Response types ────────────────────────────────
+
+export interface TextRequest { prompt: string }
+export interface TextResp... (2346 chars)"
+Both files have been created. Let me run typecheck to verify the code.
+[94m[Bash][0m Run TypeScript typecheck $ bun run typecheck 2>&1
+
+[91m[Error: Exit code 1
+error: Script not found "typecheck"
+
+error: Script not found "typecheck"][0m
+Let me check available scripts and run tsc directly.
+[94m[Bash][0m Run TypeScript compiler to check types $ npx tsc --noEmit 2>&1 | head -50
+The errors are from other files that depend on the old config exports - those will be updated in subsequent user stories (US-003-US-008). Let me verify the new files themselves are correctly typed.
+[94m[Bash][0m Check types for new files only $ npx tsc --noEmit src/lib/ai/config.ts src/lib/ai/registry.ts 2>&1
+
+[91m[Error: Exit code 2
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(13,5): error TS2717: Subsequent property declarations must have the same type.  Property 'data' must be of type 'BufferSource', but here has type 'AllowSharedBufferSource'.
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(355,5): error TS2374: Duplicate index signature for type 'number'.
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(505,6): error TS2300: Duplicate identifier 'ImageBufferSource'.
+node_modules/typescript/lib/lib.dom.d.ts(18876,5): error TS2374: Duplicate index signature for type 'number'.
+node_modules/typescript/lib/lib.dom.d.ts(39206,6): error TS2300: Duplicate identifier 'ImageBufferSource'.
+
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(13,5): error TS2717: Subsequent property declarations must have the same type.  Property 'data' must be of type 'BufferSource', but here has type 'AllowSharedBufferSource'.
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(355,5): error TS2374: Duplicate index signature for type 'number'.
+node_modules/@types/dom-webcodecs/webcodecs.generated.d.ts(505,6): error TS2300: Duplicate identifier 'ImageBufferSource'.
+node_modules/typescript/lib/lib.dom.d.ts(18876,5): error TS2374: Duplicate index signature for type 'number'.
+node_modules/typescript/lib/lib.dom.d.ts(39206,6): error TS2300: Duplicate identifier 'ImageBufferSource'.][0m
+Those errors are from conflicting node_modules type definitions, not my code. Let me verify with skipLibCheck.
+[94m[Bash][0m Check types for new files only, skipping lib errors $ npx tsc --noEmit --skipLibCheck src/lib/ai/config.ts src/lib/ai/registry.ts 2>&1
+Both files are correctly typed. Let me verify the files meet all acceptance criteria by reading them.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/config.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/registry.ts[0m
+All acceptance criteria are met. Let me update the progress file.
+[94m[Edit][0m [95m/home/vinilouz/Projetos/auto-story/.ralph-tui/progress.md[0m edit: "## 2026-03-04 - US-001
+- Verified existing src/lib..." → "## 2026-03-04 - US-002
+- Replaced src/lib/ai/confi..."
+US-002 is complete.
+
+**Summary:**
+- Replaced `src/lib/ai/config.ts` with new registry pattern (ActionType, ModelConfig, ACTIONS record, getCredentials)
+- Created `src/lib/ai/registry.ts` with request/response types, Provider interface, registerProvider, and execute function with automatic fallback
+
+**Acceptance Criteria verified:**
+- ✅ ActionType union type with 3 actions
+- ✅ ModelConfig interface with provider/model
+- ✅ ACTIONS record with ordered fallback chains
+- ✅ getCredentials reads PROVIDER_BASE_URL and PROVIDER_API_KEY env vars
+- ✅ TextRequest/TextResponse, ImageRequest/ImageResponse, AudioRequest/AudioResponse interfaces
+- ✅ Provider interface with optional handlers
+- ✅ registerProvider using Map<string, Provider>
+- ✅ execute function with fallback chain, logging, and aggregated errors
+
+<promise>COMPLETE</promise>

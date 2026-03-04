@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "sessionId": "e481c2d0-8726-419d-a5f8-f4bf15c9c3f6",
+  "status": "running",
+  "startedAt": "2026-03-04T19:46:35.834Z",
+  "updatedAt": "2026-03-04T20:28:38.463Z",
+  "currentIteration": 8,
+  "maxIterations": 50,
+  "tasksCompleted": 8,
+  "isPaused": false,
+  "agentPlugin": "claude",
+  "trackerState": {
+    "plugin": "json",
+    "prdPath": "./tasks/prd-provider-refactor.json",
+    "totalTasks": 8,
+    "tasks": [
+      {
+        "id": "US-001",
+        "title": "Create flows types module",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-002",
+        "title": "Create AI config and registry modules",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-003",
+        "title": "Create all providers and index",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-004",
+        "title": "Create all processors",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-005",
+        "title": "Create consolidated hooks",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-006",
+        "title": "Update API routes to use new processors",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-007",
+        "title": "Create StoryFlow component and update Home page",
+        "status": "completed",
+        "completedInSession": true
+      },
+      {
+        "id": "US-008",
+        "title": "Delete obsolete files and update env",
+        "status": "completed",
+        "completedInSession": true
+      }
+    ]
+  },
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-001",
+      "taskTitle": "Create flows types module",
+      "taskCompleted": true,
+      "durationMs": 128003,
+      "startedAt": "2026-03-04T19:46:36.952Z",
+      "endedAt": "2026-03-04T19:48:44.955Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-002",
+      "taskTitle": "Create AI config and registry modules",
+      "taskCompleted": true,
+      "durationMs": 134961,
+      "startedAt": "2026-03-04T19:48:45.979Z",
+      "endedAt": "2026-03-04T19:51:00.940Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-003",
+      "taskTitle": "Create all providers and index",
+      "taskCompleted": true,
+      "durationMs": 199067,
+      "startedAt": "2026-03-04T19:51:01.963Z",
+      "endedAt": "2026-03-04T19:54:21.030Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "US-004",
+      "taskTitle": "Create all processors",
+      "taskCompleted": true,
+      "durationMs": 364573,
+      "startedAt": "2026-03-04T19:54:22.062Z",
+      "endedAt": "2026-03-04T20:00:26.635Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "US-005",
+      "taskTitle": "Create consolidated hooks",
+      "taskCompleted": true,
+      "durationMs": 257647,
+      "startedAt": "2026-03-04T20:00:27.701Z",
+      "endedAt": "2026-03-04T20:04:45.348Z"
+    },
+    {
+      "iteration": 6,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Update API routes to use new processors",
+      "taskCompleted": true,
+      "durationMs": 233278,
+      "startedAt": "2026-03-04T20:04:46.375Z",
+      "endedAt": "2026-03-04T20:08:39.653Z"
+    },
+    {
+      "iteration": 7,
+      "status": "completed",
+      "taskId": "US-007",
+      "taskTitle": "Create StoryFlow component and update Home page",
+      "taskCompleted": true,
+      "durationMs": 636072,
+      "startedAt": "2026-03-04T20:08:40.677Z",
+      "endedAt": "2026-03-04T20:19:16.749Z"
+    },
+    {
+      "iteration": 8,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Delete obsolete files and update env",
+      "taskCompleted": true,
+      "durationMs": 560635,
+      "startedAt": "2026-03-04T20:19:17.768Z",
+      "endedAt": "2026-03-04T20:28:38.403Z"
+    }
+  ],
+  "skippedTaskIds": [],
+  "cwd": "/home/vinilouz/Projetos/auto-story",
+  "activeTaskIds": [],
+  "subagentPanelVisible": false
+}

@@ -1,46 +1,38 @@
-import { NextRequest, NextResponse } from "next/server"
-import { generateSingleImage } from "@/lib/ai/processors/image-generator"
-import { StorageService } from "@/lib/storage"
+import { NextRequest, NextResponse } from "next/server";
+import { generateSingleImage } from "@/lib/ai/processors/image-generator";
+import { StorageService } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-
-    if (!body.imagePrompt) {
+    const body = await request.json();
+    if (!body.imagePrompt)
       return NextResponse.json(
-        { error: "Missing required field: imagePrompt" },
-        { status: 400 }
-      )
-    }
+        { error: "Missing imagePrompt" },
+        { status: 400 },
+      );
 
-    let imageUrl = await generateSingleImage({
-      imagePrompt: body.imagePrompt,
-      referenceImage: body.referenceImage,
-      referenceImages: body.referenceImages,
-      imageConfig: body.imageConfig,
-      systemPrompt: body.systemPrompt
-    })
+    let imageUrl = await generateSingleImage(body);
 
-    if (body.projectId && body.projectName && imageUrl.startsWith('data:image/')) {
-      const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/)
-      if (matches && matches.length === 3) {
-        const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1]
-        const base64Data = matches[2]
-        const fileName = `generated-${Date.now()}.${extension}`
-
-        const localUrl = await StorageService.saveBase64Image(body.projectId, fileName, base64Data, body.projectName)
-        if (localUrl) {
-          imageUrl = localUrl
-        }
+    if (
+      body.projectId &&
+      body.projectName &&
+      imageUrl.startsWith("data:image/")
+    ) {
+      const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+      if (m) {
+        const local = await StorageService.saveBase64Image(
+          body.projectId,
+          `gen-${Date.now()}.${m[1] === "jpeg" ? "jpg" : m[1]}`,
+          m[2],
+          body.projectName,
+        );
+        if (local) imageUrl = local;
       }
     }
 
-    return NextResponse.json({ imageUrl })
-  } catch (error) {
-    console.error("Images API Error:", error)
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    )
+    return NextResponse.json({ imageUrl });
+  } catch (e: any) {
+    console.error("Images API Error:", e);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

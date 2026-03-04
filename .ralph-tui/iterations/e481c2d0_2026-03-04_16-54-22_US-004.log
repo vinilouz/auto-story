@@ -1,0 +1,1137 @@
+# Iteration 4 Log
+
+## Metadata
+
+- **Task ID**: US-004
+- **Task Title**: Create all processors
+- **Description**: As a developer, I want scene-visualizer, image-generator, audio-generator, and commentator processors so that the API routes can use them.
+
+Implementation: Create four files using the EXACT code from ...
+- **Status**: completed
+- **Task Completed**: Yes
+- **Promise Detected**: Yes
+- **Started At**: 2026-03-04T19:54:22.062Z
+- **Ended At**: 2026-03-04T20:00:26.635Z
+- **Duration**: 6m 4s
+- **Input Tokens**: 47093
+- **Output Tokens**: 7616
+- **Total Tokens**: 54709
+- **Agent**: claude
+- **Model**: glm-5
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I'll start by reading the PRD to get the exact code specifications and checking the progress file.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/tasks/prd-provider-refactor.json[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/.ralph-tui/progress.md[0m
+Now I need to find the prd.md file that contains the exact code for the processors.
+[94m[Glob][0m pattern: [96m**/*prd*.md[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/prd.md[0m
+Let me read the specific sections for the processors.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/prd.md[0m
+I have all the code. Let me check the existing files and dependencies to ensure everything is in place.
+[94m[Glob][0m pattern: [96msrc/lib/ai/processors/**/*.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/providers/index.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/flows/types.ts[0m
+[94m[Glob][0m pattern: [96msrc/lib/ai/utils/text-splitter.ts[0m
+[94m[Glob][0m pattern: [96msrc/lib/ai/prompts/prompts.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/audio-generator.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/prompts/prompts.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/utils/text-splitter.ts[0m
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/scene-visualizer.ts[0m "import { execute } from '@/lib/ai/providers'
+import { SCENE_VISUAL_PROMPT } from '@/lib/ai/prompts/prompts'
+import { Segment } from '@/lib/flows/types'
+
+export interface SceneVisualizationRequest {
+  ... (1775 chars)"
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/image-generator.ts[0m "import { execute } from '@/lib/ai/providers'
+import fs from 'fs/promises'
+import path from 'path'
+
+export interface GenerateImageRequest {
+  imagePrompt: string
+  referenceImage?: string
+  referenceIm... (1366 chars)"
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/audio-generator.ts[0m "import fs from 'fs'
+import path from 'path'
+import { execute } from '@/lib/ai/providers'
+import { splitTextIntoBatches } from '../utils/text-splitter'
+
+export interface AudioBatch {
+  index: number; t... (2582 chars)"
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/commentator.ts[0m "import { execute } from '@/lib/ai/providers'
+import { COMMENTATOR_PROMPT } from '@/lib/ai/prompts/prompts'
+import { Segment } from '@/lib/flows/types'
+
+export async function generateCommentsWithCommen... (1306 chars)"
+[94m[TodoWrite][0m
+[94m[Bash][0m Run TypeScript type checking $ bun run typecheck 2>&1
+
+[91m[Error: Exit code 1
+error: Script not found "typecheck"
+
+error: Script not found "typecheck"][0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/package.json[0m
+[94m[Bash][0m Run TypeScript type checking with tsc $ npx tsc --noEmit 2>&1
+[94m[Bash][0m Run linting with biome $ bun run lint 2>&1
+
+[91m[Error: Exit code 2
+__tests__/storage.test.ts(26,16): error TS2322: Type 'string' is not assignable to type 'Segment'.
+__tests__/storage.test.ts(26,27): error TS2322: Type 'string' is not assignable to type 'Segment'.
+__tests__/storage.test.ts(71,7): error TS2353: Object literal may only specify known properties, and 'visualDescriptions' does not exist in type 'ProjectData'.
+__tests__/storage.test.ts(87,40): error TS2339: Property 'visualDescriptions' does not exist on type 'ProjectData'.
+demos/image-void.ts(1,7): error TS2451: Cannot redeclare block-scoped variable 'prompt'.
+demos/image-void.ts(1,16): error TS2867: Cannot find name 'Bun'. Do you need to install type definitions for Bun? Try `npm i --save-dev @types/bun`.
+src/app/api/generate/audio/route.ts(19,7): error TS2353: Object literal may only specify known properties, and 'model' does not exist in type '{ text: string; voice?: string | undefined; systemPrompt?: string | undefined; targetBatchIndices?: number[] | undefined; projectId: string; projectName: string; }'.
+src/app/api/queue/process/route.ts(2,10): error TS2305: Module '"@/lib/ai/config"' has no exported member 'models'.
+src/app/api/queue/process/route.ts(2,18): error TS2305: Module '"@/lib/ai/config"' has no exported member 'providers'.
+src/app/api/queue/process/route.ts(15,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/ai/generate.ts(1,15): error TS2305: Module '"./config"' has no exported member 'EndpointType'.
+src/lib/ai/generate.ts(1,29): error TS2305: Module '"./config"' has no exported member 'Model'.
+src/lib/ai/generate.ts(1,36): error TS2305: Module '"./config"' has no exported member 'Provider'.
+src/lib/ai/queue.ts(4,15): error TS2305: Module '"./config"' has no exported member 'AssetType'.
+src/lib/ai/router.ts(1,15): error TS2305: Module '"./config"' has no exported member 'AssetType'.
+src/lib/ai/router.ts(1,26): error TS2305: Module '"./config"' has no exported member 'Model'.
+src/lib/ai/router.ts(2,10): error TS2305: Module '"./config"' has no exported member 'models'.
+src/lib/ai/router.ts(2,18): error TS2305: Module '"./config"' has no exported member 'providers'.
+
+__tests__/storage.test.ts(26,16): error TS2322: Type 'string' is not assignable to type 'Segment'.
+__tests__/storage.test.ts(26,27): error TS2322: Type 'string' is not assignable to type 'Segment'.
+__tests__/storage.test.ts(71,7): error TS2353: Object literal may only specify known properties, and 'visualDescriptions' does not exist in type 'ProjectData'.
+__tests__/storage.test.ts(87,40): error TS2339: Property 'visualDescriptions' does not exist on type 'ProjectData'.
+demos/image-void.ts(1,7): error TS2451: Cannot redeclare block-scoped variable 'prompt'.
+demos/image-void.ts(1,16): error TS2867: Cannot find name 'Bun'. Do you need to install type definitions for Bun? Try `npm i --save-dev @types/bun`.
+src/app/api/generate/audio/route.ts(19,7): error TS2353: Object literal may only specify known properties, and 'model' does not exist in type '{ text: string; voice?: string | undefined; systemPrompt?: string | undefined; targetBatchIndices?: number[] | undefined; projectId: string; projectName: string; }'.
+src/app/api/queue/process/route.ts(2,10): error TS2305: Module '"@/lib/ai/config"' has no exported member 'models'.
+src/app/api/queue/process/route.ts(2,18): error TS2305: Module '"@/lib/ai/config"' has no exported member 'providers'.
+src/app/api/queue/process/route.ts(15,30): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/ai/generate.ts(1,15): error TS2305: Module '"./config"' has no exported member 'EndpointType'.
+src/lib/ai/generate.ts(1,29): error TS2305: Module '"./config"' has no exported member 'Model'.
+src/lib/ai/generate.ts(1,36): error TS2305: Module '"./config"' has no exported member 'Provider'.
+src/lib/ai/queue.ts(4,15): error TS2305: Module '"./config"' has no exported member 'AssetType'.
+src/lib/ai/router.ts(1,15): error TS2305: Module '"./config"' has no exported member 'AssetType'.
+src/lib/ai/router.ts(1,26): error TS2305: Module '"./config"' has no exported member 'Model'.
+src/lib/ai/router.ts(2,10): error TS2305: Module '"./config"' has no exported member 'models'.
+src/lib/ai/router.ts(2,18): error TS2305: Module '"./config"' has no exported member 'providers'.][0m
+
+[91m[Error: <tool_use_error>Sibling tool call errored</tool_use_error>][0m
+The TypeScript errors are in other files (router.ts, queue.ts, generate.ts, process/route.ts, audio/route.ts) that will be updated in US-006. Let me verify the processor files themselves are correct by checking them individually.
+[94m[Bash][0m Type check only the processor files $ npx tsc --noEmit src/lib/ai/processors/scene-visualizer.ts src/lib/ai/processors/image-generator.ts ...
+[94m[Bash][0m Run lint on processors directory $ bun run lint src/lib/ai/processors/ 2>&1
+
+[91m[Error: Exit code 1
+$ biome check src/lib/ai/processors/
+src/lib/ai/processors/audio-generator.ts:1:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+  > 1 │ import fs from 'fs'
+      │                ^^^^
+    2 │ import path from 'path'
+    3 │ import { execute } from '@/lib/ai/providers'
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1    │ - import·fs·from·'fs'␍
+        1 │ + import·fs·from·'node:fs'␍
+     2  2 │   import path from 'path'␍
+     3  3 │   import { execute } from '@/lib/ai/providers'␍
+  
+
+src/lib/ai/processors/audio-generator.ts:2:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import fs from 'fs'
+  > 2 │ import path from 'path'
+      │                  ^^^^^^
+    3 │ import { execute } from '@/lib/ai/providers'
+    4 │ import { splitTextIntoBatches } from '../utils/text-splitter'
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import fs from 'fs'␍
+     2    │ - import·path·from·'path'␍
+        2 │ + import·path·from·'node:path'␍
+     3  3 │   import { execute } from '@/lib/ai/providers'␍
+     4  4 │   import { splitTextIntoBatches } from '../utils/text-splitter'␍
+  
+
+src/lib/ai/processors/audio-generator.ts:50:55 lint/style/useExponentiationOperator  FIXABLE  ━━━━━━━━━━
+
+  i Use the '**' operator instead of 'Math.pow'.
+  
+    48 │         } catch (e: any) {
+    49 │           if (attempt >= 1) { batches[idx].status = 'error'; batches[idx].error = e.message; return }
+  > 50 │           await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt) + Math.random() * 1000))
+       │                                                       ^^^^^^^^^^^^^^^^^^^^
+    51 │         }
+    52 │       }
+  
+  i Safe fix: Use the '**' operator instead of 'Math.pow'.
+  
+    48 48 │           } catch (e: any) {␍
+    49 49 │             if (attempt >= 1) { batches[idx].status = 'error'; batches[idx].error = e.message; return }␍
+    50    │ - ··········await·new·Promise(r·=>·setTimeout(r,·2000·*·Math.pow(2,·attempt)·+·Math.random()·*·1000))␍
+       50 │ + ··········await·new·Promise(r·=>·setTimeout(r,·2000·*·2·**·attempt·+·Math.random()·*·1000))␍
+    51 51 │           }␍
+    52 52 │         }␍
+  
+
+src/lib/ai/processors/image-generator.ts:2:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import { execute } from '@/lib/ai/providers'
+  > 2 │ import fs from 'fs/promises'
+      │                ^^^^^^^^^^^^^
+    3 │ import path from 'path'
+    4 │ 
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import { execute } from '@/lib/ai/providers'
+     2    │ - import·fs·from·'fs/promises'
+        2 │ + import·fs·from·'node:fs/promises'
+     3  3 │   import path from 'path'
+     4  4 │   
+  
+
+src/lib/ai/processors/image-generator.ts:3:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import { execute } from '@/lib/ai/providers'
+    2 │ import fs from 'fs/promises'
+  > 3 │ import path from 'path'
+      │                  ^^^^^^
+    4 │ 
+    5 │ export interface GenerateImageRequest {
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import { execute } from '@/lib/ai/providers'
+     2  2 │   import fs from 'fs/promises'
+     3    │ - import·path·from·'path'
+        3 │ + import·path·from·'node:path'
+     4  4 │   
+     5  5 │   export interface GenerateImageRequest {
+  
+
+src/lib/ai/processors/audio-generator.ts:48:21 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    46 │           batches[idx].status = 'completed'
+    47 │           return
+  > 48 │         } catch (e: any) {
+       │                     ^^^
+    49 │           if (attempt >= 1) { batches[idx].status = 'error'; batches[idx].error = e.message; return }
+    50 │           await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt) + Math.random() * 1000))
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:19:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    17 │     if (!Array.isArray(parsed)) throw new Error()
+    18 │     const segments: Segment[] = parsed
+  > 19 │       .map((item: any) => item?.type && item?.content
+       │                   ^^^
+    20 │    
+
+... [42531 characters truncated] ...
+
+ ··if·(!url?.startsWith("/projects/"))·return·url;
+    15 15 │     try {
+    16    │ - ····const·buf·=·await·fs.readFile(path.join(process.cwd(),·'public',·url))
+    17    │ - ····const·ext·=·path.extname(url).replace('.',·'')
+    18    │ - ····return·`data:image/${ext·===·'jpg'·?·'jpeg'·:·ext};base64,${buf.toString('base64')}`
+    19    │ - ··}·catch·{·return·undefined·}
+       16 │ + ····const·buf·=·await·fs.readFile(path.join(process.cwd(),·"public",·url));
+       17 │ + ····const·ext·=·path.extname(url).replace(".",·"");
+       18 │ + ····return·`data:image/${ext·===·"jpg"·?·"jpeg"·:·ext};base64,${buf.toString("base64")}`;
+       19 │ + ··}·catch·{
+       20 │ + ····return·undefined;
+       21 │ + ··}
+    20 22 │   }
+    21 23 │   
+    22    │ - export·async·function·generateSingleImage(req:·GenerateImageRequest):·Promise<string>·{
+    23    │ - ··const·prompt·=·req.imagePrompt.replace(/Scene·\d{1,3}:\s*/gi,·'').trim()
+    24    │ - ··const·finalPrompt·=·req.systemPrompt·?·`${req.systemPrompt}\n${prompt}`·:·prompt
+       24 │ + export·async·function·generateSingleImage(
+       25 │ + ··req:·GenerateImageRequest,
+       26 │ + ):·Promise<string>·{
+       27 │ + ··const·prompt·=·req.imagePrompt.replace(/Scene·\d{1,3}:\s*/gi,·"").trim();
+       28 │ + ··const·finalPrompt·=·req.systemPrompt
+       29 │ + ····?·`${req.systemPrompt}\n${prompt}`
+       30 │ + ····:·prompt;
+    25 31 │   
+    26    │ - ··let·refs:·string[]·|·undefined
+       32 │ + ··let·refs:·string[]·|·undefined;
+    27 33 │     if (req.referenceImages?.length) {
+    28    │ - ····refs·=·(await·Promise.all(req.referenceImages.map(resolveImage))).filter((u):·u·is·string·=>·!!u)
+       34 │ + ····refs·=·(await·Promise.all(req.referenceImages.map(resolveImage))).filter(
+       35 │ + ······(u):·u·is·string·=>·!!u,
+       36 │ + ····);
+    29 37 │     } else if (req.referenceImage) {
+    30    │ - ····const·r·=·await·resolveImage(req.referenceImage)
+    31    │ - ····if·(r)·refs·=·[r]
+       38 │ + ····const·r·=·await·resolveImage(req.referenceImage);
+       39 │ + ····if·(r)·refs·=·[r];
+    32 40 │     }
+    33 41 │   
+    34    │ - ··const·{·imageUrl·}·=·await·execute('generateImage',·{·prompt:·finalPrompt,·config:·req.imageConfig,·referenceImages:·refs·})
+    35    │ - ··return·imageUrl
+       42 │ + ··const·{·imageUrl·}·=·await·execute("generateImage",·{
+       43 │ + ····prompt:·finalPrompt,
+       44 │ + ····config:·req.imageConfig,
+       45 │ + ····referenceImages:·refs,
+       46 │ + ··});
+       47 │ + ··return·imageUrl;
+    36 48 │   }
+    37 49 │   
+  
+
+src/lib/ai/processors/scene-visualizer.ts:1:1 assist/source/organizeImports  FIXABLE  ━━━━━━━━━━━━━━
+
+  × The imports and exports are not sorted.
+  
+  > 1 │ import { execute } from '@/lib/ai/providers'
+      │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 │ import { SCENE_VISUAL_PROMPT } from '@/lib/ai/prompts/prompts'
+    3 │ import { Segment } from '@/lib/flows/types'
+  
+  i Safe fix: Organize Imports (Biome)
+  
+     1    │ - import·{·execute·}·from·'@/lib/ai/providers'
+     2    │ - import·{·SCENE_VISUAL_PROMPT·}·from·'@/lib/ai/prompts/prompts'
+        1 │ + import·{·SCENE_VISUAL_PROMPT·}·from·'@/lib/ai/prompts/prompts'
+        2 │ + import·{·execute·}·from·'@/lib/ai/providers'
+     3  3 │   import { Segment } from '@/lib/flows/types'
+     4  4 │   
+  
+
+src/lib/ai/processors/scene-visualizer.ts:44:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    42 │   if (data.consistency) {
+    43 │     const set = new Set<string>()
+  > 44 │     segments.forEach(s => s.imagePrompt?.match(/<<([^>]+)>>/g)?.forEach(m => set.add(m.replace(/<<|>>/g, ''))))
+       │              ^^^^^^^
+    45 │     if (set.size > 0) entities = Array.from(set)
+    46 │   }
+  
+  i Either remove this return or remove the returned value.
+  
+    42 │   if (data.consistency) {
+    43 │     const set = new Set<string>()
+  > 44 │     segments.forEach(s => s.imagePrompt?.match(/<<([^>]+)>>/g)?.forEach(m => set.add(m.replace(/<<|>>/g, ''))))
+       │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    45 │     if (set.size > 0) entities = Array.from(set)
+    46 │   }
+  
+
+src/lib/ai/processors/scene-visualizer.ts:44:65 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    42 │   if (data.consistency) {
+    43 │     const set = new Set<string>()
+  > 44 │     segments.forEach(s => s.imagePrompt?.match(/<<([^>]+)>>/g)?.forEach(m => set.add(m.replace(/<<|>>/g, ''))))
+       │                                                                 ^^^^^^^
+    45 │     if (set.size > 0) entities = Array.from(set)
+    46 │   }
+  
+  i Either remove this return or remove the returned value.
+  
+    42 │   if (data.consistency) {
+    43 │     const set = new Set<string>()
+  > 44 │     segments.forEach][0m
+Let me check the existing providers to see the codebase conventions.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/providers/void.ts[0m
+[94m[Bash][0m Format processors with biome $ bun run format src/lib/ai/processors/ 2>&1
+[94m[Bash][0m Check remaining lint issues $ bun run lint src/lib/ai/processors/ 2>&1
+
+[91m[Error: Exit code 1
+$ biome check src/lib/ai/processors/
+src/lib/ai/processors/audio-generator.ts:1:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+  > 1 │ import fs from "fs";
+      │                ^^^^
+    2 │ import path from "path";
+    3 │ import { execute } from "@/lib/ai/providers";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      1     │ - import·fs·from·"fs";
+          1 │ + import·fs·from·"node:fs";
+      2   2 │   import path from "path";
+      3   3 │   import { execute } from "@/lib/ai/providers";
+  
+
+src/lib/ai/processors/audio-generator.ts:2:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import fs from "fs";
+  > 2 │ import path from "path";
+      │                  ^^^^^^
+    3 │ import { execute } from "@/lib/ai/providers";
+    4 │ import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      1   1 │   import fs from "fs";
+      2     │ - import·path·from·"path";
+          2 │ + import·path·from·"node:path";
+      3   3 │   import { execute } from "@/lib/ai/providers";
+      4   4 │   import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+
+src/lib/ai/processors/audio-generator.ts:92:36 lint/style/useExponentiationOperator  FIXABLE  ━━━━━━━━━━
+
+  i Use the '**' operator instead of 'Math.pow'.
+  
+    90 │             }
+    91 │             await new Promise((r) =>
+  > 92 │               setTimeout(r, 2000 * Math.pow(2, attempt) + Math.random() * 1000),
+       │                                    ^^^^^^^^^^^^^^^^^^^^
+    93 │             );
+    94 │           }
+  
+  i Safe fix: Use the '**' operator instead of 'Math.pow'.
+  
+     90  90 │               }
+     91  91 │               await new Promise((r) =>
+     92     │ - ··············setTimeout(r,·2000·*·Math.pow(2,·attempt)·+·Math.random()·*·1000),
+         92 │ + ··············setTimeout(r,·2000·*·2·**·attempt·+·Math.random()·*·1000),
+     93  93 │               );
+     94  94 │             }
+  
+
+src/lib/ai/processors/image-generator.ts:2:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import { execute } from "@/lib/ai/providers";
+  > 2 │ import fs from "fs/promises";
+      │                ^^^^^^^^^^^^^
+    3 │ import path from "path";
+    4 │ 
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import { execute } from "@/lib/ai/providers";
+     2    │ - import·fs·from·"fs/promises";
+        2 │ + import·fs·from·"node:fs/promises";
+     3  3 │   import path from "path";
+     4  4 │   
+  
+
+src/lib/ai/processors/image-generator.ts:3:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import { execute } from "@/lib/ai/providers";
+    2 │ import fs from "fs/promises";
+  > 3 │ import path from "path";
+      │                  ^^^^^^
+    4 │ 
+    5 │ export interface GenerateImageRequest {
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import { execute } from "@/lib/ai/providers";
+     2  2 │   import fs from "fs/promises";
+     3    │ - import·path·from·"path";
+        3 │ + import·path·from·"node:path";
+     4  4 │   
+     5  5 │   export interface GenerateImageRequest {
+  
+
+src/lib/ai/processors/audio-generator.ts:85:23 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    83 │             batches[idx].status = "completed";
+    84 │             return;
+  > 85 │           } catch (e: any) {
+       │                       ^^^
+    86 │             if (attempt >= 1) {
+    87 │               batches[idx].status = "error";
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:29:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    27 │     if (!Array.isArray(parsed)) throw new Error();
+    28 │     const segments: Segment[] = parsed
+  > 29 │       .map((item: any) =>
+       │                   ^^^
+    30 │         item?.type && item?.content
+    31 │           ? {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:3:8 lint/style/useImportType  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! All these imports are only used as types.
+  
+    1 │ import { execute } 
+
+... [10992 characters truncated] ...
+
+ypes";
+      │        +++++                                     
+
+src/lib/ai/processors/scene-visualizer.ts:3:8 lint/style/useImportType  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  ! All these imports are only used as types.
+  
+    1 │ import { execute } from "@/lib/ai/providers";
+    2 │ import { SCENE_VISUAL_PROMPT } from "@/lib/ai/prompts/prompts";
+  > 3 │ import { Segment } from "@/lib/flows/types";
+      │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    4 │ 
+    5 │ export interface SceneVisualizationRequest {
+  
+  i Importing the types with import type ensures that they are removed by the compilers and avoids loading unnecessary modules.
+  
+  i Safe fix: Use import type.
+  
+    3 │ import·type·{·Segment·}·from·"@/lib/flows/types";
+      │        +++++                                     
+
+src/lib/ai/processors/commentator.ts:1:1 assist/source/organizeImports  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  × The imports and exports are not sorted.
+  
+  > 1 │ import { execute } from "@/lib/ai/providers";
+      │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 │ import { COMMENTATOR_PROMPT } from "@/lib/ai/prompts/prompts";
+    3 │ import { Segment } from "@/lib/flows/types";
+  
+  i Safe fix: Organize Imports (Biome)
+  
+     1    │ - import·{·execute·}·from·"@/lib/ai/providers";
+     2    │ - import·{·COMMENTATOR_PROMPT·}·from·"@/lib/ai/prompts/prompts";
+        1 │ + import·{·COMMENTATOR_PROMPT·}·from·"@/lib/ai/prompts/prompts";
+        2 │ + import·{·execute·}·from·"@/lib/ai/providers";
+     3  3 │   import { Segment } from "@/lib/flows/types";
+     4  4 │   
+  
+
+src/lib/ai/processors/image-generator.ts:1:1 assist/source/organizeImports  FIXABLE  ━━━━━━━━━━━━━━━
+
+  × The imports and exports are not sorted.
+  
+  > 1 │ import { execute } from "@/lib/ai/providers";
+      │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 │ import fs from "fs/promises";
+    3 │ import path from "path";
+  
+  i Safe fix: Organize Imports (Biome)
+  
+     1    │ - import·{·execute·}·from·"@/lib/ai/providers";
+     2    │ - import·fs·from·"fs/promises";
+     3    │ - import·path·from·"path";
+        1 │ + import·fs·from·"fs/promises";
+        2 │ + import·path·from·"path";
+        3 │ + import·{·execute·}·from·"@/lib/ai/providers";
+     4  4 │   
+     5  5 │   export interface GenerateImageRequest {
+  
+
+src/lib/ai/processors/scene-visualizer.ts:1:1 assist/source/organizeImports  FIXABLE  ━━━━━━━━━━━━━━
+
+  × The imports and exports are not sorted.
+  
+  > 1 │ import { execute } from "@/lib/ai/providers";
+      │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    2 │ import { SCENE_VISUAL_PROMPT } from "@/lib/ai/prompts/prompts";
+    3 │ import { Segment } from "@/lib/flows/types";
+  
+  i Safe fix: Organize Imports (Biome)
+  
+     1    │ - import·{·execute·}·from·"@/lib/ai/providers";
+     2    │ - import·{·SCENE_VISUAL_PROMPT·}·from·"@/lib/ai/prompts/prompts";
+        1 │ + import·{·SCENE_VISUAL_PROMPT·}·from·"@/lib/ai/prompts/prompts";
+        2 │ + import·{·execute·}·from·"@/lib/ai/providers";
+     3  3 │   import { Segment } from "@/lib/flows/types";
+     4  4 │   
+  
+
+src/lib/ai/processors/scene-visualizer.ts:58:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    56 │   if (data.consistency) {
+    57 │     const set = new Set<string>();
+  > 58 │     segments.forEach((s) =>
+       │              ^^^^^^^
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  
+  i Either remove this return or remove the returned value.
+  
+    57 │     const set = new Set<string>();
+    58 │     segments.forEach((s) =>
+  > 59 │       s.imagePrompt
+       │       ^^^^^^^^^^^^^
+  > 60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+src/lib/ai/processors/scene-visualizer.ts:61:11 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │           ^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+  i Either remove this return or remove the returned value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+Checked 4 files in 4ms. No fixes applied.
+Found 5 errors.
+Found 4 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+error: script "lint" exited with code 1][0m
+Let me apply the safe lint fixes.
+[94m[Bash][0m Auto-fix lint issues $ bunx biome check --write src/lib/ai/processors/ 2>&1
+
+[91m[Error: Exit code 1
+src/lib/ai/processors/audio-generator.ts:1:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+  > 1 │ import fs from "fs";
+      │                ^^^^
+    2 │ import path from "path";
+    3 │ import { execute } from "@/lib/ai/providers";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      1     │ - import·fs·from·"fs";
+          1 │ + import·fs·from·"node:fs";
+      2   2 │   import path from "path";
+      3   3 │   import { execute } from "@/lib/ai/providers";
+  
+
+src/lib/ai/processors/audio-generator.ts:2:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import fs from "fs";
+  > 2 │ import path from "path";
+      │                  ^^^^^^
+    3 │ import { execute } from "@/lib/ai/providers";
+    4 │ import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      1   1 │   import fs from "fs";
+      2     │ - import·path·from·"path";
+          2 │ + import·path·from·"node:path";
+      3   3 │   import { execute } from "@/lib/ai/providers";
+      4   4 │   import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+
+src/lib/ai/processors/image-generator.ts:1:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+  > 1 │ import fs from "fs/promises";
+      │                ^^^^^^^^^^^^^
+    2 │ import path from "path";
+    3 │ import { execute } from "@/lib/ai/providers";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1    │ - import·fs·from·"fs/promises";
+        1 │ + import·fs·from·"node:fs/promises";
+     2  2 │   import path from "path";
+     3  3 │   import { execute } from "@/lib/ai/providers";
+  
+
+src/lib/ai/processors/image-generator.ts:2:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import fs from "fs/promises";
+  > 2 │ import path from "path";
+      │                  ^^^^^^
+    3 │ import { execute } from "@/lib/ai/providers";
+    4 │ 
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import fs from "fs/promises";
+     2    │ - import·path·from·"path";
+        2 │ + import·path·from·"node:path";
+     3  3 │   import { execute } from "@/lib/ai/providers";
+     4  4 │   
+  
+
+src/lib/ai/processors/audio-generator.ts:85:23 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    83 │             batches[idx].status = "completed";
+    84 │             return;
+  > 85 │           } catch (e: any) {
+       │                       ^^^
+    86 │             if (attempt >= 1) {
+    87 │               batches[idx].status = "error";
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:29:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    27 │     if (!Array.isArray(parsed)) throw new Error();
+    28 │     const segments: Segment[] = parsed
+  > 29 │       .map((item: any) =>
+       │                   ^^^
+    30 │         item?.type && item?.content
+    31 │           ? {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/scene-visualizer.ts:58:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    56 │   if (data.consistency) {
+    57 │     const set = new Set<string>();
+  > 58 │     segments.forEach((s) =>
+       │              ^^^^^^^
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  
+  i Either remove this return or remove the returned value.
+  
+    57 │     const set = new Set<string>();
+    58 │     segments.forEach((s) =>
+  > 59 │       s.imagePrompt
+       │       ^^^^^^^^^^^^^
+  > 60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+src/lib/ai/processors/scene-visualizer.ts:61:11 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.r
+
+... [1648 characters truncated] ...
+
+h the node: protocol.
+  
+    1 │ import fs from "fs";
+  > 2 │ import path from "path";
+      │                  ^^^^^^
+    3 │ import { execute } from "@/lib/ai/providers";
+    4 │ import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+      1   1 │   import fs from "fs";
+      2     │ - import·path·from·"path";
+          2 │ + import·path·from·"node:path";
+      3   3 │   import { execute } from "@/lib/ai/providers";
+      4   4 │   import { splitTextIntoBatches } from "../utils/text-splitter";
+  
+
+src/lib/ai/processors/image-generator.ts:1:16 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+  > 1 │ import fs from "fs/promises";
+      │                ^^^^^^^^^^^^^
+    2 │ import path from "path";
+    3 │ import { execute } from "@/lib/ai/providers";
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1    │ - import·fs·from·"fs/promises";
+        1 │ + import·fs·from·"node:fs/promises";
+     2  2 │   import path from "path";
+     3  3 │   import { execute } from "@/lib/ai/providers";
+  
+
+src/lib/ai/processors/image-generator.ts:2:18 lint/style/useNodejsImportProtocol  FIXABLE  ━━━━━━━━━━
+
+  i A Node.js builtin module should be imported with the node: protocol.
+  
+    1 │ import fs from "fs/promises";
+  > 2 │ import path from "path";
+      │                  ^^^^^^
+    3 │ import { execute } from "@/lib/ai/providers";
+    4 │ 
+  
+  i Using the node: protocol is more explicit and signals that the imported module belongs to Node.js.
+  
+  i Unsafe fix: Add the node: protocol.
+  
+     1  1 │   import fs from "fs/promises";
+     2    │ - import·path·from·"path";
+        2 │ + import·path·from·"node:path";
+     3  3 │   import { execute } from "@/lib/ai/providers";
+     4  4 │   
+  
+
+src/lib/ai/processors/audio-generator.ts:85:23 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    83 │             batches[idx].status = "completed";
+    84 │             return;
+  > 85 │           } catch (e: any) {
+       │                       ^^^
+    86 │             if (attempt >= 1) {
+    87 │               batches[idx].status = "error";
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:29:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    27 │     if (!Array.isArray(parsed)) throw new Error();
+    28 │     const segments: Segment[] = parsed
+  > 29 │       .map((item: any) =>
+       │                   ^^^
+    30 │         item?.type && item?.content
+    31 │           ? {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/scene-visualizer.ts:58:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    56 │   if (data.consistency) {
+    57 │     const set = new Set<string>();
+  > 58 │     segments.forEach((s) =>
+       │              ^^^^^^^
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  
+  i Either remove this return or remove the returned value.
+  
+    57 │     const set = new Set<string>();
+    58 │     segments.forEach((s) =>
+  > 59 │       s.imagePrompt
+       │       ^^^^^^^^^^^^^
+  > 60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+src/lib/ai/processors/scene-visualizer.ts:61:11 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │           ^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+  i Either remove this return or remove the returned value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+Skipped 6 suggested fixes.
+If you wish to apply the suggested (unsafe) fixes, use the command biome check --write --unsafe
+
+Checked 4 files in 43ms. Fixed 4 files.
+Found 2 errors.
+Found 2 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while applying fixes.][0m
+[94m[Bash][0m Apply unsafe lint fixes $ bunx biome check --write --unsafe src/lib/ai/processors/ 2>&1
+
+[91m[Error: Exit code 1
+src/lib/ai/processors/audio-generator.ts:85:23 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    83 │             batches[idx].status = "completed";
+    84 │             return;
+  > 85 │           } catch (e: any) {
+       │                       ^^^
+    86 │             if (attempt >= 1) {
+    87 │               batches[idx].status = "error";
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:29:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    27 │     if (!Array.isArray(parsed)) throw new Error();
+    28 │     const segments: Segment[] = parsed
+  > 29 │       .map((item: any) =>
+       │                   ^^^
+    30 │         item?.type && item?.content
+    31 │           ? {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/scene-visualizer.ts:58:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    56 │   if (data.consistency) {
+    57 │     const set = new Set<string>();
+  > 58 │     segments.forEach((s) =>
+       │              ^^^^^^^
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  
+  i Either remove this return or remove the returned value.
+  
+    57 │     const set = new Set<string>();
+    58 │     segments.forEach((s) =>
+  > 59 │       s.imagePrompt
+       │       ^^^^^^^^^^^^^
+  > 60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+src/lib/ai/processors/scene-visualizer.ts:61:11 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │           ^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+  i Either remove this return or remove the returned value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+Checked 4 files in 10ms. Fixed 2 files.
+Found 2 errors.
+Found 2 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+
+src/lib/ai/processors/audio-generator.ts:85:23 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    83 │             batches[idx].status = "completed";
+    84 │             return;
+  > 85 │           } catch (e: any) {
+       │                       ^^^
+    86 │             if (attempt >= 1) {
+    87 │               batches[idx].status = "error";
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/commentator.ts:29:19 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    27 │     if (!Array.isArray(parsed)) throw new Error();
+    28 │     const segments: Segment[] = parsed
+  > 29 │       .map((item: any) =>
+       │                   ^^^
+    30 │         item?.type && item?.content
+    31 │           ? {
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+src/lib/ai/processors/scene-visualizer.ts:58:14 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    56 │   if (data.consistency) {
+    57 │     const set = new Set<string>();
+  > 58 │     segments.forEach((s) =>
+       │              ^^^^^^^
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  
+  i Either remove this return or remove the returned value.
+  
+    57 │     const set = new Set<string>();
+    58 │     segments.forEach((s) =>
+  > 59 │       s.imagePrompt
+       │       ^^^^^^^^^^^^^
+  > 60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+src/lib/ai/processors/scene-visualizer.ts:61:11 lint/suspicious/useIterableCallbackReturn ━━━━━━━━━━
+
+  × This callback passed to forEach() iterable method should not return a value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │           ^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+  i Either remove this return or remove the returned value.
+  
+    59 │       s.imagePrompt
+    60 │         ?.match(/<<([^>]+)>>/g)
+  > 61 │         ?.forEach((m) => set.add(m.replace(/<<|>>/g, ""))),
+       │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    62 │     );
+    63 │     if (set.size > 0) entities = Array.from(set);
+  
+
+Checked 4 files in 10ms. Fixed 2 files.
+Found 2 errors.
+Found 2 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.][0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/scene-visualizer.ts[0m
+[94m[Edit][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/scene-visualizer.ts[0m edit: "  let entities: string[] | undefined;
+  if (data.c..." → "  let entities: string[] | undefined;
+  if (data.c..."
+[94m[Bash][0m Check remaining lint issues after fix $ bun run lint src/lib/ai/processors/ 2>&1
+The lint now only shows warnings (not errors) for `any` types, which matches the PRD code. Let me verify all files are correct and update progress.
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/audio-generator.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/image-generator.ts[0m
+[94m[Read][0m [95m/home/vinilouz/Projetos/auto-story/src/lib/ai/processors/commentator.ts[0m
+[94m[TodoWrite][0m
+[94m[Edit][0m [95m/home/vinilouz/Projetos/auto-story/.ralph-tui/progress.md[0m edit: "## Codebase Patterns (Study These First)
+
+*Add reu..." → "## Codebase Patterns (Study These First)
+
+*Add reu..."
+[94m[Edit][0m [95m/home/vinilouz/Projetos/auto-story/.ralph-tui/progress.md[0m edit: "---
+
+## 2026-03-04 - US-003" → "---
+
+## 2026-03-04 - US-004
+- Created four process..."
+[94m[TodoWrite][0m
+US-004 is complete. All four processors have been created:
+
+**Files created/modified:**
+- `src/lib/ai/processors/scene-visualizer.ts` - generateSceneDescriptions using `execute('generateText')`
+- `src/lib/ai/processors/image-generator.ts` - generateSingleImage with resolveImage helper
+- `src/lib/ai/processors/audio-generator.ts` - replaced with registry-based version using `execute('generateAudio')`
+- `src/lib/ai/processors/commentator.ts` - generateCommentsWithCommentator
+
+**Acceptance criteria verified:**
+- ✅ scene-visualizer: SceneVisualizationRequest interface, JSON parsing from markdown code blocks
+- ✅ image-generator: GenerateImageRequest interface, resolveImage helper for local filesystem images
+- ✅ audio-generator: AudioBatch interface, audioDir/generateAndSave helpers, parallel chunks of 4 with 800ms stagger, 2 retry attempts
+- ✅ commentator: uses COMMENTATOR_PROMPT, maps to Segment types
+
+**Lint status:** Only 2 warnings for `any` types (matching PRD code), no errors.
+
+<promise>COMPLETE</promise>

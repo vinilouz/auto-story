@@ -1,34 +1,32 @@
-import { NextRequest, NextResponse } from "next/server"
-import { generateAudio } from "@/lib/ai/processors/audio-generator"
+import { NextRequest, NextResponse } from "next/server";
+import { generateAudio } from "@/lib/ai/processors/audio-generator";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { text, voice, model, systemPrompt, targetBatchIndices, projectId, projectName } = body
-
-    if (!text) {
-      return NextResponse.json(
-        { error: "Missing required field: text" },
-        { status: 400 }
-      )
-    }
-
-    const result = await generateAudio({
+    const {
       text,
       voice,
-      model,
       systemPrompt,
       targetBatchIndices,
       projectId,
-      projectName
-    })
-
-    return NextResponse.json(result)
-  } catch (error: any) {
-    console.error("Audio API Error:", error)
+      projectName,
+    } = await request.json();
+    if (!text)
+      return NextResponse.json({ error: "Missing text" }, { status: 400 });
+    const result = await generateAudio({
+      text,
+      voice,
+      systemPrompt,
+      targetBatchIndices,
+      projectId: projectId || "temp",
+      projectName: projectName || "untitled",
+    });
+    return NextResponse.json(result);
+  } catch (e: any) {
+    console.error("Audio API Error:", e);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    )
+      { error: e.message || "Internal error" },
+      { status: 500 },
+    );
   }
 }

@@ -1,12 +1,14 @@
-export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
-
 export interface Segment {
   text: string
   type?: 'scene_text' | 'comment'
   entities?: string[]
   imagePrompt?: string
   imagePath?: string
-  videoPath?: string
+  /** For video story flow: the generated video clip URL */
+  videoClipUrl?: string
+  /** Time window this segment covers in the audio */
+  startMs?: number
+  endMs?: number
 }
 
 export interface EntityAsset {
@@ -17,84 +19,35 @@ export interface EntityAsset {
 }
 
 export interface AudioBatch {
-  index: number
-  text: string
+  index: number; text: string
   status: 'pending' | 'generating' | 'completed' | 'error'
-  url?: string
-  error?: string
+  url?: string; error?: string
 }
 
 export interface TranscriptionResult {
   url: string
   status: 'completed' | 'error'
   transcriptionUrl?: string
-  data?: TranscriptionData
+  data?: TranscriptionWord[] | { words: TranscriptionWord[] }
   error?: string
 }
 
 export interface TranscriptionWord {
-  text: string
-  startMs: number
-  endMs: number
+  text: string; startMs: number; endMs: number
 }
-
-export type TranscriptionData = TranscriptionWord[] | { words: TranscriptionWord[] }
 
 export interface CaptionStyle {
-  fontSize: number
-  fontFamily: string
-  fontWeight: number
-  maxWordsPerLine: number
-  uppercase: boolean
-  highlightColor: string
-}
-
-export interface ProjectData {
-  id?: string | null
-  name: string
-  flowType: 'simple' | 'with-commentator' | 'full-video'
-  consistency: boolean
-  scriptText: string
-  segmentSize: number
-  language: string
-  style?: string
-  voice?: string
-  segments?: Segment[]
-  entities?: EntityAsset[]
-  audioUrls?: string[]
-  audioBatches?: AudioBatch[]
-  audioSystemPrompt?: string
-  transcriptionResults?: TranscriptionResult[]
-  commentator?: CommentatorConfig
-  videoModel?: string
+  fontSize: number; fontFamily: string; fontWeight: number
+  maxWordsPerLine: number; uppercase: boolean; highlightColor: string
 }
 
 export interface CommentatorConfig {
-  id: string
-  name: string
-  personality: string
-  appearance: {
-    type: 'upload' | 'generated'
-    imageUrl?: string
-    imagePrompt?: string
-    description?: string
-  }
+  id: string; name: string; personality: string
+  appearance: { type: 'upload' | 'generated'; imageUrl?: string; imagePrompt?: string }
   voice?: string
 }
 
-export interface VoiceConfig {
-  narrator: string
-  commentator?: string
-}
-
 export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
-  fontSize: 60,
-  fontFamily: "TikTok Sans, sans-serif",
-  fontWeight: 800,
-  maxWordsPerLine: 3,
-  uppercase: true,
-  highlightColor: "#FFE81F"
+  fontSize: 60, fontFamily: "TikTok Sans, sans-serif", fontWeight: 800,
+  maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F"
 }
-
-export const DEFAULT_SEGMENT_SIZE = 150
-export const DEFAULT_SEGMENT_SIZE_COMMENTATOR = 200

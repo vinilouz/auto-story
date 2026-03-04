@@ -1,5 +1,4 @@
-import { generateImage } from "@/lib/ai/providers/custom-client"
-import { S3Client } from "@/lib/networking/s3-client"
+import { execute } from '@/lib/ai/providers'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -7,42 +6,43 @@ export interface GenerateImageRequest {
   imagePrompt: string
   referenceImage?: string
   referenceImages?: string[]
-  imageConfig?: {
-    aspect_ratio?: string
-    image_size?: string
-  }
+  imageConfig?: { aspect_ratio?: string; image_size?: string }
   systemPrompt?: string
 }
 
-const resolveImageUrl = async (url?: string): Promise<string | undefined> => {
+async function resolveImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined
-  if (url.startsWith('/projects/')) {
-    const publicDir = path.join(process.cwd(), 'public')
-    const filePath = path.join(publicDir, url)
-    const buffer = await fs.readFile(filePath)
-    const ext = path.extname(filePath).toLowerCase().replace('.', '')
-    const mime = ext === 'jpg' ? 'jpeg' : ext
-    const base64 = `data:image/${mime};base64,${buffer.toString('base64')}`
-    return S3Client.uploadBase64(base64)
+  // Already a remote URL or base64 — pass through
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url
+  // Local path — read and convert to base64
+  if (url.startsWith('/projects/') || url.startsWith('/')) {
+    try {
+      const buf = await fs.readFile(path.join(process.cwd(), 'public', url))
+      const ext = path.extname(url).replace('.', '')
+      return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buf.toString('base64')}`
+    } catch { return undefined }
   }
   return url
 }
 
-export const generateSingleImage = async (request: GenerateImageRequest): Promise<string> => {
-  const cleanedPrompt = request.imagePrompt.replace(/Scene \d{1,3}:\s*/gi, "").trim()
+export async function generateSingleImage(req: GenerateImageRequest): Promise<string> {
+  const prompt = req.imagePrompt.replace(/Scene \d{1,3}:\s*/gi, '').trim()
+  const finalPrompt = req.systemPrompt ? `${req.systemPrompt}\n${prompt}` : prompt
 
-  const systemPrompt = request.systemPrompt || ""
-  const finalPrompt = systemPrompt ? `${systemPrompt}\n${cleanedPrompt}` : cleanedPrompt
+  let refs: string[] | undefined
+  if (req.referenceImages?.length) {
+    refs = (await Promise.all(req.referenceImages.map(resolveImage))).filter((u): u is string => !!u)
+  } else if (req.referenceImage) {
+    const r = await resolveImage(req.referenceImage)
+    if (r) refs = [r]
+  }
 
-  const resolvedImageUrls = request.referenceImages && request.referenceImages.length > 0
-    ? await Promise.all(request.referenceImages.map(resolveImageUrl)).then(urls => urls.filter((url): url is string => !!url))
-    : request.referenceImage
-      ? await resolveImageUrl(request.referenceImage).then(url => url ? [url] : undefined)
-      : undefined
-
-  return generateImage(
-    finalPrompt,
-    request.imageConfig,
-    resolvedImageUrls
-  )
+  // Registry handles fallback. Void accepts base64 natively. Air's handler
+  // will internally upload base64 refs to AnonDrop before calling the API.
+  const { imageUrl } = await execute('generateImage', {
+    prompt: finalPrompt,
+    config: req.imageConfig,
+    referenceImages: refs,
+  })
+  return imageUrl
 }

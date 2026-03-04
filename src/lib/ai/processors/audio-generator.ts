@@ -1,142 +1,101 @@
-// src/lib/ai/processors/audio-generator.ts
-import fs from 'fs';
-import path from 'path';
-
-// --- Types ---
-export interface AudioGenerationRequest {
-  text: string;
-  voice?: string;
-  model?: string;
-  systemPrompt?: string;
-  targetBatchIndices?: number[];
-  projectId: string;
-  projectName: string;
-}
+import fs from "node:fs";
+import path from "node:path";
+import { execute } from "@/lib/ai/providers";
+import { splitTextIntoBatches } from "../utils/text-splitter";
 
 export interface AudioBatch {
   index: number;
   text: string;
-  status: 'pending' | 'generating' | 'completed' | 'error';
+  status: "pending" | "generating" | "completed" | "error";
   url?: string;
   error?: string;
 }
 
-export interface AudioGenerationResponse {
-  batches: AudioBatch[];
+function audioDir(projectId: string, projectName: string) {
+  const slug =
+    projectName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9 -]/g, "")
+      .replace(/\s+/g, "-")
+      .substring(0, 10) || "untitled";
+  return `${slug}-${projectId.split("-")[0] || projectId.substring(0, 8)}`;
 }
 
-import { splitTextIntoBatches } from '../utils/text-splitter';
-
-async function audioRequest(
-  model: string,
-  prompt: string,
+async function generateAndSave(
+  text: string,
   voice: string,
   projectId: string,
-  projectName: string
+  projectName: string,
 ): Promise<string> {
-  const BASE_URL = process.env.NAGA_BASE_URL;
-  const API_KEY = process.env.NAGA_API_KEY;
-
-  if (!BASE_URL || !API_KEY) {
-    throw new Error("Missing NAGA_BASE_URL or NAGA_API_KEY");
-  }
-
-  const response = await fetch(
-    `${BASE_URL}/v1/audio/speech`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        input: prompt,
-        voice,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Audio] Error ${response.status}: ${errorText}`);
-    throw new Error(`Audio failed: ${response.status} - ${errorText}`);
-  }
-
-  const audioBuffer = await response.arrayBuffer();
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `audio_${timestamp}_${Math.random().toString(36).substring(7)}.mp3`;
-
-  const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 40);
-  const slug = cleanTitle(projectName) || 'untitled';
-  const shortId = projectId.split('-')[0] || projectId.substring(0, 8);
-  const dirName = `${slug}-${shortId}`;
-
-  const publicDir = path.join(process.cwd(), 'public', 'projects', dirName, 'audios');
-
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-  }
-
-  const filepath = path.join(publicDir, filename);
-  fs.writeFileSync(filepath, Buffer.from(audioBuffer));
-
-  return `/projects/${dirName}/audios/${filename}`;
+  const { audioBuffer } = await execute("generateAudio", { text, voice });
+  const dir = audioDir(projectId, projectName);
+  const pubDir = path.join(process.cwd(), "public", "projects", dir, "audios");
+  if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
+  const name = `audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`;
+  fs.writeFileSync(path.join(pubDir, name), Buffer.from(audioBuffer));
+  return `/projects/${dir}/audios/${name}`;
 }
 
-export const generateAudio = async (request: AudioGenerationRequest): Promise<AudioGenerationResponse> => {
-  const { text, voice = "nPczCjzI2devNBz1zQrb", model = "eleven-multilingual-v2:free", systemPrompt, targetBatchIndices, projectId, projectName } = request;
-
+export async function generateAudio(opts: {
+  text: string;
+  voice?: string;
+  systemPrompt?: string;
+  targetBatchIndices?: number[];
+  projectId: string;
+  projectName: string;
+}): Promise<{ batches: AudioBatch[] }> {
+  const {
+    text,
+    voice = "nPczCjzI2devNBz1zQrb",
+    systemPrompt,
+    targetBatchIndices,
+    projectId,
+    projectName,
+  } = opts;
   const segments = splitTextIntoBatches(text, 10000, systemPrompt);
-
-  const batches: AudioBatch[] = segments.map((seg, i) => ({
+  const batches: AudioBatch[] = segments.map((t, i) => ({
     index: i,
-    text: seg,
-    status: 'pending'
+    text: t,
+    status: "pending" as const,
   }));
 
-  const CONCURRENCY = 4;
-  const MAX_RETRIES = 2;
+  const indices =
+    targetBatchIndices?.filter((i) => i >= 0 && i < segments.length) ??
+    segments.map((_, i) => i);
 
-  const indicesToProcess = targetBatchIndices
-    ? targetBatchIndices.filter(i => i >= 0 && i < segments.length)
-    : segments.map((_, i) => i);
-
-  for (let i = 0; i < indicesToProcess.length; i += CONCURRENCY) {
-    const chunkIndices = indicesToProcess.slice(i, i + CONCURRENCY);
-
-    await Promise.all(chunkIndices.map(async (index, batchIdx) => {
-      await new Promise(r => setTimeout(r, batchIdx * 800));
-
-      batches[index].status = 'generating';
-
-      let attempt = 0;
-      while (attempt < MAX_RETRIES) {
-        try {
-          const url = await audioRequest(model, segments[index], voice, projectId, projectName);
-          batches[index].status = 'completed';
-          batches[index].url = url;
-          return;
-        } catch (error: any) {
-          attempt++;
-          const isRateLimit = error.message?.includes('429');
-          const delay = isRateLimit
-            ? 2000 * Math.pow(2, attempt) + Math.random() * 1000
-            : 1000 * Math.pow(2, attempt) + Math.random() * 1000;
-
-          console.error(`[Audio] Batch ${index + 1} failed (Attempt ${attempt}/${MAX_RETRIES}). Error: ${error.message}.`);
-
-          if (attempt >= MAX_RETRIES) {
-            batches[index].status = 'error';
-            batches[index].error = error.message;
+  for (let i = 0; i < indices.length; i += 4) {
+    const chunk = indices.slice(i, i + 4);
+    await Promise.all(
+      chunk.map(async (idx, offset) => {
+        await new Promise((r) => setTimeout(r, offset * 800));
+        batches[idx].status = "generating";
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            batches[idx].url = await generateAndSave(
+              segments[idx],
+              voice,
+              projectId,
+              projectName,
+            );
+            batches[idx].status = "completed";
             return;
+          } catch (e: any) {
+            if (attempt >= 1) {
+              batches[idx].status = "error";
+              batches[idx].error = e.message;
+              return;
+            }
+            await new Promise((r) =>
+              setTimeout(r, 2000 * 2 ** attempt + Math.random() * 1000),
+            );
           }
-          await new Promise(r => setTimeout(r, delay));
         }
-      }
-    }));
+      }),
+    );
   }
 
   return { batches };
-};
+}

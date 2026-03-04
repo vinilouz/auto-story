@@ -1,15 +1,14 @@
 {
-  "id": "f2d2867f-f998-49fc-9f6f-f66fd7335847",
-  "status": "completed",
-  "startedAt": "2026-03-03T21:43:20.329Z",
-  "updatedAt": "2026-03-04T00:56:21.454Z",
+  "id": "e481c2d0-8726-419d-a5f8-f4bf15c9c3f6",
+  "status": "running",
+  "startedAt": "2026-03-04T19:46:35.706Z",
+  "updatedAt": "2026-03-04T20:28:38.472Z",
   "agentPlugin": "claude",
   "trackerPlugin": "json",
-  "prdPath": "./tasks/prd.json",
-  "currentIteration": 6,
-  "maxIterations": 20,
+  "prdPath": "./tasks/prd-provider-refactor.json",
+  "currentIteration": 8,
+  "maxIterations": 50,
   "totalTasks": 0,
-  "tasksCompleted": 6,
-  "cwd": "/home/vinilouz/Projetos/auto-story",
-  "endedAt": "2026-03-04T00:56:21.454Z"
+  "tasksCompleted": 8,
+  "cwd": "/home/vinilouz/Projetos/auto-story"
 }

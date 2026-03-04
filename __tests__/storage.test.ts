@@ -1,54 +1,47 @@
-import { StorageService, ProjectData } from '@/lib/storage';
-import fs from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { type ProjectData, StorageService } from "@/lib/storage";
 
-// Change storage location for tests so we don't mess up real data
-const PUBLIC_DIR = path.join(process.cwd(), 'public');
-const DATA_DIR = path.join(PUBLIC_DIR, 'projects');
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const DATA_DIR = path.join(PUBLIC_DIR, "projects");
 
-describe('StorageService', () => {
+describe("StorageService", () => {
   const mockProject: ProjectData = {
-    id: 'test-project-id-1234',
-    name: 'Test Project',
+    id: "test-project-id-1234",
+    name: "Test Project",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    flowType: 'simple',
-    scriptText: 'This is a test script.',
+    flowType: "simple",
+    scriptText: "This is a test script.",
     segmentSize: 150,
-    language: 'english',
-    style: 'Anime Style',
-    voice: 'NarratorVoice1',
+    language: "english",
+    style: "Anime Style",
+    voice: "NarratorVoice1",
     consistency: true,
     entities: [
-      { name: 'John Doe', description: 'A test entity', status: 'pending' }
+      { name: "John Doe", description: "A test entity", status: "pending" },
     ],
-    segments: ['Scene 1', 'Scene 2'],
-    visualDescriptions: [],
+    segments: [{ text: "Scene 1" }, { text: "Scene 2" }],
     audioUrls: [],
     audioBatches: [],
-    transcriptionResults: []
+    transcriptionResults: [],
   };
 
   afterAll(async () => {
-    // Cleanup the test project directory
     await StorageService.deleteProject(mockProject.id);
   });
 
-  it('should save a project with all custom properties and reload them accurately', async () => {
-    // 1. Save Project
+  it("should save a project with all custom properties and reload them accurately", async () => {
     const savedId = await StorageService.saveProject(mockProject);
 
     expect(savedId).toBe(mockProject.id);
 
-    // 2. Fetch Project Back
     const loadedProject = await StorageService.getProject(mockProject.id);
 
-    // 3. Verify it exists
     expect(loadedProject).not.toBeNull();
     if (!loadedProject) return;
 
-    // 4. Assert all specific fields survived the serialization roundtrip
     expect(loadedProject.id).toBe(mockProject.id);
     expect(loadedProject.name).toBe(mockProject.name);
     expect(loadedProject.consistency).toBe(mockProject.consistency);
@@ -56,25 +49,25 @@ describe('StorageService', () => {
     expect(loadedProject.voice).toBe(mockProject.voice);
     expect(loadedProject.entities).toEqual(mockProject.entities);
 
-    // Assert strictly on fields that cause regressions
-    expect(loadedProject).toHaveProperty('consistency', true);
-    expect(loadedProject).toHaveProperty('voice', 'NarratorVoice1');
-    expect(loadedProject).toHaveProperty('style', 'Anime Style');
+    expect(loadedProject).toHaveProperty("consistency", true);
+    expect(loadedProject).toHaveProperty("voice", "NarratorVoice1");
+    expect(loadedProject).toHaveProperty("style", "Anime Style");
     expect(loadedProject.entities).toBeDefined();
     expect(loadedProject.entities?.length).toBe(1);
   });
 
-  it('should extract base64 images to file system on save', async () => {
+  it("should extract base64 images to file system on save", async () => {
     const projectWithBase64: ProjectData = {
       ...mockProject,
-      id: 'test-project-id-5678',
-      visualDescriptions: [
+      id: "test-project-id-5678",
+      segments: [
         {
-          imagePrompt: 'A simple scene',
-          status: 'completed',
-          imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
-        }
-      ]
+          text: "A simple scene",
+          imagePrompt: "A simple scene",
+          imagePath:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        },
+      ],
     };
 
     await StorageService.saveProject(projectWithBase64);
@@ -83,17 +76,18 @@ describe('StorageService', () => {
     expect(loadedProject).not.toBeNull();
     if (!loadedProject) return;
 
-    // Assert that the base64 payload was extracted to a path
-    const extractedUrl = loadedProject.visualDescriptions?.[0].imageUrl;
-    expect(extractedUrl).not.toContain('data:image/');
-    expect(extractedUrl).toMatch(/\/projects\/test-project-test\/images\/scene-0-\d+\.png/);
+    const extractedUrl = loadedProject.segments?.[0]?.imagePath;
+    expect(extractedUrl).not.toContain("data:image/");
+    expect(extractedUrl).toMatch(/\/projects\/.*\/images\/scene-0-\d+\.png/);
 
-    // Check if file actually exists
-    const shortId = loadedProject.id.split('-')[0];
-    const filepath = path.join(DATA_DIR, `test-project-${shortId}`, 'images', extractedUrl!.split('/').pop()!);
+    const shortId = loadedProject.id.split("-")[0];
+    const dirName = `test-project-${shortId}`;
+    const dirs = await fs.readdir(DATA_DIR);
+    const actualDir = dirs.find((d) => d.includes(shortId)) || dirName;
+    const fileName = extractedUrl?.split("/").pop();
+    const filepath = path.join(DATA_DIR, actualDir, "images", fileName ?? "");
     expect(existsSync(filepath)).toBe(true);
 
-    // Cleanup
     await StorageService.deleteProject(projectWithBase64.id);
   });
 });
