@@ -118,11 +118,25 @@ registerProvider({
     }
 
     const events = await parseSSE(res)
-    const imageUrl = extractUrl(events)
+    const rawUrl = extractUrl(events)
 
-    if (!imageUrl) {
+    if (!rawUrl) {
       console.error('[air/image] No URL found in SSE events:', JSON.stringify(events.slice(-3), null, 2))
       throw new Error('No image URL in Air SSE response')
+    }
+
+    let imageUrl = rawUrl;
+    if (rawUrl.startsWith('http')) {
+      try {
+        const dRes = await fetch(rawUrl);
+        if (!dRes.ok) throw new Error(`HTTP ${dRes.status}`);
+        const arrayBuffer = await dRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const mimeType = dRes.headers.get('content-type') || 'image/png';
+        imageUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      } catch (e: any) {
+        throw new Error(`Failed to convert Air image to base64: ${e.message}`);
+      }
     }
 
     return { imageUrl }
@@ -188,11 +202,25 @@ registerProvider({
     }
 
     const events = await parseSSE(res)
-    const videoUrl = extractUrl(events)
+    const rawUrl = extractUrl(events)
 
-    if (!videoUrl) {
+    if (!rawUrl) {
       console.error('[air/video] No URL found in SSE events:', JSON.stringify(events.slice(-3), null, 2))
       throw new Error('No video URL in Air SSE response')
+    }
+
+    let videoUrl = rawUrl;
+    if (rawUrl.startsWith('http')) {
+      try {
+        const dRes = await fetch(rawUrl);
+        if (!dRes.ok) throw new Error(`HTTP ${dRes.status}`);
+        const arrayBuffer = await dRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const mimeType = dRes.headers.get('content-type') || 'video/mp4';
+        videoUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      } catch (e: any) {
+        throw new Error(`Failed to convert Air video to base64: ${e.message}`);
+      }
     }
 
     return { videoUrl }

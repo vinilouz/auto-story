@@ -27,6 +27,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/38a69695-2ca9-4b9e-b9ec-f07ced494a58.mp3",
   },
   {
+    name: "Adam Borges",
+    id: "adam-borges",
+    externalId: "ZqE9vIHPcrC35dZv0Svu",
+    provider: "n",
+    description: "Sensual and Expressive",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/user/lhhRUNVUX2UiAtEmR2ilIHreyhK2/voices/ZqE9vIHPcrC35dZv0Svu/7a6a9eb0-8651-42ca-a3bc-548131d08239.mp3",
+  },
+  {
     name: "Alice",
     id: "alice",
     externalId: "Xb7hH8MSUJpSbSDYk0k2",
@@ -180,6 +189,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/g5CIjZEefAph4nQFvHAz/26acfa99-fdec-43b8-b2ee-e49e75a3ac16.mp3",
   },
   {
+    name: "Evelin Perdomo",
+    id: "evelin-perdomo",
+    externalId: "x3mAOLD9WzlmrFCwA1S3",
+    provider: "n",
+    description: "Smooth and Expressive",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/workspace/c4ac53b6ed344b3a93f8c66b7b9d4344/voices/x3mAOLD9WzlmrFCwA1S3/xTJ7rTNlWJnl03Xf9Dru.mp3",
+  },
+  {
     name: "Fin",
     id: "fin",
     externalId: "D38z5RcWu1voky8WS1ja",
@@ -241,6 +259,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
     description: "audiobook",
     previewUrl:
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/oWAxZDx7w5VEj9dCyTzz/84a36d1c-e182-41a8-8c55-dbdd15cd6e72.mp3",
+  },
+  {
+    name: "Hale",
+    id: "hale",
+    externalId: "wWWn96OtTHu1sn8SRGEr",
+    provider: "n",
+    description: "Expressive, Deep and Emotive",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/user/1D73t5OmWJcLCgnlSL28i2bB7Iq2/voices/wWWn96OtTHu1sn8SRGEr/e7c39b42-a77b-413c-9d7b-143bd782294b.mp3",
   },
   {
     name: "Harry",
@@ -369,6 +396,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/5Q0t7uMcjvnagumLfvZi/1094515a-b080-4282-aac7-b1b8a553a3a8.mp3",
   },
   {
+    name: "Paulo",
+    id: "paulo",
+    externalId: "Qrdut83w0Cr152Yb4Xn3",
+    provider: "n",
+    description: "Expressive and Confident",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/workspace/c4ac53b6ed344b3a93f8c66b7b9d4344/voices/Qrdut83w0Cr152Yb4Xn3/qIxIJ5ey8adKPaB8poOW.mp3",
+  },
+  {
     name: "Rachel",
     id: "rachel",
     externalId: "21m00Tcm4TlvDq8ikWAM",
@@ -412,6 +448,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
     description: "calm, meditation",
     previewUrl:
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/GBv7mTt0atIp3Br8iCZE/98542988-5267-4148-9a9e-baa8c4f14644.mp3",
+  },
+  {
+    name: "Tomasz Z",
+    id: "tomasz-z",
+    externalId: "xsSg7GkDPDhaGZpbKOLn",
+    provider: "n",
+    description: "calm, meditation",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/user/vQ81lku08BWwovhs0iMxLmw6pyH2/voices/xsSg7GkDPDhaGZpbKOLn/8b64484e-6963-45e3-8e2c-75eb1821d2b6.mp3",
   },
   {
     name: "Santa Claus",

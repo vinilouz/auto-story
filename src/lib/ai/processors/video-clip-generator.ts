@@ -38,11 +38,15 @@ export async function generateAndSaveVideoClip(
   const filename = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`
   const filepath = path.join(pubDir, filename)
 
-  // videoUrl is always a remote URL from Air's SSE response — download it
-  const res = await fetch(videoUrl)
-  if (!res.ok) throw new Error(`Failed to download video clip: ${res.status}`)
-  const buf = await res.arrayBuffer()
-  fs.writeFileSync(filepath, Buffer.from(buf))
+  if (videoUrl.startsWith('data:')) {
+    const [, base64Data] = videoUrl.split(',');
+    fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
+  } else {
+    const res = await fetch(videoUrl);
+    if (!res.ok) throw new Error(`Failed to download video clip: ${res.status}`);
+    const buf = await res.arrayBuffer();
+    fs.writeFileSync(filepath, Buffer.from(buf));
+  }
 
   return `/projects/${dir}/clips/${filename}`
 }

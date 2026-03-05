@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import { AudioBatch, TranscriptionResult, CaptionStyle, Segment, TranscriptionWord } from "./types"
 import { RemotionVideoProps } from "@/lib/video/types"
-import { alignVideoProps } from "@/lib/video/aligner"
+import { alignVideoProps, AlignmentMode } from "@/lib/video/aligner"
 
 // ── Audio ──────────────────────────────────────────────────
 
@@ -189,7 +189,8 @@ export function useVideo() {
   const generate = async (
     segments: { id: string; text: string; imageUrl: string }[],
     audioBatches: AudioBatch[],
-    transcriptionResults: TranscriptionResult[]
+    transcriptionResults: TranscriptionResult[],
+    alignmentMode: AlignmentMode = 'video'
   ) => {
     const completed = audioBatches.filter(b => b.status === 'completed' && b.url)
     const urls = completed.map(b => b.url!)
@@ -212,7 +213,7 @@ export function useVideo() {
         a.onerror = () => { clearTimeout(t); resolve(0) }
       })))
 
-      const props = alignVideoProps(segments, transcriptions, validUrls, durations)
+      const props = alignVideoProps(segments, transcriptions, validUrls, durations, [], undefined, alignmentMode)
       if (props.durationInFrames <= 0) throw new Error('Zero duration')
       setVideoProps(props)
       return props
@@ -268,6 +269,10 @@ export function useProject() {
 
   const load = async (id: string) => {
     const res = await fetch(`/api/projects/${id}`)
+    if (res.status === 404) {
+      setProjectId(id)
+      return null
+    }
     if (!res.ok) throw new Error('Load failed')
     const data = await res.json()
     setProjectId(data.id)

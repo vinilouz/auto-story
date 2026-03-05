@@ -14,6 +14,7 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateImage: [
     { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
     { provider: 'void', model: 'gemini-3-pro-image-preview' },
+    { provider: 'air', model: 'nano-banana-pro' },
   ],
   generateAudio: [
     { provider: 'naga', model: 'eleven-multilingual-v2:free' },

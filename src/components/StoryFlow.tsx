@@ -69,7 +69,7 @@ const STAGE_LABELS: Record<Stage, string> = {
 
 interface Props {
   mode: FlowMode
-  projectId?: string
+  projectId: string
   onBack: () => void
 }
 
@@ -152,8 +152,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
   // ── Load project ──
   useEffect(() => {
-    if (!projectId) return
     project.load(projectId).then(p => {
+      if (!p) return
       if (p.name) setTitle(p.name)
       if (p.scriptText) setScriptText(p.scriptText)
       if (p.segmentSize) setSegmentSize([p.segmentSize])
@@ -213,7 +213,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       ? segments.filter(s => s.type).map(s => `${s.type === 'comment' ? 'commentator' : 'narrator'}: ${s.text}`).join('\n')
       : scriptText,
     voice: audioVoice, systemPrompt: audioSystemPrompt,
-    projectId: project.projectId || 'temp', projectName: title || 'untitled',
+    projectId: project.projectId || projectId, projectName: title || 'untitled',
   })
 
   // ════════════════════════════════════════════════════════════
@@ -308,7 +308,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     try {
       const prompt = mode === 'commentator' && commentator?.appearance?.imageUrl
         ? COMMENTATOR_IMAGE_GENERATION_PROMPT(seg.imagePrompt) : GENERATE_SEGMENT_IMAGE_PROMPT(seg.imagePrompt, imagePromptStyle)
-      const payload: any = { imagePrompt: prompt, imageConfig: { aspect_ratio: "16:9" }, systemPrompt: imagePromptStyle, projectId: project.projectId, projectName: title }
+      const payload: any = { imagePrompt: prompt, imageConfig: { aspect_ratio: "16:9" }, systemPrompt: imagePromptStyle, projectId: project.projectId || projectId, projectName: title }
       const matches = prompt.match(/<<([^>]+)>>/g)
       if (matches && entities.length) { const refs = entities.filter(e => matches.some(m => m.includes(e.name)) && e.imageUrl).map(e => e.imageUrl!); if (refs.length) payload.referenceImages = refs }
       else if (mode === 'commentator' && commentator?.appearance?.imageUrl) payload.referenceImage = commentator.appearance.imageUrl
@@ -373,19 +373,19 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
   const generateAllClips = async () => {
     let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
-    await videoClips.generateAll(segments, setSegments, { projectId: pid, projectName: title, clipDuration })
+    await videoClips.generateAll(segments, setSegments, { projectId: pid || projectId, projectName: title, clipDuration })
     setTimeout(() => save(), 200)
   }
 
   const generateVideoPreview = async () => {
     try {
-      // For video-story mode, scenes use videoClipUrl. For image modes, they use imageUrl.
       const segs = segments.filter(s => s.imagePrompt).map((s, i) => ({
         id: `seg-${i}`,
         text: s.text,
         imageUrl: s.videoClipUrl || s.imagePath || '',
       }))
-      await video.generate(segs, audio.batches, transcription.results)
+      const alignmentMode = mode === 'video-story' ? 'video' as const : 'image' as const
+      await video.generate(segs, audio.batches, transcription.results, alignmentMode)
       setStage('video')
     } catch (e: any) { toast.error(`Video generation failed: ${e.message}`) }
   }
@@ -786,7 +786,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                     <div className="relative group">
                       <video src={seg.videoClipUrl} controls className="w-full rounded" />
                       <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
-                        onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId, projectName: title, clipDuration })}>
+                        onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId || projectId, projectName: title, clipDuration })}>
                         <RefreshCw className="w-4 h-4" />
                       </Button>
                     </div>
@@ -797,7 +797,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                   ) : st === 'error' ? (
                     <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
                       <span className="text-sm text-muted-foreground">Error</span>
-                      <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId, projectName: title, clipDuration })}>
+                      <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId || projectId, projectName: title, clipDuration })}>
                         <RefreshCw className="w-4 h-4 mr-2" />Retry
                       </Button>
                     </div>

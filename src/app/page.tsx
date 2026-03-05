@@ -17,7 +17,15 @@ export default function Home() {
   const [flow, setFlow] = useState<{ type: FlowType; projectId?: string } | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
 
-  useEffect(() => { loadProjects() }, [])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const pId = params.get('projectId')
+    const type = params.get('type') as FlowType
+    if (pId && type) {
+      setFlow({ projectId: pId, type })
+    }
+    loadProjects()
+  }, [])
 
   const loadProjects = async () => {
     try {
@@ -43,11 +51,23 @@ export default function Home() {
     return 'simple'
   }
 
+  const startFlow = (type: FlowType, projectId?: string) => {
+    const id = projectId || crypto.randomUUID()
+    window.history.pushState(null, '', `?projectId=${id}&type=${type}`)
+    setFlow({ type, projectId: id })
+  }
+
+  const closeFlow = () => {
+    window.history.pushState(null, '', window.location.pathname)
+    setFlow(null)
+    loadProjects()
+  }
+
   if (flow) {
     return <StoryFlow
       mode={flow.type}
-      projectId={flow.projectId}
-      onBack={() => { setFlow(null); loadProjects() }}
+      projectId={flow.projectId!}
+      onBack={closeFlow}
     />
   }
 
@@ -79,7 +99,7 @@ export default function Home() {
                 <Card
                   key={p.id}
                   className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all group"
-                  onClick={() => setFlow({ type: detectFlowType(p), projectId: p.id })}
+                  onClick={() => startFlow(detectFlowType(p), p.id)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex justify-between">
@@ -112,7 +132,7 @@ export default function Home() {
         <div className="grid md:grid-cols-3 gap-6">
           <Card
             className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all"
-            onClick={() => setFlow({ type: 'simple' })}
+            onClick={() => startFlow('simple')}
           >
             <CardHeader>
               <div className="text-4xl mb-4">📖</div>
@@ -124,7 +144,7 @@ export default function Home() {
 
           <Card
             className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all"
-            onClick={() => setFlow({ type: 'commentator' })}
+            onClick={() => startFlow('commentator')}
           >
             <CardHeader>
               <div className="text-4xl mb-4">🎙️</div>
@@ -136,7 +156,7 @@ export default function Home() {
 
           <Card
             className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all"
-            onClick={() => setFlow({ type: 'video-story' })}
+            onClick={() => startFlow('video-story')}
           >
             <CardHeader>
               <div className="text-4xl mb-4">🎬</div>

@@ -570,7 +570,205 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
   }
 }
 
+// --- Image Alignment Strategy ---
+
+export class ImageAlignmentStrategy implements AlignmentStrategy {
+  private static EFFECTS: SceneEffect[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
+  private static TRANSITIONS: VideoTransition['type'][] = ['fade', 'wipe', 'slide'];
+  private static TRANSITION_DURATION = 30;
+
+  align(context: AlignmentContext): RemotionVideoProps {
+    const { segments, transcriptionResults, audioUrls, fps } = context;
+
+    const { allWords, audioTracks, totalAudioDurationSeconds } = this.flattenTranscription(
+      transcriptionResults, audioUrls, fps, context.audioDurations
+    );
+
+    const segmentTimings = this.findSegmentTimings(segments, allWords, totalAudioDurationSeconds);
+    const scenes = this.generateScenes(segments, segmentTimings, fps);
+
+    const captions = allWords.map(w => ({
+      text: w.text,
+      startMs: Math.round(w.globalStart * 1000),
+      endMs: Math.round(w.globalEnd * 1000)
+    }));
+
+    const totalAudioDurationFrames = Math.ceil(totalAudioDurationSeconds * fps);
+
+    console.log("[ImageAlignment] Complete:", {
+      segments: segments.length,
+      audioTracks: audioTracks.length,
+      durationSec: totalAudioDurationSeconds,
+      durationFrames: totalAudioDurationFrames
+    });
+
+    return {
+      fps,
+      durationInFrames: Math.max(1, totalAudioDurationFrames),
+      width: REMOTION_CROPPED_WIDTH,
+      height: REMOTION_CROPPED_HEIGHT,
+      scenes,
+      audioTracks,
+      captions
+    };
+  }
+
+  private flattenTranscription(
+    transcriptionResults: { words: Word[] }[],
+    audioUrls: string[],
+    fps: number,
+    audioDurations?: number[]
+  ) {
+    let globalTimeOffset = 0;
+    const allWords: FlattenedWord[] = [];
+    const audioTracks: AudioTrackConfig[] = [];
+
+    transcriptionResults.forEach((result, batchIndex) => {
+      const words = Array.isArray(result) ? result : (result.words || []);
+      const lastWord = words[words.length - 1];
+
+      let durationSeconds = 0;
+      if (audioDurations && audioDurations[batchIndex]) {
+        durationSeconds = audioDurations[batchIndex];
+      } else {
+        durationSeconds = lastWord ? lastWord.endMs / 1000 : 0;
+      }
+
+      const durationFrames = Math.ceil(durationSeconds * fps);
+
+      audioTracks.push({
+        src: audioUrls[batchIndex],
+        startFrame: Math.round(globalTimeOffset * fps),
+        durationInFrames: durationFrames
+      });
+
+      words.forEach((w, i) => {
+        if (!w.text.trim()) return;
+        const startSeconds = w.startMs / 1000;
+        const endSeconds = w.endMs / 1000;
+        allWords.push({
+          ...w,
+          start: startSeconds,
+          end: endSeconds,
+          originalIndex: i,
+          batchIndex,
+          globalStart: globalTimeOffset + startSeconds,
+          globalEnd: globalTimeOffset + endSeconds
+        });
+      });
+
+      globalTimeOffset += durationSeconds;
+    });
+
+    return { allWords, audioTracks, totalAudioDurationSeconds: globalTimeOffset };
+  }
+
+  private findSegmentTimings(
+    segments: { id: string; text: string }[],
+    allWords: FlattenedWord[],
+    totalDuration: number
+  ) {
+    const starts: number[] = [];
+    let searchFrom = 0;
+
+    for (let i = 0; i < segments.length; i++) {
+      if (i === 0) {
+        starts.push(0);
+        continue;
+      }
+
+      const match = findSegmentStartWithConfidence(segments[i].text, allWords, searchFrom);
+      if (match.index !== -1) {
+        starts.push(allWords[match.index].globalStart);
+        searchFrom = match.index;
+      } else {
+        starts.push(-1);
+      }
+    }
+
+    const timings: { start: number; end: number }[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+      const start = starts[i] !== -1 ? starts[i] : (i > 0 ? timings[i - 1].end : 0);
+      const end = i < segments.length - 1
+        ? (starts[i + 1] !== -1 ? starts[i + 1] : totalDuration)
+        : totalDuration;
+
+      timings.push({ start, end: Math.max(end, start) });
+    }
+
+    return timings;
+  }
+
+  private generateScenes(
+    segments: { id: string; imageUrl?: string; text?: string }[],
+    timings: { start: number; end: number }[],
+    fps: number
+  ): VideoScene[] {
+    const scenes: VideoScene[] = [];
+    const TRANSITION_FRAMES = ImageAlignmentStrategy.TRANSITION_DURATION;
+    const HALF_TRANSITION = TRANSITION_FRAMES / 2;
+
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      const timing = timings[i];
+      const logicalDurationFrames = Math.round((timing.end - timing.start) * fps);
+
+      const isFirst = i === 0;
+      const isLast = i === segments.length - 1;
+
+      const effect = ImageAlignmentStrategy.EFFECTS[i % ImageAlignmentStrategy.EFFECTS.length];
+      const transitionType = ImageAlignmentStrategy.TRANSITIONS[i % ImageAlignmentStrategy.TRANSITIONS.length];
+
+      let hasTransitionIn = !isFirst;
+      let hasTransitionOut = !isLast;
+
+      const paddingIn = hasTransitionIn ? HALF_TRANSITION : 0;
+      const paddingOut = hasTransitionOut ? HALF_TRANSITION : 0;
+      const projectedDuration = logicalDurationFrames + paddingIn + paddingOut;
+
+      if (projectedDuration <= TRANSITION_FRAMES + 2) {
+        hasTransitionIn = false;
+        hasTransitionOut = false;
+        if (i > 0 && scenes[i - 1].transition) {
+          scenes[i - 1].transition = undefined;
+          scenes[i - 1].durationInFrames -= HALF_TRANSITION;
+          if (scenes[i - 1].durationInFrames < TRANSITION_FRAMES)
+            scenes[i - 1].durationInFrames = TRANSITION_FRAMES;
+        }
+      }
+
+      let finalDuration = logicalDurationFrames;
+      if (hasTransitionIn) finalDuration += HALF_TRANSITION;
+      if (hasTransitionOut) finalDuration += HALF_TRANSITION;
+      if (finalDuration < 1) finalDuration = 1;
+
+      scenes.push({
+        id: seg.id,
+        imageUrl: seg.imageUrl || "",
+        startFrame: 0,
+        durationInFrames: Math.round(finalDuration),
+        effect,
+        transition: hasTransitionOut ? {
+          type: transitionType,
+          durationInFrames: TRANSITION_FRAMES
+        } : undefined,
+        textFragment: seg.text,
+        debug: {
+          startSeconds: timing.start,
+          endSeconds: timing.end,
+          durationSeconds: timing.end - timing.start,
+        } as any
+      });
+    }
+
+    return scenes;
+  }
+}
+
 // --- Main Export ---
+
+export type AlignmentMode = 'image' | 'video';
 
 export function alignVideoProps(
   segments: { id: string; text: string; imageUrl: string }[],
@@ -578,8 +776,14 @@ export function alignVideoProps(
   audioUrls: string[],
   audioDurations: number[] = [],
   videoDurations: number[] = [],
-  fps: number = REMOTION_DEFAULT_FPS
+  fps: number = REMOTION_DEFAULT_FPS,
+  mode: AlignmentMode = 'video'
 ): RemotionVideoProps {
+  if (mode === 'image') {
+    const strategy = new PrecisionAlignmentStrategy();
+    return strategy.align({ segments, transcriptionResults, audioUrls, audioDurations, fps });
+  }
+
   const strategy = new ContinuousAlignmentStrategy();
   return strategy.align({
     segments,
