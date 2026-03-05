@@ -19,6 +19,7 @@ import {
   Segment, EntityAsset, CaptionStyle, CommentatorConfig, DEFAULT_CAPTION_STYLE
 } from "@/lib/flows/types"
 import { NAGA_VOICES } from "@/config/voices"
+import { VoicePicker } from "@/components/ui/voice-picker"
 import { ACTIONS, getVideoClipDuration } from "@/lib/ai/config"
 import {
   useAudio, useTranscription, useVideo, useVideoClips,
@@ -313,8 +314,6 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       else if (mode === 'commentator' && commentator?.appearance?.imageUrl) payload.referenceImage = commentator.appearance.imageUrl
       const res = await fetch('/api/generate/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (!res.ok) throw new Error()
-      setSegments(prev => prev.map((s, j) => j === segIndex ? { ...s, imagePath: (res as any).__data?.imageUrl } : s))
-      // Need to actually read the response
       const data = await res.json()
       setSegments(prev => prev.map((s, j) => j === segIndex ? { ...s, imagePath: data.imageUrl } : s))
       setImageStatuses(p => { const n = new Map(p); n.delete(segIndex); return n })
@@ -527,9 +526,11 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                 )}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Voice</label>
-                  <select className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm" value={audioVoice} onChange={e => setAudioVoice(e.target.value)}>
-                    {NAGA_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} ({v.description})</option>)}
-                  </select>
+                  <VoicePicker
+                    voices={NAGA_VOICES.map(v => ({ voiceId: v.externalId, name: v.name, previewUrl: v.previewUrl, labels: { description: v.description } } as any))}
+                    value={audioVoice}
+                    onValueChange={setAudioVoice}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
