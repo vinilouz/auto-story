@@ -1,7 +1,2 @@
-# Seletor de transições na renderização
-- [ ] Seletor com possibilidade de apenas um efeito de transição ou random para o efeito aleatorio atual 
-
-# limpar codigo legado
-- ex voices google
-
-
+log de padronizado de requests de ai
+testar 16/9 gpt image 

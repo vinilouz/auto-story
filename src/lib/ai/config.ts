@@ -9,12 +9,12 @@ export interface ModelConfig {
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gpt-5.2-chat-latest' },
+    { provider: 'void', model: 'gpt-5.3-chat-latest' },
   ],
   generateImage: [
-    { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
-    { provider: 'void', model: 'gemini-3-pro-image-preview' },
     { provider: 'air', model: 'nano-banana-pro' },
+    // { provider: 'void', model: 'gemini-3-pro-image-preview' },
+    // { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
   ],
   generateAudio: [
     { provider: 'naga', model: 'eleven-multilingual-v2:free' },

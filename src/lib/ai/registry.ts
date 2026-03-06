@@ -1,5 +1,5 @@
 import { ActionType, ACTIONS, getCredentials } from './config'
-import { acquireSlot, waitAfter429 } from './rate-limiter'
+import { acquireSlot } from './rate-limiter'
 
 // ── Request/Response types ────────────────────────────────
 
@@ -76,16 +76,6 @@ export async function execute<A extends ActionType>(
       return await handler(model, request, creds)
     } catch (e: any) {
       const msg = e?.message || String(e)
-      if (msg.includes('429')) {
-        await waitAfter429(name)
-        try {
-          await acquireSlot(name)
-          return await handler(model, request, creds)
-        } catch (retryErr: any) {
-          errors.push(`${name}/${model}: ${retryErr?.message || retryErr}`)
-          continue
-        }
-      }
       console.warn(`[AI] ${name}/${model} failed: ${msg}`)
       errors.push(`${name}/${model}: ${msg}`)
     }

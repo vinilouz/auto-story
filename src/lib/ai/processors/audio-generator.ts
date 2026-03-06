@@ -62,40 +62,28 @@ export async function generateAudio(opts: {
     status: "pending" as const,
   }));
 
+  batches.forEach((b) => (b.status = "pending"));
   const indices =
     targetBatchIndices?.filter((i) => i >= 0 && i < segments.length) ??
     segments.map((_, i) => i);
 
-  for (let i = 0; i < indices.length; i += 4) {
-    const chunk = indices.slice(i, i + 4);
-    await Promise.all(
-      chunk.map(async (idx, offset) => {
-        await new Promise((r) => setTimeout(r, offset * 800));
-        batches[idx].status = "generating";
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            batches[idx].url = await generateAndSave(
-              segments[idx],
-              voice,
-              projectId,
-              projectName,
-            );
-            batches[idx].status = "completed";
-            return;
-          } catch (e: any) {
-            if (attempt >= 1) {
-              batches[idx].status = "error";
-              batches[idx].error = e.message;
-              return;
-            }
-            await new Promise((r) =>
-              setTimeout(r, 2000 * 2 ** attempt + Math.random() * 1000),
-            );
-          }
-        }
-      }),
-    );
-  }
+  await Promise.all(
+    indices.map(async (idx) => {
+      batches[idx].status = "generating";
+      try {
+        batches[idx].url = await generateAndSave(
+          segments[idx],
+          voice,
+          projectId,
+          projectName,
+        );
+        batches[idx].status = "completed";
+      } catch (e: any) {
+        batches[idx].status = "error";
+        batches[idx].error = e.message;
+      }
+    }),
+  );
 
   return { batches };
 }

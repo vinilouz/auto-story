@@ -360,6 +360,15 @@ export const NAGA_VOICES: VoiceConfig[] = [
       "https://storage.googleapis.com/eleven-public-prod/premade/voices/flq6f7yk4E4fJM5XTYuZ/c6431a82-f7d2-4905-b8a4-a631960633d6.mp3",
   },
   {
+    name: "Miguel",
+    id: "miguel",
+    externalId: "k8cFOyAg7B9qwBlDDNTC",
+    provider: "n",
+    description: "Deep, Rich and Cinematic",
+    previewUrl:
+      "https://storage.googleapis.com/eleven-public-prod/database/user/GJdoyaP8TaZz3yZHCWI2JwuCVsv1/voices/k8cFOyAg7B9qwBlDDNTC/KZqiLbg5cT5CZ7ANPaey.mp3",
+  },
+  {
     name: "Mimi",
     id: "mimi",
     externalId: "zrHiDhphv9ZnVXBqCLjz",

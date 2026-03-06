@@ -279,25 +279,39 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     setLoading(true)
     try {
       let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
+
+      const missing = entities.filter(e => !e.imageUrl || !e.description)
+      const targets = missing.length > 0 ? missing : entities
+
       const descRes = await fetch("/api/generate/entities/descriptions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entities: entities.map(e => e.name), segments: segments.map(s => s.text) })
+        body: JSON.stringify({ entities: targets.map(e => e.name), segments: segments.map(s => s.text) })
       })
       if (!descRes.ok) throw new Error()
-      const descData = await descRes.json()
-      const enhanced = entities.map(e => { const g = descData.entities.find((x: any) => x.name === e.name); return { ...e, description: g?.description, status: 'generating' as const } })
-      setEntities(enhanced)
-      const completed = await Promise.all(enhanced.map(async e => {
-        if (!e.description) return e
+      const { entities: newDescs } = await descRes.json()
+
+      const processing = entities.map(e => {
+        const desc = newDescs.find((x: any) => x.name === e.name)?.description
+        if (!targets.some(t => t.name === e.name)) return e
+        return { ...e, description: desc || e.description, status: 'generating' as const }
+      })
+      setEntities(processing)
+
+      const completed = await Promise.all(processing.map(async e => {
+        if (!targets.some(t => t.name === e.name) || !e.description) return e
         try {
           const r = await fetch("/api/generate/images", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle), imageConfig: { aspect_ratio: "1:1" }, projectId: pid, projectName: title })
+            body: JSON.stringify({
+              imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
+              imageConfig: { aspect_ratio: "1:1" }, projectId: pid, projectName: title
+            })
           })
           if (!r.ok) throw new Error()
           return { ...e, imageUrl: (await r.json()).imageUrl, status: 'completed' as const }
         } catch { return { ...e, status: 'error' as const } }
       }))
+
       setEntities(completed); await save({ entities: completed })
     } catch { toast.error("Failed") } finally { setLoading(false) }
   }

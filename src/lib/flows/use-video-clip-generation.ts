@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react"
 import { Segment } from "./types"
-import pLimit from "p-limit"
 import { GENERATE_VIDEO_PROMPT } from "@/lib/ai/prompts/prompts"
 
 type ClipStatus = 'pending' | 'generating' | 'completed' | 'error'
@@ -11,28 +10,20 @@ const executeGeneration = async (
   config: { modelId: string; projectId?: string | null; projectName?: string }
 ) => {
   const enhancedPrompt = GENERATE_VIDEO_PROMPT(prompt)
+  const res = await fetch('/api/generate/video', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: enhancedPrompt,
+      referenceImageUrl,
+      modelId: config.modelId,
+      projectId: config.projectId,
+      projectName: config.projectName
+    })
+  })
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch('/api/generate/video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: enhancedPrompt,
-          referenceImageUrl,
-          modelId: config.modelId,
-          projectId: config.projectId,
-          projectName: config.projectName
-        })
-      })
-
-      if (!res.ok) throw new Error('Video generation failed')
-      return await res.json()
-    } catch (error) {
-      if (attempt === 2) throw error
-      await new Promise(r => setTimeout(r, 2000))
-    }
-  }
+  if (!res.ok) throw new Error('Video generation failed')
+  return await res.json()
 }
 
 export function useVideoClipGeneration(
@@ -53,13 +44,12 @@ export function useVideoClipGeneration(
     setIsLoading(true)
 
     const indices = segments
-      .map((seg, i) => (!seg.videoPath ? i : -1))
+      .map((seg, i) => (!seg.videoClipUrl ? i : -1))
       .filter(i => i !== -1)
 
-    const limit = pLimit(config.modelId === 'veo-3.1-fast' ? 2 : 10)
     let currentSegments = [...segments]
 
-    const promises = indices.map(idx => limit(async () => {
+    await Promise.all(indices.map(async (idx) => {
       const seg = segments[idx]
       if (!seg.imagePath) return
 
@@ -74,7 +64,7 @@ export function useVideoClipGeneration(
 
         setSegments(prev => {
           const next = prev.map((s, i) =>
-            i === idx ? { ...s, videoPath: data.videoUrl } : s
+            i === idx ? { ...s, videoClipUrl: data.videoUrl } : s
           )
           currentSegments = next
           return next
@@ -86,7 +76,6 @@ export function useVideoClipGeneration(
       }
     }))
 
-    await Promise.all(promises)
     setIsLoading(false)
     if (onUpdate) {
       onUpdate(currentSegments)
@@ -112,7 +101,7 @@ export function useVideoClipGeneration(
 
       setSegments(prev => {
         const next = prev.map((s, i) =>
-          i === index ? { ...s, videoPath: data.videoUrl } : s
+          i === index ? { ...s, videoClipUrl: data.videoUrl } : s
         )
         if (onUpdate) onUpdate(next)
         return next

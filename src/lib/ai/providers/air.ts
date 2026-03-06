@@ -102,7 +102,7 @@ registerProvider({
       payload.size = ratioMap[req.config.aspect_ratio] || '1024x1024'
     }
 
-    console.log(`[air/image] ${model} payload:`, JSON.stringify({ ...payload, image_urls: payload.image_urls?.map((u: string) => u.substring(0, 50) + '...') }, null, 2))
+    // console.log(`[air/image] ${model} payload:`, JSON.stringify({ ...payload, image_urls: payload.image_urls?.map((u: string) => u.substring(0, 50) + '...') }, null, 2))
 
     const res = await fetch(`${creds.baseUrl}/v1/images/generations`, {
       method: 'POST',
@@ -182,11 +182,11 @@ registerProvider({
       }
     }
 
-    console.log(`[air/video] ${model} payload:`, JSON.stringify({
-      ...payload,
-      image_urls: payload.image_urls?.map((u: string) => u.substring(0, 50) + '...'),
-      reference_image_url: payload.reference_image_url ? payload.reference_image_url.substring(0, 50) + '...' : undefined,
-    }, null, 2))
+    // console.log(`[air/video] ${model} payload:`, JSON.stringify({
+    //   ...payload,
+    //   image_urls: payload.image_urls?.map((u: string) => u.substring(0, 50) + '...'),
+    //   reference_image_url: payload.reference_image_url ? payload.reference_image_url.substring(0, 50) + '...' : undefined,
+    // }, null, 2))
 
     const res = await fetch(`${creds.baseUrl}/v1/images/generations`, {
       method: 'POST',

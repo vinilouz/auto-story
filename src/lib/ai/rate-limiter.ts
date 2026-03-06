@@ -1,10 +1,9 @@
 const WINDOW_MS = 60_000
-const RETRY_AFTER_MS = 60_000
 
 const PROVIDER_LIMITS: Record<string, number> = {
   void: 20,
-  air: 9,
-  naga: 9,
+  air: 5,
+  naga: 10,
 }
 
 const windows = new Map<string, number[]>()
@@ -39,9 +38,4 @@ export async function acquireSlot(provider: string): Promise<void> {
     console.log(`[rate-limit] ${provider} — window full, waiting ${Math.ceil(waitMs / 1000)}s`)
     await new Promise<void>(resolve => setTimeout(resolve, waitMs + 50))
   }
-}
-
-export async function waitAfter429(provider: string): Promise<void> {
-  console.log(`[rate-limit] ${provider} — 429 received, cooling down ${RETRY_AFTER_MS / 1000}s`)
-  await new Promise<void>(resolve => setTimeout(resolve, RETRY_AFTER_MS))
 }
