@@ -187,11 +187,17 @@ export const StorageService = {
   },
 
   async getProjectByDirName(dirName: string): Promise<ProjectData | null> {
-    const configPath = path.join(DATA_DIR, dirName, 'config.json');
     try {
-      const data = await fs.readFile(configPath, 'utf-8');
-      return JSON.parse(data);
-    } catch (error) {
+      const project: ProjectData = JSON.parse(await fs.readFile(path.join(DATA_DIR, dirName, 'config.json'), 'utf-8'));
+      project.transcriptionResults ??= [];
+
+      for (const b of project.audioBatches || []) {
+        if (b.status !== 'completed' || !b.url || project.transcriptionResults.some(r => r.url === b.url)) continue;
+        const content = await fs.readFile(path.join(PUBLIC_DIR, b.url.replace(/^\//, '')) + '.elevenlabs.json', 'utf-8').catch(() => null);
+        if (content) project.transcriptionResults.push({ url: b.url, status: 'completed', transcriptionUrl: `${b.url}.elevenlabs.json`, data: JSON.parse(content) });
+      }
+      return project;
+    } catch {
       return null;
     }
   },

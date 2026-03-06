@@ -48,7 +48,9 @@ export async function generateSceneDescriptions(
         : typeof desc === "string"
           ? desc
           : null;
-    if (!imagePrompt) throw new Error(`Bad description at index ${i}`);
+    if (!imagePrompt) {
+      throw new Error(`Bad description at index ${i}.\nReceived: ${JSON.stringify(desc)}.\nFull AI response: ${raw}`);
+    }
     return { ...seg, imagePrompt };
   });
 
