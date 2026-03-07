@@ -14,6 +14,7 @@ export interface Segment {
 export interface EntityAsset {
   name: string
   description?: string
+  segment?: number[]
   imageUrl?: string
   status: 'pending' | 'generating' | 'completed' | 'error'
 }

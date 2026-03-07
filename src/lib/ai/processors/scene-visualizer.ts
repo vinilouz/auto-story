@@ -1,32 +1,29 @@
-import { SCENE_VISUAL_PROMPT } from "@/lib/ai/prompts/prompts";
+import { BATCH_DESCRIPTIONS_PROMPT } from "@/lib/ai/prompts/prompts";
 import { execute } from "@/lib/ai/providers";
 import type { Segment } from "@/lib/flows/types";
+import type { ExtractedEntity } from "@/lib/ai/processors/entity-extractor";
+
+const BATCH_SIZE = 40;
 
 export interface SceneVisualizationRequest {
   segments: Segment[];
+  entities?: ExtractedEntity[];
   language?: string;
   style?: string;
-  consistency?: boolean;
   context?: "story" | "commentator";
   commentatorName?: string;
   commentatorPersonality?: string;
   commentatorImage?: string;
 }
 
-export async function generateSceneDescriptions(
-  data: SceneVisualizationRequest,
-) {
-  if (!data.segments?.length) throw new Error("No segments");
-
-  const prompt = SCENE_VISUAL_PROMPT(
-    data.segments.map((s, i) => ({
-      id: String(i + 1),
-      scriptText: s.text.trim(),
-    })),
-    data.language || "Portuguese",
-  );
-
-  const { text: raw } = await execute("generateText", { prompt });
+async function generateBatchDescriptions(
+  segments: Array<{ id: string; scriptText: string }>,
+  entities: ExtractedEntity[],
+  language: string,
+): Promise<Array<{ id: string; imagePrompt: string }>> {
+  const { text: raw } = await execute("generateText", {
+    prompt: BATCH_DESCRIPTIONS_PROMPT(segments, entities, language),
+  });
 
   let clean = raw.trim();
   const m =
@@ -40,8 +37,35 @@ export async function generateSceneDescriptions(
     : parsed.visualDescriptions;
   if (!Array.isArray(descriptions)) throw new Error("Response not an array");
 
+  return descriptions;
+}
+
+export async function generateSceneDescriptions(
+  data: SceneVisualizationRequest,
+) {
+  if (!data.segments?.length) throw new Error("No segments");
+
+  const entities = data.entities || [];
+  const language = data.language || "Portuguese";
+
+  const formattedSegments = data.segments.map((s, i) => ({
+    id: String(i + 1),
+    scriptText: s.text.trim(),
+  }));
+
+  const batches: Array<{ id: string; scriptText: string }[]> = [];
+  for (let i = 0; i < formattedSegments.length; i += BATCH_SIZE) {
+    batches.push(formattedSegments.slice(i, i + BATCH_SIZE));
+  }
+
+  const allDescriptions: Array<{ id: string; imagePrompt: string }> = [];
+  for (const batch of batches) {
+    const batchResult = await generateBatchDescriptions(batch, entities, language);
+    allDescriptions.push(...batchResult);
+  }
+
   const segments: Segment[] = data.segments.map((seg, i) => {
-    const desc = descriptions[i];
+    const desc = allDescriptions.find(d => d.id === String(i + 1));
     const imagePrompt =
       typeof desc?.imagePrompt === "string"
         ? desc.imagePrompt
@@ -49,24 +73,12 @@ export async function generateSceneDescriptions(
           ? desc
           : null;
     if (!imagePrompt) {
-      throw new Error(`Bad description at index ${i}.\nReceived: ${JSON.stringify(desc)}.\nFull AI response: ${raw}`);
+      throw new Error(
+        `Bad description at index ${i}.\nReceived: ${JSON.stringify(desc)}.\nFull AI response: ${JSON.stringify(allDescriptions)}`,
+      );
     }
     return { ...seg, imagePrompt };
   });
 
-  let entities: string[] | undefined;
-  if (data.consistency) {
-    const set = new Set<string>();
-    for (const s of segments) {
-      const matches = s.imagePrompt?.match(/<<([^>]+)>>/g);
-      if (matches) {
-        for (const m of matches) {
-          set.add(m.replace(/<<|>>/g, ""));
-        }
-      }
-    }
-    if (set.size > 0) entities = Array.from(set);
-  }
-
-  return { segments, ...(entities ? { entities } : {}) };
+  return { segments };
 }

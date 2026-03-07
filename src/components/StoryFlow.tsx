@@ -43,16 +43,16 @@ type FlowMode = 'simple' | 'commentator' | 'video-story'
 
 function getStages(mode: FlowMode, consistency: boolean): Stage[] {
   if (mode === 'video-story') {
-    return ['input', 'audio', 'transcription', 'split', 'clip-descriptions',
+    return ['input', 'audio', 'transcription', 'split',
       ...(consistency ? ['entities' as Stage] : []),
-      'clips', 'video', 'download']
+      'clip-descriptions', 'clips', 'video', 'download']
   }
   return ([
-    'input', 'commentator', 'comments', 'descriptions',
-    'entities', 'images', 'audio', 'transcription', 'video', 'download'
+    'input', 'commentator', 'comments',
+    ...(consistency ? ['entities' as Stage] : []),
+    'descriptions', 'images', 'audio', 'transcription', 'video', 'download'
   ] as Stage[]).filter(s => {
     if (s === 'commentator' || s === 'comments') return mode === 'commentator'
-    if (s === 'entities') return consistency
     return true
   })
 }
@@ -128,10 +128,9 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     if (mode === 'video-story') {
       if (video.videoProps) return idx('download')
       if (hasClips) return idx('video')
-      if (hasPrompts && consistency && entities.every(e => e.status === 'completed')) return idx('clips')
-      if (hasPrompts && consistency && entities.length > 0) return idx('entities')
-      if (hasPrompts) return idx(consistency ? 'entities' : 'clips')
-      if (segments.length > 0) return idx('clip-descriptions')
+      if (hasPrompts) return idx('clips')
+      if (consistency && entities.length > 0) return idx('clip-descriptions')
+      if (segments.length > 0) return idx(consistency ? 'entities' : 'clip-descriptions')
       if (hasTranscription) return idx('split')
       if (hasAudio) return idx('transcription')
       return 0
@@ -141,12 +140,11 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     if (hasTranscription) return idx('video')
     if (hasAudio) return idx('transcription')
     if (hasImages) return idx('audio')
-    if (hasPrompts && consistency && entities.every(e => e.status === 'completed')) return idx('images')
-    if (hasPrompts && consistency && entities.length > 0) return idx('entities')
-    if (hasPrompts) return idx(consistency ? 'entities' : 'images')
-    if (hasComments && mode === 'commentator') return idx('descriptions')
+    if (hasPrompts) return idx('images')
+    if (consistency && entities.length > 0) return idx('descriptions')
+    if (hasComments && mode === 'commentator') return idx(consistency ? 'entities' : 'descriptions')
     if (commentator && mode === 'commentator') return idx('comments')
-    if (segments.length > 0) return idx(mode === 'commentator' ? 'commentator' : 'descriptions')
+    if (segments.length > 0) return idx(mode === 'commentator' ? (consistency ? 'commentator' : 'descriptions') : (consistency ? 'entities' : 'descriptions'))
     return 0
   }, [stages, mode, video.videoProps, hasTranscription, hasAudio, hasImages, hasClips, hasPrompts, entities, hasComments, commentator, segments, consistency])
 
@@ -256,22 +254,48 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     } catch { toast.error("Failed") } finally { setLoading(false) }
   }
 
+  const extractEntities = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/generate/entities", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ segments })
+      })
+      if (!res.ok) throw new Error()
+      const { entities: extracted } = await res.json()
+      const ents: EntityAsset[] = extracted.map((e: any) => ({
+        name: e.type,
+        description: e.description,
+        segment: e.segment,
+        status: 'pending' as const
+      }))
+      setEntities(ents)
+      await save({ entities: ents })
+    } catch { toast.error("Failed to extract entities") } finally { setLoading(false) }
+  }
+
   const generateDescriptions = async () => {
     setLoading(true)
     try {
       const segsForApi = mode === 'commentator'
         ? segments.map(s => s.type === 'comment' ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` } : s)
         : segments
+      const entitiesForApi = entities.map(e => ({ type: e.name, description: e.description || '', segment: e.segment || [] }))
       const res = await fetch("/api/generate/descriptions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments: segsForApi, language, style: imagePromptStyle, consistency, commentatorName: commentator?.name, commentatorPersonality: commentator?.personality })
+        body: JSON.stringify({
+          segments: segsForApi,
+          entities: entitiesForApi,
+          language,
+          style: imagePromptStyle,
+          commentatorName: commentator?.name,
+          commentatorPersonality: commentator?.personality
+        })
       })
       if (!res.ok) throw new Error()
-      const data = await res.json(); setSegments(data.segments || segments)
-      if (consistency && data.entities?.length) {
-        const ents: EntityAsset[] = data.entities.map((n: string) => ({ name: n, status: 'pending' as const }))
-        setEntities(ents); await save({ segments: data.segments, entities: ents })
-      } else { await save({ segments: data.segments }) }
+      const data = await res.json()
+      setSegments(data.segments || segments)
+      await save({ segments: data.segments })
     } catch { toast.error("Failed") } finally { setLoading(false) }
   }
 
@@ -280,20 +304,12 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     try {
       let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
 
-      const missing = entities.filter(e => !e.imageUrl || !e.description)
+      const missing = entities.filter(e => !e.imageUrl)
       const targets = missing.length > 0 ? missing : entities
 
-      const descRes = await fetch("/api/generate/entities/descriptions", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entities: targets.map(e => e.name), segments: segments.map(s => s.text) })
-      })
-      if (!descRes.ok) throw new Error()
-      const { entities: newDescs } = await descRes.json()
-
       const processing = entities.map(e => {
-        const desc = newDescs.find((x: any) => x.name === e.name)?.description
         if (!targets.some(t => t.name === e.name)) return e
-        return { ...e, description: desc || e.description, status: 'generating' as const }
+        return { ...e, status: 'generating' as const }
       })
       setEntities(processing)
 
@@ -336,6 +352,11 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
   const generateAllImages = async () => {
     let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
+
+    if (consistency && entities.length > 0 && entities.some(e => !e.imageUrl)) {
+      await generateEntities()
+    }
+
     const isRegen = segments.every(s => s.imagePath)
     await Promise.all(segments.map(async (seg, i) => {
       if (!seg.imagePrompt || (!isRegen && seg.imagePath)) return
@@ -369,18 +390,15 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
   const generateClipDescriptions = async () => {
     setLoading(true)
     try {
+      const entitiesForApi = entities.map(e => ({ type: e.name, description: e.description || '', segment: e.segment || [] }))
       const res = await fetch("/api/generate/descriptions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments, language, style: imagePromptStyle, consistency }),
+        body: JSON.stringify({ segments, entities: entitiesForApi, language, style: imagePromptStyle }),
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
       setSegments(data.segments || segments)
-      if (consistency && data.entities?.length) {
-        const ents: EntityAsset[] = data.entities.map((n: string) => ({ name: n, status: 'pending' as const }))
-        setEntities(ents)
-      }
-      await save({ segments: data.segments, entities: consistency && data.entities ? data.entities.map((n: string) => ({ name: n, status: 'pending' })) : undefined })
+      await save({ segments: data.segments })
     } catch { toast.error("Failed to generate descriptions") }
     finally { setLoading(false) }
   }
@@ -446,7 +464,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       case 'descriptions':
         return { fn: generateDescriptions, ok: segments.length > 0, label: hasPrompts ? "Regenerate" : "Generate Descriptions", busy: loading }
       case 'entities':
-        return { fn: generateEntities, ok: entities.length > 0, label: "Generate Entity Assets", busy: loading }
+        return { fn: extractEntities, ok: segments.length > 0, label: entities.length > 0 ? "Regenerate" : "Extract Entities", busy: loading }
       case 'images':
         return { fn: generateAllImages, ok: hasPrompts, label: hasImages ? "Regenerate" : "Generate Images", busy: imageStatuses.size > 0 }
       case 'audio':

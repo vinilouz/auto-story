@@ -62,7 +62,7 @@ const normalizeProps = (props: any, origin: string): any => ({
 const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
 
 export async function POST(req: NextRequest) {
-  let tempOutput = "";
+  let publicOutput = "";
   try {
     const body = await req.json();
     const { videoProps, projectId, projectName, compositionId = "CaptionedVideo" } = body;
@@ -79,8 +79,19 @@ export async function POST(req: NextRequest) {
 
     const bundleLocation = await ensureBundle();
 
-    console.log(`Rendering video (concurrency: ${RENDER_CONCURRENCY})...`);
-    tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
+    const fileName = `render-${Date.now()}.mp4`;
+    let basePath = "renders";
+
+    if (projectId && projectName) {
+      const slug = projectName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').slice(0, 40) || 'untitled';
+      basePath = `projects/${slug}-${projectId.split('-')[0]}/videos`;
+    }
+
+    const rendersDir = path.join(process.cwd(), "public", basePath);
+    await fs.promises.mkdir(rendersDir, { recursive: true });
+
+    publicOutput = path.join(rendersDir, fileName);
+    const videoUrl = `/${basePath}/${fileName}`;
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -107,7 +118,7 @@ export async function POST(req: NextRequest) {
             } as any,
             serveUrl: bundleLocation,
             codec: "h264",
-            outputLocation: tempOutput,
+            outputLocation: publicOutput,
             inputProps: normalizedProps,
             timeoutInMilliseconds: 3600000,
             concurrency: RENDER_CONCURRENCY,
@@ -149,45 +160,12 @@ export async function POST(req: NextRequest) {
           });
 
           sendEvent({ type: "progress", progress: 100, stage: "encoding" });
-
-          // Ensure renders directory exists within the project directory
-          let publicOutput: string;
-          let videoUrl: string;
-
-          if (projectId && projectName) {
-            const cleanTitle = (text: string) => text.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').substring(0, 40);
-            const slug = cleanTitle(projectName) || 'untitled';
-            const shortId = projectId.split('-')[0] || projectId.substring(0, 8);
-            const dirName = `${slug}-${shortId}`;
-
-            const rendersDir = path.join(process.cwd(), "public", "projects", dirName, "videos");
-            if (!fs.existsSync(rendersDir)) {
-              await fs.promises.mkdir(rendersDir, { recursive: true });
-            }
-
-            const fileName = `render-${Date.now()}.mp4`;
-            publicOutput = path.join(rendersDir, fileName);
-            videoUrl = `/projects/${dirName}/videos/${fileName}`;
-          } else {
-            // Fallback for requests without project context
-            const rendersDir = path.join(process.cwd(), "public", "renders");
-            if (!fs.existsSync(rendersDir)) {
-              await fs.promises.mkdir(rendersDir, { recursive: true });
-            }
-            const fileName = `render-${Date.now()}.mp4`;
-            publicOutput = path.join(rendersDir, fileName);
-            videoUrl = `/renders/${fileName}`;
-          }
-
-          // Move temp file to persistent storage
-          await fs.promises.rename(tempOutput, publicOutput);
-
           sendEvent({ type: "complete", videoUrl });
           controller.close();
         } catch (error: any) {
           console.error("Render API Error:", error);
-          if (tempOutput && fs.existsSync(tempOutput)) {
-            fs.promises.unlink(tempOutput).catch(() => { });
+          if (publicOutput && fs.existsSync(publicOutput)) {
+            fs.promises.unlink(publicOutput).catch(() => { });
           }
           sendEvent({ type: "error", error: error.message || "Render failed" });
           controller.close();
@@ -204,7 +182,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("Render API Error:", error);
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { });
+    if (publicOutput && fs.existsSync(publicOutput)) {
+      fs.promises.unlink(publicOutput).catch(() => { });
+    }
     return NextResponse.json(
       { error: error.message || "Failed to render" },
       { status: 500 }
