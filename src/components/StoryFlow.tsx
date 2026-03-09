@@ -365,10 +365,33 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     }
 
     const isRegen = segments.every(s => s.imagePath)
-    await Promise.all(segments.map(async (seg, i) => {
-      if (!seg.imagePrompt || (!isRegen && seg.imagePath)) return
-      await generateSingleImage(i)
-    }))
+    const queue: number[] = segments
+      .map((seg, i) => (!seg.imagePrompt || (!isRegen && seg.imagePath)) ? -1 : i)
+      .filter(i => i >= 0)
+
+    const failed = new Map<number, number>()
+    const MAX_ATTEMPTS = 3
+
+    while (queue.length > 0) {
+      const batch = queue.splice(0, queue.length)
+      const batchFailed: number[] = []
+
+      await Promise.all(batch.map(async (segIndex) => {
+        try {
+          await generateSingleImage(segIndex)
+        } catch {
+          const attempts = (failed.get(segIndex) || 0) + 1
+          if (attempts < MAX_ATTEMPTS) {
+            failed.set(segIndex, attempts)
+            batchFailed.push(segIndex)
+          } else {
+            setImageStatuses(p => new Map(p).set(segIndex, 'error'))
+          }
+        }
+      }))
+
+      queue.push(...batchFailed)
+    }
   }
 
   const generateAudioAction = async () => {

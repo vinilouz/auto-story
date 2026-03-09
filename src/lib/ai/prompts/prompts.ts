@@ -74,8 +74,15 @@ ${toJsonForPrompt(segments, true)}
 </InputScript>
 
 <OutputFormat>
-Return ONLY a JSON array in the language ${language}:
-[{"id":"...","imagePrompt":"..."}]
+You MUST return ONLY a VALID JSON array of objects in the language ${language}.
+Do NOT use markdown blocks. Do NOT add any text before or after the JSON.
+Every segment ID in the InputScript MUST have a corresponding object in your response.
+Every object MUST have exactly two keys: "id" (string) and "imagePrompt" (string).
+Example for 2 segments:
+[
+  { "id": "1", "imagePrompt": "Description for segment 1..." },
+  { "id": "2", "imagePrompt": "Description for segment 2..." }
+]
 </OutputFormat>`;
 };
 

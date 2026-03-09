@@ -9,7 +9,7 @@ export interface ModelConfig {
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gpt-5.3-chat-latest' },
+    { provider: 'void', model: 'gemini-3.1-flash-lite-preview' },
   ],
   generateImage: [
     // { provider: 'air', model: 'nano-banana-pro' },
