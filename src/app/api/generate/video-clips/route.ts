@@ -4,12 +4,12 @@ import { generateAndSaveVideoClip } from "@/lib/ai/processors/video-clip-generat
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { prompt, referenceImage, duration, projectId, projectName } = body
+    const { prompt, referenceImage, duration, projectId, projectName, index } = body
 
     if (!prompt) return NextResponse.json({ error: "Missing prompt" }, { status: 400 })
 
     const videoUrl = await generateAndSaveVideoClip(
-      { prompt, referenceImage, duration },
+      { prompt, referenceImage, duration, index },
       projectId || 'temp',
       projectName || 'untitled',
     )

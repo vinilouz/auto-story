@@ -85,19 +85,21 @@ export const GENERATE_ENTITY_IMAGE_PROMPT = (
   visualPrompt?: string
 ) => {
   const stylePrompt = visualPrompt ?? styleId ?? "default";
-  return `<Role>
-ACT AS AN EXPERT CONCEPT ARTIST.
-</Role>
+  return `Style: ${stylePrompt}
+Description: ${description}`;
+  //   `<Role>
+  // ACT AS AN EXPERT CONCEPT ARTIST.
+  // </Role>
 
-<Objective>
-Create a high-fidelity visual asset, with this description ${description} and following this art direction ${stylePrompt}.
-</Objective>
+  // <Objective>
+  // Create a high-fidelity visual asset, with this description ${description} and following this art direction ${stylePrompt}.
+  // </Objective>
 
-<Rules>
-- Combine subject and style into a single coherent image.
-- Ensure details and textures are faithful to the selected style.
-- No text overlay. Visuals only.
-</Rules>`;
+  // <Rules>
+  // - Combine subject and style into a single coherent image.
+  // - Ensure details and textures are faithful to the art direction.
+  // - No text overlay. Visuals only.
+  // </Rules>`
 };
 
 export const GENERATE_SEGMENT_IMAGE_PROMPT = (

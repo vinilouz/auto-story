@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { AudioBatch, TranscriptionResult, CaptionStyle, Segment, TranscriptionWord } from "./types"
 import { RemotionVideoProps } from "@/lib/video/types"
 import { alignVideoProps, AlignmentMode } from "@/lib/video/aligner"
@@ -67,11 +67,14 @@ export function useTranscription() {
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
+      let updatedResults: TranscriptionResult[] = []
       setResults(prev => {
         const map = new Map(prev.map(r => [r.url, r]))
         data.results.forEach((r: TranscriptionResult) => map.set(r.url, r))
-        return Array.from(map.values())
+        updatedResults = Array.from(map.values())
+        return updatedResults
       })
+      return updatedResults
     } finally { setIsLoading(false) }
   }
 
@@ -85,7 +88,14 @@ export function useTranscription() {
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      if (data.results?.[0]) setResults(prev => [...prev.filter(r => r.url !== url), data.results[0]])
+      let updatedResults: TranscriptionResult[] = []
+      if (data.results?.[0]) {
+        setResults(prev => {
+          updatedResults = [...prev.filter(r => r.url !== url), data.results[0]]
+          return updatedResults
+        })
+      }
+      return updatedResults
     } catch {
       setResults(prev => [...prev, { url, status: 'error' as const, error: 'Retry failed' }])
     } finally { setIsLoading(false) }
@@ -103,7 +113,7 @@ export function useVideoClips() {
   const generateAll = async (
     segments: Segment[],
     setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
-    opts: { projectId?: string | null; projectName?: string; clipDuration?: number }
+    opts: { projectId?: string | null; projectName?: string; clipDuration?: number; onClipCompleted?: (newSegments: Segment[]) => Promise<void> }
   ) => {
     setIsLoading(true)
     const promises = segments.map(async (seg, i) => {
@@ -118,18 +128,26 @@ export function useVideoClips() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: seg.imagePrompt,
+            referenceImage: seg.imagePath,
             duration: opts.clipDuration,
             projectId: opts.projectId,
             projectName: opts.projectName,
+            index: i,
           }),
         })
         if (!res.ok) throw new Error('Clip generation failed')
         const data = await res.json()
 
-        setSegments(prev => prev.map((s, j) =>
-          j === i ? { ...s, videoClipUrl: data.videoUrl } : s
-        ))
+        let updatedSegments: Segment[] = []
+        setSegments(prev => {
+          updatedSegments = prev.map((s, j) => j === i ? { ...s, videoClipUrl: data.videoUrl } : s)
+          return updatedSegments
+        })
         setClipStatuses(p => new Map(p).set(i, 'completed'))
+
+        if (opts.onClipCompleted) {
+          await opts.onClipCompleted(updatedSegments)
+        }
       } catch {
         setClipStatuses(p => new Map(p).set(i, 'error'))
       }
@@ -143,7 +161,7 @@ export function useVideoClips() {
     index: number,
     segments: Segment[],
     setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
-    opts: { projectId?: string | null; projectName?: string; clipDuration?: number }
+    opts: { projectId?: string | null; projectName?: string; clipDuration?: number; onClipCompleted?: (newSegments: Segment[]) => Promise<void> }
   ) => {
     const seg = segments[index]
     if (!seg?.imagePrompt) return
@@ -156,18 +174,26 @@ export function useVideoClips() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: seg.imagePrompt,
+          referenceImage: seg.imagePath,
           duration: opts.clipDuration,
           projectId: opts.projectId,
           projectName: opts.projectName,
+          index: index,
         }),
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
 
-      setSegments(prev => prev.map((s, j) =>
-        j === index ? { ...s, videoClipUrl: data.videoUrl } : s
-      ))
+      let updatedSegments: Segment[] = []
+      setSegments(prev => {
+        updatedSegments = prev.map((s, j) => j === index ? { ...s, videoClipUrl: data.videoUrl } : s)
+        return updatedSegments
+      })
       setClipStatuses(p => new Map(p).set(index, 'completed'))
+
+      if (opts.onClipCompleted) {
+        await opts.onClipCompleted(updatedSegments)
+      }
     } catch {
       setClipStatuses(p => new Map(p).set(index, 'error'))
     }
@@ -266,6 +292,7 @@ export function useVideo() {
 export function useProject() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const saveQueue = useRef<Promise<any>>(Promise.resolve())
 
   const load = async (id: string) => {
     const res = await fetch(`/api/projects/${id}`)
@@ -281,16 +308,27 @@ export function useProject() {
 
   const save = async (data: Record<string, any>) => {
     setIsSaving(true)
-    try {
-      const res = await fetch('/api/projects', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: projectId, ...data }),
-      })
-      if (!res.ok) throw new Error('Save failed')
-      const saved = await res.json()
-      setProjectId(saved.id)
-      return saved
-    } finally { setIsSaving(false) }
+
+    const task = saveQueue.current.then(async () => {
+      try {
+        const res = await fetch('/api/projects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: projectId, ...data }),
+        })
+        if (!res.ok) throw new Error('Save failed')
+        const saved = await res.json()
+        setProjectId(saved.id)
+        return saved
+      } finally {
+        setIsSaving(false)
+      }
+    }).catch(e => {
+      setIsSaving(false)
+      throw e
+    })
+
+    saveQueue.current = task.catch(() => { })
+    return task
   }
 
   return { projectId, setProjectId, load, save, isSaving }

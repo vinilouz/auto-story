@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       if (m) {
         const local = await StorageService.saveBase64Image(
           body.projectId,
-          `gen-${Date.now()}.${m[1] === "jpeg" ? "jpg" : m[1]}`,
+          `gen-${body.index !== undefined ? body.index + 1 : Date.now()}.${m[1] === "jpeg" ? "jpg" : m[1]}`,
           m[2],
           body.projectName,
         );

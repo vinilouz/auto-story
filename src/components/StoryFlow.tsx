@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils"
 type Stage =
   | 'input' | 'commentator' | 'comments' | 'descriptions'
   | 'entities' | 'images' | 'audio' | 'transcription'
-  | 'split' | 'clip-descriptions' | 'clips' | 'video' | 'download'
+  | 'split' | 'clips' | 'video' | 'download'
 
 type FlowMode = 'simple' | 'commentator' | 'video-story'
 
@@ -45,7 +45,7 @@ function getStages(mode: FlowMode, consistency: boolean): Stage[] {
   if (mode === 'video-story') {
     return ['input', 'audio', 'transcription', 'split',
       ...(consistency ? ['entities' as Stage] : []),
-      'clip-descriptions', 'clips', 'video', 'download']
+      'descriptions', 'images', 'clips', 'video', 'download']
   }
   return ([
     'input', 'commentator', 'comments',
@@ -61,7 +61,7 @@ const STAGE_LABELS: Record<Stage, string> = {
   input: 'Input', commentator: 'Commentator', comments: 'Comments',
   descriptions: 'Descriptions', entities: 'Entities', images: 'Images',
   audio: 'Audio', transcription: 'Transcription', video: 'Video',
-  download: 'Download', split: 'Split', 'clip-descriptions': 'Descriptions',
+  download: 'Download', split: 'Split',
   clips: 'Video Clips',
 }
 
@@ -128,9 +128,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     if (mode === 'video-story') {
       if (video.videoProps) return idx('download')
       if (hasClips) return idx('video')
-      if (hasPrompts) return idx('clips')
-      if (consistency && entities.length > 0) return idx('clip-descriptions')
-      if (segments.length > 0) return idx(consistency ? 'entities' : 'clip-descriptions')
+      if (hasImages) return idx('clips')
+      if (hasPrompts) return idx('images')
+      if (consistency && entities.length > 0) return idx('descriptions')
+      if (segments.length > 0) return idx(consistency ? 'entities' : 'descriptions')
       if (hasTranscription) return idx('split')
       if (hasAudio) return idx('transcription')
       return 0
@@ -174,7 +175,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       // Determine stage
       if (mode === 'video-story') {
         if (p.segments?.some((s: any) => s.videoClipUrl)) setStage('clips')
-        else if (p.segments?.some((s: any) => s.imagePrompt)) setStage('clip-descriptions')
+        else if (p.segments?.some((s: any) => s.imagePath)) setStage('images')
+        else if (p.segments?.some((s: any) => s.imagePrompt)) setStage('descriptions')
         else if (p.segments?.length) setStage('split')
         else if (p.transcriptionResults?.length) setStage('transcription')
         else if (p.audioBatches?.some((b: any) => b.status === 'completed')) setStage('audio')
@@ -320,7 +322,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
-              imageConfig: { aspect_ratio: "1:1" }, projectId: pid, projectName: title
+              imageConfig: { aspect_ratio: "16:9" }, projectId: pid, projectName: title
             })
           })
           if (!r.ok) throw new Error()
@@ -338,15 +340,20 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     try {
       const prompt = mode === 'commentator' && commentator?.appearance?.imageUrl
         ? COMMENTATOR_IMAGE_GENERATION_PROMPT(seg.imagePrompt) : GENERATE_SEGMENT_IMAGE_PROMPT(seg.imagePrompt, imagePromptStyle)
-      const payload: any = { imagePrompt: prompt, imageConfig: { aspect_ratio: "16:9" }, systemPrompt: imagePromptStyle, projectId: project.projectId || projectId, projectName: title }
+      const payload: any = { imagePrompt: prompt, imageConfig: { aspect_ratio: "16:9" }, systemPrompt: imagePromptStyle, projectId: project.projectId || projectId, projectName: title, index: segIndex }
       const matches = prompt.match(/<<([^>]+)>>/g)
       if (matches && entities.length) { const refs = entities.filter(e => matches.some(m => m.includes(e.name)) && e.imageUrl).map(e => e.imageUrl!); if (refs.length) payload.referenceImages = refs }
       else if (mode === 'commentator' && commentator?.appearance?.imageUrl) payload.referenceImage = commentator.appearance.imageUrl
       const res = await fetch('/api/generate/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      setSegments(prev => prev.map((s, j) => j === segIndex ? { ...s, imagePath: data.imageUrl } : s))
+      let updatedSegs: Segment[] = []
+      setSegments(prev => {
+        updatedSegs = prev.map((s, j) => j === segIndex ? { ...s, imagePath: data.imageUrl } : s)
+        return updatedSegs
+      })
       setImageStatuses(p => { const n = new Map(p); n.delete(segIndex); return n })
+      await save({ segments: updatedSegs })
     } catch { setImageStatuses(p => new Map(p).set(segIndex, 'error')) }
   }
 
@@ -362,17 +369,18 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       if (!seg.imagePrompt || (!isRegen && seg.imagePath)) return
       await generateSingleImage(i)
     }))
-    setTimeout(() => save(), 200)
   }
 
   const generateAudioAction = async () => {
-    await audio.generate(audioOpts())
-    setStage('audio'); setTimeout(() => save(), 200)
+    const newBatches = await audio.generate(audioOpts())
+    setStage('audio');
+    await save({ audioBatches: newBatches })
   }
 
   const transcribeAction = async () => {
-    await transcription.transcribe(audio.batches, language)
-    setStage('transcription'); setTimeout(() => save(), 200)
+    const newResults = await transcription.transcribe(audio.batches, language)
+    setStage('transcription');
+    if (newResults) await save({ transcriptionResults: newResults })
   }
 
   // ════════════════════════════════════════════════════════════
@@ -387,26 +395,16 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     save({ segments: newSegs })
   }
 
-  const generateClipDescriptions = async () => {
-    setLoading(true)
-    try {
-      const entitiesForApi = entities.map(e => ({ type: e.name, description: e.description || '', segment: e.segment || [] }))
-      const res = await fetch("/api/generate/descriptions", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segments, entities: entitiesForApi, language, style: imagePromptStyle }),
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setSegments(data.segments || segments)
-      await save({ segments: data.segments })
-    } catch { toast.error("Failed to generate descriptions") }
-    finally { setLoading(false) }
-  }
+
 
   const generateAllClips = async () => {
     let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
-    await videoClips.generateAll(segments, setSegments, { projectId: pid || projectId, projectName: title, clipDuration })
-    setTimeout(() => save(), 200)
+    await videoClips.generateAll(segments, setSegments, {
+      projectId: pid || projectId,
+      projectName: title,
+      clipDuration,
+      onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
+    })
   }
 
   const generateVideoPreview = async () => {
@@ -475,10 +473,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         return { fn: transcribeAction, ok: hasAudio, label: "Transcribe", busy: transcription.isLoading }
       case 'split':
         return { fn: splitByDuration, ok: hasTranscription, label: `Split by ${clipDuration}s clips`, busy: false }
-      case 'clip-descriptions':
-        return { fn: generateClipDescriptions, ok: segments.length > 0, label: hasPrompts ? "Regenerate" : "Generate Descriptions", busy: loading }
       case 'clips':
-        return { fn: generateAllClips, ok: hasPrompts, label: hasClips ? "Regenerate Clips" : "Generate Video Clips", busy: videoClips.isLoading }
+        return { fn: generateAllClips, ok: hasImages, label: hasClips ? "Regenerate Clips" : "Generate Video Clips", busy: videoClips.isLoading }
       case 'video':
         return { fn: generateVideoPreview, ok: mode === 'video-story' ? hasClips || hasTranscription : hasTranscription, label: video.videoProps ? "Regenerate" : "Generate Preview", busy: video.isGenerating }
       case 'download':
@@ -786,22 +782,6 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
           </div>
         )}
 
-        {/* CLIP DESCRIPTIONS (video-story only) */}
-        {stage === 'clip-descriptions' && (
-          <div className="space-y-4">
-            {segments.map((seg, i) => (
-              <Card key={i}><CardContent className="p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-semibold text-xs text-muted-foreground uppercase">Clip {i + 1}</span>
-                  <span className="text-xs text-muted-foreground">{((seg.startMs || 0) / 1000).toFixed(1)}s — {((seg.endMs || 0) / 1000).toFixed(1)}s</span>
-                </div>
-                <p className="text-sm">{seg.text}</p>
-                {seg.imagePrompt && <div className="bg-muted p-2 rounded text-sm italic text-muted-foreground border-l-2">{seg.imagePrompt}</div>}
-              </CardContent></Card>
-            ))}
-          </div>
-        )}
-
         {/* VIDEO CLIPS (video-story only) */}
         {stage === 'clips' && (
           <div className="grid grid-cols-2 gap-4">
@@ -818,7 +798,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                     <div className="relative group">
                       <video src={seg.videoClipUrl} controls className="w-full rounded" />
                       <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
-                        onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId || projectId, projectName: title, clipDuration })}>
+                        onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
+                          projectId: project.projectId || projectId, projectName: title, clipDuration,
+                          onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
+                        })}>
                         <RefreshCw className="w-4 h-4" />
                       </Button>
                     </div>
@@ -829,7 +812,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                   ) : st === 'error' ? (
                     <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
                       <span className="text-sm text-muted-foreground">Error</span>
-                      <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, { projectId: project.projectId || projectId, projectName: title, clipDuration })}>
+                      <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
+                        projectId: project.projectId || projectId, projectName: title, clipDuration,
+                        onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
+                      })}>
                         <RefreshCw className="w-4 h-4 mr-2" />Retry
                       </Button>
                     </div>

@@ -12,8 +12,8 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
     { provider: 'void', model: 'gpt-5.3-chat-latest' },
   ],
   generateImage: [
-    { provider: 'air', model: 'nano-banana-pro' },
-    // { provider: 'void', model: 'gemini-3-pro-image-preview' },
+    // { provider: 'air', model: 'nano-banana-pro' },
+    { provider: 'void', model: 'gemini-3-pro-image-preview' },
     // { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
   ],
   generateAudio: [

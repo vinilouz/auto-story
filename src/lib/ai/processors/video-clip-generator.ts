@@ -6,6 +6,7 @@ export interface VideoClipRequest {
   prompt: string
   referenceImage?: string
   duration?: number
+  index?: number
 }
 
 export async function generateVideoClip(req: VideoClipRequest): Promise<string> {
@@ -35,7 +36,7 @@ export async function generateAndSaveVideoClip(
   const pubDir = path.join(process.cwd(), 'public', 'projects', dir, 'clips')
   if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true })
 
-  const filename = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`
+  const filename = req.index !== undefined ? `clip_${req.index + 1}.mp4` : `clip_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`
   const filepath = path.join(pubDir, filename)
 
   if (videoUrl.startsWith('data:')) {
