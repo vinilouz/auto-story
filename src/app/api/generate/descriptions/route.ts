@@ -1,27 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateSceneDescriptions } from "@/lib/ai/processors/scene-visualizer";
-import type { ExtractedEntity } from "@/lib/ai/processors/entity-extractor";
+import { NextRequest, NextResponse } from "next/server"
+import { generateSceneDescriptions } from "@/lib/ai/processors/scene-visualizer"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger('api/descriptions')
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    if (!body.segments?.length)
-      return NextResponse.json({ error: "Missing segments" }, { status: 400 });
+    const body = await request.json()
 
-    const result = await generateSceneDescriptions({
-      segments: body.segments,
-      entities: body.entities as ExtractedEntity[] | undefined,
-      language: body.language,
-      style: body.style,
-      context: body.context,
-      commentatorName: body.commentatorName,
-      commentatorPersonality: body.commentatorPersonality,
-      commentatorImage: body.commentatorImage,
-    });
+    if (!body.segments?.length) {
+      return NextResponse.json({ error: "Missing segments" }, { status: 400 })
+    }
 
-    return NextResponse.json(result);
+    log.info(`Description request: ${body.segments.length} segments`)
+    const result = await generateSceneDescriptions(body)
+    log.success(`Descriptions done: ${result.segments.length} segments`)
+
+    return NextResponse.json(result)
   } catch (e: any) {
-    console.error("Descriptions API Error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    log.error('Description generation failed', e)
+    return NextResponse.json({ error: e.message || "Internal error" }, { status: 500 })
   }
 }

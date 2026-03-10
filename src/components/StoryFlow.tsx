@@ -369,6 +369,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       .map((seg, i) => (!seg.imagePrompt || (!isRegen && seg.imagePath)) ? -1 : i)
       .filter(i => i >= 0)
 
+    const total = queue.length
+    const progress = { done: 0, failed: 0 }
+    console.log(`[image] Queue: ${total} items`)
+
     const failed = new Map<number, number>()
     const MAX_ATTEMPTS = 3
 
@@ -377,14 +381,20 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       const batchFailed: number[] = []
 
       await Promise.all(batch.map(async (segIndex) => {
+        console.log(`[image] ${progress.done + 1}/${total} -> segment ${segIndex + 1}`)
         try {
           await generateSingleImage(segIndex)
-        } catch {
+          progress.done++
+          console.log(`[image] ${progress.done}/${total} -> done`)
+        } catch (e) {
           const attempts = (failed.get(segIndex) || 0) + 1
           if (attempts < MAX_ATTEMPTS) {
             failed.set(segIndex, attempts)
             batchFailed.push(segIndex)
+            console.warn(`[image] segment ${segIndex + 1} -> retry ${attempts}/${MAX_ATTEMPTS}`)
           } else {
+            progress.failed++
+            console.error(`[image] segment ${segIndex + 1} -> error`)
             setImageStatuses(p => new Map(p).set(segIndex, 'error'))
           }
         }
@@ -392,6 +402,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
       queue.push(...batchFailed)
     }
+
+    console.log(`[image] Done: ${progress.done}/${total}, failed: ${progress.failed}`)
   }
 
   const generateAudioAction = async () => {

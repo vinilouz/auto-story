@@ -1,6 +1,9 @@
 import { execute } from '@/lib/ai/providers'
+import { createLogger } from '@/lib/logger'
 import fs from 'fs/promises'
 import path from 'path'
+
+const log = createLogger('image')
 
 export interface GenerateImageRequest {
   imagePrompt: string
@@ -12,10 +15,8 @@ export interface GenerateImageRequest {
 
 async function resolveImage(url?: string): Promise<string | undefined> {
   if (!url) return undefined
-  // Already a remote URL or base64 — pass through
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url
-  // Local path — read and convert to base64
-  if (url.startsWith('/projects/') || url.startsWith('/')) {
+  if (url.startsWith('/')) {
     try {
       const buf = await fs.readFile(path.join(process.cwd(), 'public', url))
       const ext = path.extname(url).replace('.', '')
@@ -37,8 +38,8 @@ export async function generateSingleImage(req: GenerateImageRequest): Promise<st
     if (r) refs = [r]
   }
 
-  // Registry handles fallback. Void accepts base64 natively. Air's handler
-  // will internally upload base64 refs to AnonDrop before calling the API.
+  log.info(`Generating image (${refs?.length || 0} refs, prompt: ${finalPrompt.substring(0, 80)}...)`)
+
   const { imageUrl } = await execute('generateImage', {
     prompt: finalPrompt,
     config: req.imageConfig,

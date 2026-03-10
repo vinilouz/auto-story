@@ -116,44 +116,72 @@ export function useVideoClips() {
     opts: { projectId?: string | null; projectName?: string; clipDuration?: number; onClipCompleted?: (newSegments: Segment[]) => Promise<void> }
   ) => {
     setIsLoading(true)
-    const promises = segments.map(async (seg, i) => {
-      if (!seg.imagePrompt) return
-      if (seg.videoClipUrl) return // already has clip
 
-      setClipStatuses(p => new Map(p).set(i, 'generating'))
+    const queue: number[] = segments
+      .map((seg, i) => (!seg.imagePrompt || seg.videoClipUrl) ? -1 : i)
+      .filter(i => i >= 0)
 
-      try {
-        const res = await fetch('/api/generate/video-clips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: seg.imagePrompt,
-            referenceImage: seg.imagePath,
-            duration: opts.clipDuration,
-            projectId: opts.projectId,
-            projectName: opts.projectName,
-            index: i,
-          }),
-        })
-        if (!res.ok) throw new Error('Clip generation failed')
-        const data = await res.json()
+    const total = queue.length
+    const progress = { done: 0, failed: 0 }
+    console.log(`[video] Queue: ${total} items`)
 
-        let updatedSegments: Segment[] = []
-        setSegments(prev => {
-          updatedSegments = prev.map((s, j) => j === i ? { ...s, videoClipUrl: data.videoUrl } : s)
-          return updatedSegments
-        })
-        setClipStatuses(p => new Map(p).set(i, 'completed'))
+    const failed = new Map<number, number>()
+    const MAX_ATTEMPTS = 3
 
-        if (opts.onClipCompleted) {
-          await opts.onClipCompleted(updatedSegments)
+    while (queue.length > 0) {
+      const batch = queue.splice(0, queue.length)
+      const batchFailed: number[] = []
+
+      await Promise.all(batch.map(async (i) => {
+        console.log(`[video] ${progress.done + 1}/${total} -> clip ${i + 1}`)
+        setClipStatuses(p => new Map(p).set(i, 'generating'))
+
+        try {
+          const res = await fetch('/api/generate/video-clips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: segments[i].imagePrompt,
+              referenceImage: segments[i].imagePath,
+              duration: opts.clipDuration,
+              projectId: opts.projectId,
+              projectName: opts.projectName,
+              index: i,
+            }),
+          })
+          if (!res.ok) throw new Error('Clip generation failed')
+          const data = await res.json()
+
+          let updatedSegments: Segment[] = []
+          setSegments(prev => {
+            updatedSegments = prev.map((s, j) => j === i ? { ...s, videoClipUrl: data.videoUrl } : s)
+            return updatedSegments
+          })
+          setClipStatuses(p => new Map(p).set(i, 'completed'))
+          progress.done++
+          console.log(`[video] ${progress.done}/${total} -> done`)
+
+          if (opts.onClipCompleted) {
+            await opts.onClipCompleted(updatedSegments)
+          }
+        } catch (e) {
+          const attempts = (failed.get(i) || 0) + 1
+          if (attempts < MAX_ATTEMPTS) {
+            failed.set(i, attempts)
+            batchFailed.push(i)
+            console.warn(`[video] clip ${i + 1} -> retry ${attempts}/${MAX_ATTEMPTS}`)
+          } else {
+            progress.failed++
+            console.error(`[video] clip ${i + 1} -> error`)
+            setClipStatuses(p => new Map(p).set(i, 'error'))
+          }
         }
-      } catch {
-        setClipStatuses(p => new Map(p).set(i, 'error'))
-      }
-    })
+      }))
 
-    await Promise.all(promises)
+      queue.push(...batchFailed)
+    }
+
+    console.log(`[video] Done: ${progress.done}/${total}, failed: ${progress.failed}`)
     setIsLoading(false)
   }
 

@@ -1,4 +1,4 @@
-import { registerProvider, AudioRequest, AudioResponse } from '../registry'
+import { registerProvider, AudioRequest, AudioResponse } from '@/lib/ai/registry'
 
 registerProvider({
   name: 'naga',
@@ -8,18 +8,21 @@ registerProvider({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${creds.apiKey}`,
-        'Connection': 'close',
-        'User-Agent': 'auto-story-app/1.0'
+        Authorization: `Bearer ${creds.apiKey}`,
+        Connection: 'close',
+        'User-Agent': 'auto-story-app/1.0',
       },
       body: JSON.stringify({ model, input: req.text, voice: req.voice }),
-      cache: 'no-store'
+      cache: 'no-store',
     })
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).substring(0, 200)}`)
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
+    }
 
     const audioBuffer = await res.arrayBuffer()
-    if (!audioBuffer.byteLength) throw new Error('Empty audio')
+    if (!audioBuffer.byteLength) throw new Error('Empty audio response (0 bytes)')
     return { audioBuffer }
   },
 })

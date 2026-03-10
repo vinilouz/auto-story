@@ -1,4 +1,4 @@
-import { registerProvider, TextRequest, TextResponse, ImageRequest, ImageResponse } from '../registry'
+import { registerProvider, TextRequest, TextResponse, ImageRequest, ImageResponse } from '@/lib/ai/registry'
 
 registerProvider({
   name: 'void',
@@ -9,10 +9,13 @@ registerProvider({
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
       body: JSON.stringify({ model, messages: [{ role: 'user', content: req.prompt }], stream: true }),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).substring(0, 200)}`)
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
+    }
 
     const reader = res.body?.getReader()
-    if (!reader) throw new Error('No body')
+    if (!reader) throw new Error('No response body')
     const decoder = new TextDecoder()
     let text = ''
 
@@ -21,7 +24,7 @@ registerProvider({
       if (done) break
       for (const line of decoder.decode(value).split('\n')) {
         if (!line.startsWith('data: ') || line.slice(6) === '[DONE]') continue
-        try { text += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '' } catch {}
+        try { text += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '' } catch { }
       }
     }
 
@@ -43,12 +46,15 @@ registerProvider({
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).substring(0, 200)}`)
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
+    }
 
     const data = await res.json()
     const img = data.choices?.[0]?.message?.images?.[0]
     const imageUrl = img?.image_url?.url || img?.url
-    if (!imageUrl) throw new Error('No image in response')
+    if (!imageUrl) throw new Error(`No image in response: ${JSON.stringify(data).substring(0, 300)}`)
     return { imageUrl }
   },
 })

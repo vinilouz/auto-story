@@ -3,18 +3,20 @@ export type ActionType = 'generateText' | 'generateImage' | 'generateAudio' | 'g
 export interface ModelConfig {
   provider: string
   model: string
-  /** Clip duration in seconds for video models */
   clipDuration?: number
 }
 
+/**
+ * Provider chain per action. Order = preference.
+ * Queue distributes across ALL, not sequential fallback.
+ */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
     { provider: 'void', model: 'gemini-3.1-flash-lite-preview' },
   ],
   generateImage: [
-    // { provider: 'air', model: 'nano-banana-pro' },
+    { provider: 'air', model: 'nano-banana-pro' },
     { provider: 'void', model: 'gemini-3-pro-image-preview' },
-    // { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
   ],
   generateAudio: [
     { provider: 'naga', model: 'eleven-multilingual-v2:free' },
@@ -25,15 +27,13 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   ],
 }
 
-export function getCredentials(provider: string) {
-  const key = provider.toUpperCase()
-  const baseUrl = process.env[`${key}_BASE_URL`] || ''
-  const apiKey = process.env[`${key}_API_KEY`] || ''
-  if (!baseUrl || !apiKey) return null
-  return { baseUrl, apiKey }
+/** RPM (requests per minute) per provider. Used by rate-limiter and queue. */
+export const PROVIDER_RPM: Record<string, number> = {
+  void: 20,
+  air: 5,
+  naga: 10,
 }
 
 export function getVideoClipDuration(): number {
-  const first = ACTIONS.generateVideo[0]
-  return first?.clipDuration ?? 6
+  return ACTIONS.generateVideo[0]?.clipDuration ?? 6
 }

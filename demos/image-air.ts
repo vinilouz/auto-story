@@ -5,7 +5,7 @@ fetch("https://api.airforce/v1/images/generations", {
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    "model": "nano-banana-2",
+    "model": "nano-banana-pro",
     "prompt": "anime",
     "n": 1,
     "size": "1024x1024",
