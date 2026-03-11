@@ -3,6 +3,7 @@ import fsp from 'fs/promises'
 import path from 'path'
 import { execute } from '@/lib/ai/providers'
 import { executeBatch, BatchResult } from '@/lib/ai/queue'
+import { StorageService } from '@/lib/storage'
 import { getProjectDirName } from '@/lib/utils'
 import { createLogger } from '@/lib/logger'
 import { VideoResponse } from '@/lib/ai/registry'
@@ -28,20 +29,14 @@ async function resolveImage(url?: string): Promise<string | undefined> {
   return url
 }
 
-export async function generateVideoClip(req: VideoClipRequest): Promise<string> {
-  const referenceImage = await resolveImage(req.referenceImage)
-  const { videoUrl } = await execute('generateVideo', {
-    prompt: req.prompt,
-    referenceImage,
-    duration: req.duration,
-  })
-  return videoUrl
-}
-
-async function saveClip(videoUrl: string, pubDir: string): Promise<string> {
+/**
+ * Salva o vídeo no disco com nome baseado no índice do segmento.
+ * Nome: clip-1.mp4, clip-2.mp4, etc. (1-indexed, legível e rastreável)
+ */
+async function saveClip(videoUrl: string, pubDir: string, segmentIndex: number): Promise<string> {
   if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true })
 
-  const filename = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`
+  const filename = `clip-${segmentIndex + 1}.mp4`
   const filepath = path.join(pubDir, filename)
 
   if (videoUrl.startsWith('data:')) {
@@ -57,21 +52,29 @@ async function saveClip(videoUrl: string, pubDir: string): Promise<string> {
 }
 
 export async function generateAndSaveVideoClip(
-  req: VideoClipRequest, projectId: string, projectName: string,
+  req: VideoClipRequest, projectId: string, projectName: string, segmentIndex = 0,
 ): Promise<string> {
-  const videoUrl = await generateVideoClip(req)
+  const referenceImage = await resolveImage(req.referenceImage)
+  const { videoUrl } = await execute('generateVideo', {
+    prompt: req.prompt,
+    referenceImage,
+    duration: req.duration,
+  })
 
   const dir = getProjectDirName(projectId, projectName)
   const pubDir = path.join(process.cwd(), 'public', 'projects', dir, 'clips')
-  const filename = await saveClip(videoUrl, pubDir)
-
+  const filename = await saveClip(videoUrl, pubDir, segmentIndex)
   const publicPath = `/projects/${dir}/clips/${filename}`
+
+  // Salva imediatamente no config.json — não espera o cliente
+  await StorageService.patchSegmentClip(projectId, projectName, segmentIndex, publicPath)
+
   log.success(`Saved clip: ${publicPath}`)
   return publicPath
 }
 
 export interface BatchClipRequest {
-  index: number
+  index: number       // índice do segmento — usado no nome do arquivo e no config patch
   prompt: string
   referenceImage?: string
   duration?: number
@@ -90,6 +93,7 @@ export async function generateAndSaveVideoClipBatch(
   projectName: string,
   onResult?: (result: BatchClipResult) => void,
 ): Promise<BatchClipResult[]> {
+  // Resolve imagens de referência antes de enviar para a queue
   const resolved = await Promise.all(
     requests.map(async (r) => ({
       prompt: r.prompt,
@@ -105,25 +109,31 @@ export async function generateAndSaveVideoClipBatch(
   const savePromises: Promise<void>[] = []
 
   const handleResult = async (br: BatchResult<VideoResponse>) => {
-    const originalIndex = requests[br.id].index
+    const segmentIndex = requests[br.id].index  // índice real do segmento
 
     if (br.status === 'error' || !br.data?.videoUrl) {
-      const r: BatchClipResult = { index: originalIndex, status: 'error', error: br.error || 'No video URL' }
+      const r: BatchClipResult = { index: segmentIndex, status: 'error', error: br.error || 'No video URL' }
       clipResults.push(r)
       onResult?.(r)
       return
     }
 
     try {
-      const filename = await saveClip(br.data.videoUrl, pubDir)
+      // Nome: clip-1.mp4, clip-2.mp4 ... (usa segmentIndex, não br.id)
+      const filename = await saveClip(br.data.videoUrl, pubDir, segmentIndex)
       const publicPath = `/projects/${dir}/clips/${filename}`
-      log.success(`Saved clip #${originalIndex + 1}: ${publicPath}`)
-      const r: BatchClipResult = { index: originalIndex, status: 'success', videoUrl: publicPath }
+
+      // ⚡ Salva no config.json IMEDIATAMENTE — antes de responder ao cliente
+      // Se a conexão SSE cair depois disso, o clip já está persistido
+      await StorageService.patchSegmentClip(projectId, projectName, segmentIndex, publicPath)
+
+      log.success(`Saved clip #${segmentIndex + 1}: ${publicPath}`)
+      const r: BatchClipResult = { index: segmentIndex, status: 'success', videoUrl: publicPath }
       clipResults.push(r)
       onResult?.(r)
     } catch (e: any) {
-      log.error(`Failed to save clip #${originalIndex + 1}`, e)
-      const r: BatchClipResult = { index: originalIndex, status: 'error', error: e.message }
+      log.error(`Failed to save clip #${segmentIndex + 1}`, e)
+      const r: BatchClipResult = { index: segmentIndex, status: 'error', error: e.message }
       clipResults.push(r)
       onResult?.(r)
     }

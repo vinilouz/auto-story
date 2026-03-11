@@ -7,8 +7,7 @@ export interface ModelConfig {
 }
 
 /**
- * Provider chain per action. Order = preference.
- * Queue distributes across ALL, not sequential fallback.
+ * Provider chain por action. Ordem = preferência.
  */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
@@ -27,8 +26,37 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   ],
 }
 
-/** RPM (requests per minute) per provider. Used by rate-limiter and queue. */
+/**
+ * RPM = quantos requests podem *começar* por minuto (janela deslizante 60s).
+ * Usado pelo rate-limiter — controla o ritmo de disparo.
+ */
 export const PROVIDER_RPM: Record<string, number> = {
+  void: 30,
+  air: 20,
+  naga: 10,
+}
+
+/**
+ * CONCURRENCY = quantos requests ficam *em-flight simultaneamente*.
+ *
+ * ⚠️  RPM ≠ CONCURRENCY — são conceitos diferentes!
+ *
+ * RPM=20 significa "pode disparar 20 por minuto".
+ * CONCURRENCY=3 significa "no máximo 3 ao mesmo tempo".
+ *
+ * Para vídeo (30–120s por request): concurrency baixo é essencial.
+ * Se mandar 20 simultâneos, o provider rejeita a maioria por sobrecarga.
+ *
+ * Raciocínio para air/vídeo:
+ *   - Provider diz: "não passe do RPM e está tudo bem"
+ *   - Mas na prática, 20 requests longos simultâneos → timeout/rejeição
+ *   - Com concurrency=3: 3 em-flight, rate-limiter garante ≤20/min
+ *   - Os logs vão mostrar se aparecem 429 (rate-limit) ou 5xx (sobrecarga)
+ *   - Se só aparecer 💥 server error → aumentar concurrency
+ *   - Se aparecer ⏱ rate-limit     → diminuir RPM ou concurrency
+ *   - Se zero erros               → aumentar concurrency gradualmente
+ */
+export const PROVIDER_CONCURRENCY: Record<string, number> = {
   void: 30,
   air: 20,
   naga: 10,

@@ -1,6 +1,4 @@
-de video clips temos alguns erros:
-  1. porque estamos removendo a criação de imagens?! os videos sao criados com imagens referencia.
-  2. 
+logs de air aparecem como base64 ainda, mas as gerações de video estao funcionais.
   
 * [ ] fazer request sem proxy antes de tentar proxies
 * [ ] concurrency para metade dos cores | remotion

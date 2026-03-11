@@ -51,18 +51,13 @@ export interface ProjectSummary {
 
 // ── Helpers ────────────────────────────────────────────────
 
-/**
- * Find existing project directory by short ID suffix.
- */
 function findExistingDir(projectId: string): string | null {
   if (!existsSync(DATA_DIR)) return null
   const shortId = projectId.split('-')[0] || projectId.substring(0, 8)
   const dirs = readdirSync(DATA_DIR, { withFileTypes: true })
-
   for (const d of dirs) {
     if (d.isDirectory() && d.name.endsWith(`-${shortId}`)) return d.name
   }
-  // Fallback: contains shortId (backwards compat with existing projects)
   for (const d of dirs) {
     if (d.isDirectory() && d.name.includes(shortId)) return d.name
   }
@@ -80,8 +75,9 @@ async function extractBase64(
   if (!m) return null
   if (!existsSync(imagesDir)) mkdirSync(imagesDir, { recursive: true })
 
+  // img-1.jpg, img-2.jpg ... (1-indexed, sem timestamp para nome legível)
   const ext = m[1] === 'jpeg' ? 'jpg' : m[1]
-  const fileName = `${prefix}-${index}-${Date.now()}.${ext}`
+  const fileName = `${prefix}-${index + 1}.${ext}`
   await fs.writeFile(path.join(imagesDir, fileName), Buffer.from(m[2], 'base64'))
   return `/projects/${dirName}/images/${fileName}`
 }
@@ -98,18 +94,17 @@ export const StorageService = {
 
     if (!existsSync(projectDir)) mkdirSync(projectDir, { recursive: true })
 
-    // Extract base64 from segments
     if (project.segments) {
       for (let i = 0; i < project.segments.length; i++) {
         const seg = project.segments[i]
         if (seg.imagePath?.startsWith('data:image/')) {
-          const saved = await extractBase64(seg.imagePath, imagesDir, dirName, 'scene', i)
+          // img-1.jpg, img-2.jpg ...
+          const saved = await extractBase64(seg.imagePath, imagesDir, dirName, 'img', i)
           if (saved) seg.imagePath = saved
         }
       }
     }
 
-    // Extract base64 from entities
     if (project.entities) {
       for (let i = 0; i < project.entities.length; i++) {
         const ent = project.entities[i]
@@ -125,6 +120,66 @@ export const StorageService = {
     await fs.writeFile(configPath, JSON.stringify(project, null, 2))
     log.success(`Saved ${dirName}/config.json`)
     return project.id
+  },
+
+  /**
+   * Patch cirúrgico: atualiza apenas o videoClipUrl de um segmento específico no config.json.
+   * Chamado imediatamente após salvar o arquivo do clip no disco — sem esperar o cliente.
+   * Isso garante que o clip nunca seja perdido mesmo que a conexão SSE caia.
+   */
+  async patchSegmentClip(
+    projectId: string, projectName: string,
+    segmentIndex: number, videoClipUrl: string,
+  ): Promise<void> {
+    try {
+      const dirName = resolveDir(projectId, projectName)
+      const configPath = path.join(DATA_DIR, dirName, 'config.json')
+      if (!existsSync(configPath)) {
+        log.warn(`patchSegmentClip: config.json não encontrado para ${dirName}`)
+        return
+      }
+
+      const project: ProjectData = JSON.parse(await fs.readFile(configPath, 'utf-8'))
+      if (!project.segments?.[segmentIndex]) {
+        log.warn(`patchSegmentClip: segmento ${segmentIndex} não existe`)
+        return
+      }
+
+      project.segments[segmentIndex].videoClipUrl = videoClipUrl
+      project.updatedAt = new Date().toISOString()
+
+      await fs.writeFile(configPath, JSON.stringify(project, null, 2))
+      log.success(`Patched config: segment[${segmentIndex}].videoClipUrl = ${videoClipUrl}`)
+    } catch (e: any) {
+      // Não lança — patch é best-effort, o clip já está no disco
+      log.error(`patchSegmentClip falhou para segmento ${segmentIndex}`, e.message)
+    }
+  },
+
+  /**
+   * Patch cirúrgico: atualiza apenas o imagePath de um segmento específico no config.json.
+   * Chamado imediatamente após salvar a imagem no disco.
+   */
+  async patchSegmentImage(
+    projectId: string, projectName: string,
+    segmentIndex: number, imagePath: string,
+  ): Promise<void> {
+    try {
+      const dirName = resolveDir(projectId, projectName)
+      const configPath = path.join(DATA_DIR, dirName, 'config.json')
+      if (!existsSync(configPath)) return
+
+      const project: ProjectData = JSON.parse(await fs.readFile(configPath, 'utf-8'))
+      if (!project.segments?.[segmentIndex]) return
+
+      project.segments[segmentIndex].imagePath = imagePath
+      project.updatedAt = new Date().toISOString()
+
+      await fs.writeFile(configPath, JSON.stringify(project, null, 2))
+      log.success(`Patched config: segment[${segmentIndex}].imagePath = ${imagePath}`)
+    } catch (e: any) {
+      log.error(`patchSegmentImage falhou para segmento ${segmentIndex}`, e.message)
+    }
   },
 
   async saveBase64Image(
@@ -152,72 +207,46 @@ export const StorageService = {
       if (!existsSync(configPath)) return null
 
       const project: ProjectData = JSON.parse(await fs.readFile(configPath, 'utf-8'))
-      project.transcriptionResults ??= []
-
-      // Auto-discover transcription sidecar files
-      for (const b of project.audioBatches || []) {
-        if (b.status !== 'completed' || !b.url) continue
-        if (project.transcriptionResults.some(r => r.url === b.url)) continue
-
-        const jsonPath = path.join(PUBLIC_DIR, b.url.replace(/^\//, '')) + '.elevenlabs.json'
-        const content = await fs.readFile(jsonPath, 'utf-8').catch(() => null)
-        if (content) {
-          project.transcriptionResults.push({
-            url: b.url, status: 'completed',
-            transcriptionUrl: `${b.url}.elevenlabs.json`,
-            data: JSON.parse(content),
-          })
+      project.transcriptionResults?.forEach(r => {
+        if (typeof r.data === 'string') {
+          try { r.data = JSON.parse(r.data) } catch { }
         }
-      }
-
+      })
       return project
     } catch (e) {
-      log.error(`Error loading project ${id}`, e)
+      log.error('Failed to load project', e)
       return null
     }
   },
 
   async getAllProjects(): Promise<ProjectSummary[]> {
     if (!existsSync(DATA_DIR)) return []
-    try {
-      const dirents = await fs.readdir(DATA_DIR, { withFileTypes: true })
-      const summaries: ProjectSummary[] = []
+    const dirs = readdirSync(DATA_DIR, { withFileTypes: true })
+    const summaries: ProjectSummary[] = []
 
-      for (const d of dirents) {
-        if (!d.isDirectory()) continue
-        try {
-          const cfgPath = path.join(DATA_DIR, d.name, 'config.json')
-          if (!existsSync(cfgPath)) continue
-          const p = JSON.parse(await fs.readFile(cfgPath, 'utf-8'))
-          summaries.push({
-            id: p.id, name: p.name, createdAt: p.createdAt,
-            updatedAt: p.updatedAt, flowType: p.flowType,
-            commentator: p.commentator, dirName: d.name,
-          })
-        } catch { }
-      }
-
-      // Deduplicate by ID, keep latest
-      const deduped = new Map<string, ProjectSummary>()
-      for (const p of summaries) {
-        const existing = deduped.get(p.id)
-        if (!existing || new Date(p.updatedAt) > new Date(existing.updatedAt)) {
-          deduped.set(p.id, p)
-        }
-      }
-
-      return Array.from(deduped.values())
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    } catch (e) {
-      log.error('Error reading projects', e)
-      return []
+    for (const d of dirs) {
+      if (!d.isDirectory()) continue
+      const configPath = path.join(DATA_DIR, d.name, 'config.json')
+      if (!existsSync(configPath)) continue
+      try {
+        const p: ProjectData = JSON.parse(await fs.readFile(configPath, 'utf-8'))
+        summaries.push({
+          id: p.id, name: p.name,
+          createdAt: p.createdAt, updatedAt: p.updatedAt,
+          flowType: p.flowType, commentator: p.commentator,
+          dirName: d.name,
+        })
+      } catch { }
     }
+
+    return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   },
 
-  async deleteProject(id: string): Promise<void> {
+  async deleteProject(id: string): Promise<boolean> {
     const dirName = findExistingDir(id)
-    if (!dirName) return
+    if (!dirName) return false
     await fs.rm(path.join(DATA_DIR, dirName), { recursive: true, force: true })
-    log.info(`Deleted project dir: ${dirName}`)
+    log.success(`Deleted project: ${dirName}`)
+    return true
   },
 }
