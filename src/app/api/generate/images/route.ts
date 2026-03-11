@@ -75,40 +75,68 @@ async function handleBatch(
     config: r.imageConfig,
   }))
 
-  const results = await executeBatch('generateImage', batchRequests)
-
-  const processed = await Promise.all(
-    results.map(async (r, i) => {
-      if (r.status === 'error') return r
-
-      // index undefined → imagem de entity/commentator, sem patchSegmentImage
-      // index explícito → imagem de segmento, patcha o config
-      const segmentIndex: number | undefined = requests[i]?.index
-
-      const imgRes = r.data as ImageResponse
-      let imageUrl = imgRes.imageUrl
-
-      if (projectId && projectName && imageUrl.startsWith('data:image/')) {
-        const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/)
-        if (m) {
-          const ext = m[1] === 'jpeg' ? 'jpg' : m[1]
-          const fileName = segmentIndex !== undefined
-            ? `img-${segmentIndex + 1}.${ext}`
-            : `img-${Date.now()}.${ext}`
-
-          const local = await StorageService.saveBase64Image(projectId, fileName, m[2], projectName)
-          if (local) {
-            imageUrl = local
-            if (segmentIndex !== undefined) {
-              await StorageService.patchSegmentImage(projectId, projectName, segmentIndex, imageUrl)
-            }
-          }
-        }
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      let closed = false
+      const send = (data: any) => {
+        if (closed) return
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
       }
 
-      return { ...r, data: { imageUrl } }
-    })
-  )
+      const pending: Promise<void>[] = []
+      await executeBatch('generateImage', batchRequests, {
+        onResult: (r) => {
+          const p = (async () => {
+            try {
+              if (r.status === 'error') {
+                send({ id: r.id, status: 'error', error: r.error, errorKind: r.errorKind })
+                return
+              }
 
-  return NextResponse.json({ results: processed })
+              const segmentIndex: number | undefined = requests[r.id]?.index
+              const imgRes = r.data as ImageResponse
+              let imageUrl = imgRes.imageUrl
+
+              if (projectId && projectName && imageUrl.startsWith('data:image/')) {
+                const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/)
+                if (m) {
+                  const ext = m[1] === 'jpeg' ? 'jpg' : m[1]
+                  const fileName = segmentIndex !== undefined
+                    ? `img-${segmentIndex + 1}.${ext}`
+                    : `img-${Date.now()}.${ext}`
+
+                  const local = await StorageService.saveBase64Image(projectId, fileName, m[2], projectName)
+                  if (local) {
+                    imageUrl = local
+                    if (segmentIndex !== undefined) {
+                      await StorageService.patchSegmentImage(projectId, projectName, segmentIndex, imageUrl)
+                    }
+                  }
+                }
+              }
+
+              send({ id: r.id, status: 'success', data: { imageUrl } })
+            } catch (e: any) {
+              send({ id: r.id, status: 'error', error: e.message })
+            }
+          })()
+          pending.push(p)
+        },
+      })
+
+      await Promise.all(pending)
+      send({ done: true })
+      closed = true
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }

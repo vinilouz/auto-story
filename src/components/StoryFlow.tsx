@@ -336,19 +336,50 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         body: JSON.stringify({ requests, projectId: pid, projectName: title })
       })
       if (!r.ok) throw new Error()
-      const { results } = await r.json()
 
-      let resIdx = 0
-      const completed = processing.map(e => {
-        if (!targets.some(t => t.name === e.name) || !e.description) return e
-        const res = results[resIdx++]
-        if (res?.status === 'success' && res.data?.imageUrl) {
-          return { ...e, imageUrl: res.data.imageUrl, status: 'completed' as const }
+      const reader = r.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let latestEnts = [...processing]
+      const targetNames = targets.map(t => t.name)
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const event = JSON.parse(line.slice(6))
+          if (event.done) break
+
+          let targetIdx = -1
+          let count = 0
+          for (let j = 0; j < latestEnts.length; j++) {
+            if (targetNames.includes(latestEnts[j].name) && latestEnts[j].description) {
+              if (count === event.id) { targetIdx = j; break }
+              count++
+            }
+          }
+          if (targetIdx === -1) continue
+
+          if (event.status === 'success' && event.data?.imageUrl) {
+            latestEnts = latestEnts.map((e, j) =>
+              j === targetIdx ? { ...e, imageUrl: event.data.imageUrl, status: 'completed' as const } : e
+            )
+          } else {
+            latestEnts = latestEnts.map((e, j) =>
+              j === targetIdx ? { ...e, status: 'error' as const } : e
+            )
+          }
+          setEntities([...latestEnts])
         }
-        return { ...e, status: 'error' as const }
-      })
+      }
 
-      setEntities(completed); await save({ entities: completed })
+      setEntities(latestEnts); await save({ entities: latestEnts })
     } catch { toast.error("Failed") } finally { if (!skipLoading) setLoading(false) }
   }
 
@@ -414,23 +445,40 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         body: JSON.stringify({ requests, projectId: pid, projectName: title })
       })
       if (!r.ok) throw new Error()
-      const { results } = await r.json()
 
-      let updatedSegs = [...segments]
-      const newStatusMap = new Map<number, 'error' | 'generating'>()
+      const reader = r.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let latestSegs = [...segments]
 
-      results.forEach((res: any, i: number) => {
-        const segIndex = indices[i]
-        if (res?.status === 'success' && res.data?.imageUrl) {
-          updatedSegs[segIndex] = { ...updatedSegs[segIndex], imagePath: res.data.imageUrl }
-        } else {
-          newStatusMap.set(segIndex, 'error')
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const event = JSON.parse(line.slice(6))
+          if (event.done) break
+
+          const segIndex = indices[event.id]
+          if (event.status === 'success' && event.data?.imageUrl) {
+            latestSegs = latestSegs.map((s, j) =>
+              j === segIndex ? { ...s, imagePath: event.data.imageUrl } : s
+            )
+            setSegments([...latestSegs])
+            setImageStatuses(p => { const n = new Map(p); n.delete(segIndex); return n })
+          } else {
+            setImageStatuses(p => new Map(p).set(segIndex, 'error'))
+          }
         }
-      })
+      }
 
-      setSegments(updatedSegs)
-      setImageStatuses(newStatusMap)
-      await save({ segments: updatedSegs })
+      setSegments(latestSegs)
+      await save({ segments: latestSegs })
     } catch {
       const errorMap = new Map<number, 'error' | 'generating'>(indices.map(i => [i, 'error']))
       setImageStatuses(errorMap)

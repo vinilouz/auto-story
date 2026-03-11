@@ -11,44 +11,12 @@ export interface ExtractedEntity {
   description: string
 }
 
-function repairJson(str: string): string {
-  let result = str
-
-  result = result.replace(/\s+/g, ' ')
-
-  result = result.replace(/(\w+)":\s*"/g, '"$1": "')
-  result = result.replace(/(\w+)":/g, '"$1":')
-  result = result.replace(/"(\w+)"\s+\[/g, '"$1": [')
-  result = result.replace(/"(\w+)"\s+\{/g, '"$1": {')
-  result = result.replace(/"(\w+)"\s+"/g, '"$1": "')
-
-  result = result.replace(/"":\s*\[/g, '"segment": [')
-
-  result = result.replace(/(\d)\s+(\d)/g, '$1, $2')
-  result = result.replace(/,\s*,/g, ',')
-  result = result.replace(/,\s*\]/g, ']')
-
-  result = result.replace(
-    /"description":\s*([^"\[]+?)(\s*"[a-z]+":|\s*}\s*[,]])/gi,
-    (_, v, end) => {
-      const desc = v.trim().replace(/\s+/g, ' ')
-      return `"description": "${desc}"${end}`
-    }
-  )
-
-  result = result.replace(/\[\s*([^\]]*?)\s*(?="description")/g, (_, arr) => {
-    const nums = arr.match(/\d+/g)
-    return nums ? `[${nums.join(', ')}]` : '[]'
-  })
-
-  return result
-}
-
-function wrapIfNeeded(str: string): string {
-  const trimmed = str.trim()
-  if (trimmed.startsWith('[')) return trimmed
-  if (trimmed.startsWith('{')) return `[${trimmed}]`
-  return trimmed
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const body = fenced ? fenced[1].trim() : raw.trim()
+  if (body.startsWith('[')) return body
+  if (body.startsWith('{')) return `[${body}]`
+  throw new Error('No JSON found in AI response')
 }
 
 export async function extractEntities(segments: Segment[]): Promise<ExtractedEntity[]> {
@@ -62,20 +30,9 @@ export async function extractEntities(segments: Segment[]): Promise<ExtractedEnt
     ),
   })
 
-  let clean = raw.trim()
-  const m =
-    clean.match(/```json\s*(\[[\s\S]*\])\s*```/) ||
-    clean.match(/(\[[\s\S]*\])/) ||
-    clean.match(/```json\s*(\{[\s\S]*\})\s*```/) ||
-    clean.match(/(\{[\s\S]*\})/)
-  if (m) clean = m[1]
-
-  clean = wrapIfNeeded(clean)
-  clean = repairJson(clean)
-
   let parsed: any
   try {
-    parsed = JSON.parse(clean.trim())
+    parsed = JSON.parse(extractJson(raw))
   } catch (e) {
     log.error('Failed to parse entity extraction response', raw.substring(0, 500))
     throw new Error(`Invalid JSON from AI: ${(e as Error).message}`)

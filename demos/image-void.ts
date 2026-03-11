@@ -8,7 +8,7 @@ const res = await fetch(`${process.env.VOID_BASE_URL}/v1/chat/completions`, {
     Authorization: `Bearer ${process.env.VOID_API_KEY}`
   },
   body: JSON.stringify({
-    model: "gemini-3-pro-image-preview",
+    model: "gemini-3.1-flash-image-preview",
     messages: [{ role: "user", content: [{ type: "text", text: prompt }] }],
     responseModalities: ["IMAGE"],
     image_config: { aspect_ratio: "16:9", image_size: "4K" }

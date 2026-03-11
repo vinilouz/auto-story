@@ -4,15 +4,12 @@ registerProvider({
   name: 'void',
 
   async generateText(model, req: TextRequest, creds): Promise<TextResponse> {
-    const wantsJson = req.prompt.includes('Return ONLY a JSON') || req.prompt.includes('```json')
     const res = await fetch(`${creds.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
       body: JSON.stringify({
         model,
         messages: [{ role: 'user', content: req.prompt }],
-        stream: true,
-        ...(wantsJson && { response_format: { type: 'json_object' } }),
       }),
     })
     if (!res.ok) {
@@ -20,20 +17,8 @@ registerProvider({
       throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
     }
 
-    const reader = res.body?.getReader()
-    if (!reader) throw new Error('No response body')
-    const decoder = new TextDecoder()
-    let text = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      for (const line of decoder.decode(value).split('\n')) {
-        if (!line.startsWith('data: ') || line.slice(6) === '[DONE]') continue
-        try { text += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '' } catch { }
-      }
-    }
-
+    const data = await res.json()
+    const text = data.choices?.[0]?.message?.content
     if (!text) throw new Error('Empty text response')
     return { text }
   },

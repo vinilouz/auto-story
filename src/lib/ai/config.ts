@@ -11,10 +11,11 @@ export interface ModelConfig {
  */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gpt-5.4' },
+    // { provider: 'void', model: 'deepseek-v3.2' },
+    { provider: 'void', model: 'gemini-3.1-flash-lite-preview' },
   ],
   generateImage: [
-    { provider: 'void', model: 'gemini-3-pro-image-preview' },
+    { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
     // { provider: 'air', model: 'nano-banana-2' },
   ],
   generateAudio: [
