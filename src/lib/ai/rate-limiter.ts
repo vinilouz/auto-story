@@ -31,6 +31,11 @@ export function tryAcquireSlot(provider: string): boolean {
   return false
 }
 
+export function releaseSlot(provider: string): void {
+  const w = windows.get(provider)
+  if (w?.length) w.pop()
+}
+
 /** Returns ms until next slot becomes available. 0 = available now. */
 export function nextSlotMs(provider: string): number {
   const limit = PROVIDER_RPM[provider]

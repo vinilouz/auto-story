@@ -315,20 +315,33 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       })
       setEntities(processing)
 
-      const completed = await Promise.all(processing.map(async e => {
+      const requests = processing
+        .map(e => targets.some(t => t.name === e.name) && e.description ? {
+          imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
+          imageConfig: { aspect_ratio: "16:9" }
+        } : null)
+        .filter(Boolean)
+
+      if (requests.length === 0) {
+        setEntities(processing); return
+      }
+
+      const r = await fetch("/api/generate/images", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requests, projectId: pid, projectName: title })
+      })
+      if (!r.ok) throw new Error()
+      const { results } = await r.json()
+
+      let resIdx = 0
+      const completed = processing.map(e => {
         if (!targets.some(t => t.name === e.name) || !e.description) return e
-        try {
-          const r = await fetch("/api/generate/images", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
-              imageConfig: { aspect_ratio: "16:9" }, projectId: pid, projectName: title
-            })
-          })
-          if (!r.ok) throw new Error()
-          return { ...e, imageUrl: (await r.json()).imageUrl, status: 'completed' as const }
-        } catch { return { ...e, status: 'error' as const } }
-      }))
+        const res = results[resIdx++]
+        if (res?.status === 'success' && res.data?.imageUrl) {
+          return { ...e, imageUrl: res.data.imageUrl, status: 'completed' as const }
+        }
+        return { ...e, status: 'error' as const }
+      })
 
       setEntities(completed); await save({ entities: completed })
     } catch { toast.error("Failed") } finally { setLoading(false) }
@@ -365,45 +378,58 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     }
 
     const isRegen = segments.every(s => s.imagePath)
-    const queue: number[] = segments
+    const indices = segments
       .map((seg, i) => (!seg.imagePrompt || (!isRegen && seg.imagePath)) ? -1 : i)
       .filter(i => i >= 0)
 
-    const total = queue.length
-    const progress = { done: 0, failed: 0 }
-    console.log(`[image] Queue: ${total} items`)
+    if (indices.length === 0) return
 
-    const failed = new Map<number, number>()
-    const MAX_ATTEMPTS = 3
+    const statusMap = new Map<number, 'error' | 'generating'>(indices.map(i => [i, 'generating']))
+    setImageStatuses(statusMap)
 
-    while (queue.length > 0) {
-      const batch = queue.splice(0, queue.length)
-      const batchFailed: number[] = []
+    const requests = indices.map(segIndex => {
+      const seg = segments[segIndex]
+      const prompt = mode === 'commentator' && commentator?.appearance?.imageUrl
+        ? COMMENTATOR_IMAGE_GENERATION_PROMPT(seg.imagePrompt!) : GENERATE_SEGMENT_IMAGE_PROMPT(seg.imagePrompt!, imagePromptStyle)
+      const payload: any = { imagePrompt: prompt, imageConfig: { aspect_ratio: "16:9" }, systemPrompt: imagePromptStyle, index: segIndex }
+      const matches = prompt.match(/<<([^>]+)>>/g)
+      if (matches && entities.length) {
+        const refs = entities.filter(e => matches.some(m => m.includes(e.name)) && e.imageUrl).map(e => e.imageUrl!)
+        if (refs.length) payload.referenceImages = refs
+      } else if (mode === 'commentator' && commentator?.appearance?.imageUrl) {
+        payload.referenceImage = commentator.appearance.imageUrl
+      }
+      return payload
+    })
 
-      await Promise.all(batch.map(async (segIndex) => {
-        console.log(`[image] ${progress.done + 1}/${total} -> segment ${segIndex + 1}`)
-        try {
-          await generateSingleImage(segIndex)
-          progress.done++
-          console.log(`[image] ${progress.done}/${total} -> done`)
-        } catch (e) {
-          const attempts = (failed.get(segIndex) || 0) + 1
-          if (attempts < MAX_ATTEMPTS) {
-            failed.set(segIndex, attempts)
-            batchFailed.push(segIndex)
-            console.warn(`[image] segment ${segIndex + 1} -> retry ${attempts}/${MAX_ATTEMPTS}`)
-          } else {
-            progress.failed++
-            console.error(`[image] segment ${segIndex + 1} -> error`)
-            setImageStatuses(p => new Map(p).set(segIndex, 'error'))
-          }
+    try {
+      const r = await fetch('/api/generate/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests, projectId: pid, projectName: title })
+      })
+      if (!r.ok) throw new Error()
+      const { results } = await r.json()
+
+      let updatedSegs = [...segments]
+      const newStatusMap = new Map<number, 'error' | 'generating'>()
+
+      results.forEach((res: any, i: number) => {
+        const segIndex = indices[i]
+        if (res?.status === 'success' && res.data?.imageUrl) {
+          updatedSegs[segIndex] = { ...updatedSegs[segIndex], imagePath: res.data.imageUrl }
+        } else {
+          newStatusMap.set(segIndex, 'error')
         }
-      }))
+      })
 
-      queue.push(...batchFailed)
+      setSegments(updatedSegs)
+      setImageStatuses(newStatusMap)
+      await save({ segments: updatedSegs })
+    } catch {
+      const errorMap = new Map<number, 'error' | 'generating'>(indices.map(i => [i, 'error']))
+      setImageStatuses(errorMap)
     }
-
-    console.log(`[image] Done: ${progress.done}/${total}, failed: ${progress.failed}`)
   }
 
   const generateAudioAction = async () => {
@@ -707,23 +733,34 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
         {/* IMAGES (simple/commentator) */}
         {stage === 'images' && (
-          <div className="grid grid-cols-2 gap-4">
-            {segments.filter(s => s.imagePrompt).map((seg, i) => {
-              const realIdx = segments.indexOf(seg); const st = imageStatuses.get(realIdx)
-              return (
-                <Card key={i}><CardContent className="p-4 space-y-2">
-                  <p className="text-xs text-muted-foreground italic">{seg.imagePrompt}</p>
-                  {seg.imagePath && st !== 'generating' ? (
-                    <div className="relative group">
-                      <img src={seg.imagePath} alt="" className="w-full rounded" />
-                      <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => generateSingleImage(realIdx)}><RefreshCw className="w-4 h-4" /></Button>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Images</span>
+              <span className="font-mono bg-muted px-2 py-0.5 rounded">{segments.filter(s => s.imagePath).length}/{segments.length}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {segments.filter(s => s.imagePrompt).map((seg, i) => {
+                const realIdx = segments.indexOf(seg); const st = imageStatuses.get(realIdx)
+                return (
+                  <Card key={i}><CardContent className="space-y-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-mono text-xs font-bold">#{realIdx + 1}</span>
+                      {seg.imagePath && st !== 'generating' && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => generateSingleImage(realIdx)}><RefreshCw className="w-3 h-3" /></Button>
+                      )}
                     </div>
-                  ) : st === 'generating' ? <Skeleton className="w-full h-48" /> :
-                    st === 'error' ? <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2"><span className="text-sm text-muted-foreground">Error</span><Button variant="outline" size="sm" onClick={() => generateSingleImage(realIdx)}><RefreshCw className="w-4 h-4 mr-2" />Retry</Button></div> :
-                      <div className="h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed text-muted-foreground/50 text-sm">Waiting...</div>}
-                </CardContent></Card>
-              )
-            })}
+                    <p className="text-xs text-muted-foreground italic line-clamp-2">{seg.imagePrompt}</p>
+                    {seg.imagePath && st !== 'generating' ? (
+                      <div className="relative group">
+                        <img src={seg.imagePath} alt="" className="w-full rounded" />
+                      </div>
+                    ) : st === 'generating' ? <Skeleton className="w-full h-48" /> :
+                      st === 'error' ? <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2"><span className="text-sm text-muted-foreground">Error</span><Button variant="outline" size="sm" onClick={() => generateSingleImage(realIdx)}><RefreshCw className="w-4 h-4 mr-2" />Retry</Button></div> :
+                        <div className="h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed text-muted-foreground/50 text-sm">Waiting...</div>}
+                  </CardContent></Card>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -819,47 +856,53 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
 
         {/* VIDEO CLIPS (video-story only) */}
         {stage === 'clips' && (
-          <div className="grid grid-cols-2 gap-4">
-            {segments.filter(s => s.imagePrompt).map((seg, i) => {
-              const st = videoClips.clipStatuses.get(i)
-              return (
-                <Card key={i}><CardContent className="p-4 space-y-2">
-                  <div className="flex justify-between mb-1">
-                    <span className="font-mono text-xs font-bold">Clip #{i + 1}</span>
-                    <span className="text-xs text-muted-foreground">{clipDuration}s</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground italic line-clamp-2">{seg.imagePrompt}</p>
-                  {seg.videoClipUrl && st !== 'generating' ? (
-                    <div className="relative group">
-                      <video src={seg.videoClipUrl} controls className="w-full rounded" />
-                      <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
-                        onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Clips</span>
+              <span className="font-mono bg-muted px-2 py-0.5 rounded">{segments.filter(s => s.videoClipUrl).length}/{segments.length}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {segments.filter(s => s.imagePrompt).map((seg, i) => {
+                const st = videoClips.clipStatuses.get(i)
+                return (
+                  <Card key={i}><CardContent className="p-4 space-y-2">
+                    <div className="flex justify-between mb-1">
+                      <span className="font-mono text-xs font-bold">Clip #{i + 1}</span>
+                      <span className="text-xs text-muted-foreground">{clipDuration}s</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground italic line-clamp-2">{seg.imagePrompt}</p>
+                    {seg.videoClipUrl && st !== 'generating' ? (
+                      <div className="relative group">
+                        <video src={seg.videoClipUrl} controls className="w-full rounded" />
+                        <Button size="icon" variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
+                          onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
+                            projectId: project.projectId || projectId, projectName: title, clipDuration,
+                            onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
+                          })}>
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : st === 'generating' ? (
+                      <div className="w-full h-48 bg-muted rounded animate-pulse flex items-center justify-center">
+                        <div className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /><span className="text-xs text-muted-foreground">Generating {clipDuration}s clip...</span></div>
+                      </div>
+                    ) : st === 'error' ? (
+                      <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
+                        <span className="text-sm text-muted-foreground">Error</span>
+                        <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
                           projectId: project.projectId || projectId, projectName: title, clipDuration,
                           onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
                         })}>
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : st === 'generating' ? (
-                    <div className="w-full h-48 bg-muted rounded animate-pulse flex items-center justify-center">
-                      <div className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /><span className="text-xs text-muted-foreground">Generating {clipDuration}s clip...</span></div>
-                    </div>
-                  ) : st === 'error' ? (
-                    <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
-                      <span className="text-sm text-muted-foreground">Error</span>
-                      <Button variant="outline" size="sm" onClick={() => videoClips.regenerateClip(i, segments, setSegments, {
-                        projectId: project.projectId || projectId, projectName: title, clipDuration,
-                        onClipCompleted: async (newSegments) => { await save({ segments: newSegments }) }
-                      })}>
-                        <RefreshCw className="w-4 h-4 mr-2" />Retry
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed text-muted-foreground/50 text-sm">Waiting...</div>
-                  )}
-                </CardContent></Card>
-              )
-            })}
+                          <RefreshCw className="w-4 h-4 mr-2" />Retry
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-muted/40 rounded flex items-center justify-center border border-dashed text-muted-foreground/50 text-sm">Waiting...</div>
+                    )}
+                  </CardContent></Card>
+                )
+              })}
+            </div>
           </div>
         )}
 

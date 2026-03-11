@@ -12,25 +12,25 @@ export interface ModelConfig {
  */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gemini-3.1-flash-lite-preview' },
+    { provider: 'void', model: 'gemini-2.5-flash' },
   ],
   generateImage: [
-    { provider: 'air', model: 'nano-banana-pro' },
     { provider: 'void', model: 'gemini-3-pro-image-preview' },
+    { provider: 'air', model: 'nano-banana-2' },
   ],
   generateAudio: [
     { provider: 'naga', model: 'eleven-multilingual-v2:free' },
   ],
   generateVideo: [
     { provider: 'air', model: 'grok-imagine-video', clipDuration: 6 },
-    { provider: 'air', model: 'veo-3.1-fast', clipDuration: 8 },
+    // { provider: 'air', model: 'veo-3.1-fast', clipDuration: 8 },
   ],
 }
 
 /** RPM (requests per minute) per provider. Used by rate-limiter and queue. */
 export const PROVIDER_RPM: Record<string, number> = {
-  void: 20,
-  air: 5,
+  void: 30,
+  air: 20,
   naga: 10,
 }
 

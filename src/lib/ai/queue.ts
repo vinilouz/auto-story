@@ -2,6 +2,7 @@ import { ActionType, ACTIONS, PROVIDER_RPM } from './config'
 import { getProvider, getCredentials, ActionMap, Handler } from './registry'
 import { acquireSlot } from './rate-limiter'
 import { createLogger } from '@/lib/logger'
+import { saveDebug } from './registry'
 
 const log = createLogger('queue')
 
@@ -39,6 +40,7 @@ export async function executeBatch<A extends ActionType>(
   opts: {
     maxRetries?: number
     onProgress?: (completed: number, total: number) => void
+    onResult?: (result: BatchResult<ActionMap[A]['res']>) => void
   } = {},
 ): Promise<BatchResult<ActionMap[A]['res']>[]> {
   const maxRetries = opts.maxRetries ?? 3
@@ -109,23 +111,29 @@ export async function executeBatch<A extends ActionType>(
       try {
         const data = await slot.handler(slot.model, job.request, slot.creds)
         const ms = Date.now() - start
-        results[job.id] = { id: job.id, status: 'success', data, provider: `${slot.providerName}/${slot.model}`, durationMs: ms }
+        saveDebug(action, slot.providerName, slot.model, job.request, data, ms)
+        const result: BatchResult<ActionMap[A]['res']> = { id: job.id, status: 'success', data, provider: `${slot.providerName}/${slot.model}`, durationMs: ms }
+        results[job.id] = result
         completed++
         pending--
         log.success(`#${job.id + 1} ← ${slot.providerName}/${slot.model} (${ms}ms) [${completed}/${total}]`)
         opts.onProgress?.(completed, total)
+        opts.onResult?.(result)
       } catch (e: any) {
         const ms = Date.now() - start
         const msg = e?.message || String(e)
+        saveDebug(action, slot.providerName, slot.model, job.request, null, ms, msg)
         job.failedOn.add(slot.providerName)
         job.lastError = msg
 
         if (job.attempts >= maxRetries) {
-          results[job.id] = { id: job.id, status: 'error', error: msg, provider: `${slot.providerName}/${slot.model}`, durationMs: ms }
+          const result: BatchResult<ActionMap[A]['res']> = { id: job.id, status: 'error', error: msg, provider: `${slot.providerName}/${slot.model}`, durationMs: ms }
+          results[job.id] = result
           completed++
           pending--
           log.error(`#${job.id + 1} ✗ ${slot.providerName}/${slot.model} — exhausted ${maxRetries} attempts [${completed}/${total}]`, msg)
           opts.onProgress?.(completed, total)
+          opts.onResult?.(result)
         } else {
           log.warn(`#${job.id + 1} ✗ ${slot.providerName}/${slot.model} (${ms}ms) — requeued (attempt ${job.attempts}/${maxRetries})`)
           retryQueue.push(job)

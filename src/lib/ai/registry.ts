@@ -1,8 +1,50 @@
 import { ActionType, ACTIONS } from './config'
-import { acquireSlot } from './rate-limiter'
+import { tryAcquireSlot, acquireSlot, nextSlotMs } from './rate-limiter'
 import { createLogger } from '@/lib/logger'
+import fs from 'fs'
+import path from 'path'
 
 const log = createLogger('AI')
+
+// ── Debug file logging ────────────────────────────────────
+
+/** Set false to disable all file logging */
+const DEBUG_LOGS_ENABLED = true
+/** 'all' = every call, 'error' = only failures */
+/** 'all' = every call, 'error' = only failures */
+const DEBUG_LOGS_LEVEL: 'all' | 'error' = 'all'
+
+const LOGS_DIR = path.join(process.cwd(), 'logs')
+if (DEBUG_LOGS_ENABLED && !fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true })
+
+export function saveDebug(action: string, provider: string, model: string, request: any, response: any, durationMs: number, error?: string) {
+  if (!DEBUG_LOGS_ENABLED) return
+  if (DEBUG_LOGS_LEVEL === 'error' && !error) return
+
+  const ts = new Date().toISOString().replace(/[:.]/g, '-')
+  const status = error ? 'error' : 'ok'
+  const filename = `${action}-${provider}-${status}-${ts}.json`
+
+  const data: any = {
+    timestamp: new Date().toISOString(),
+    action,
+    provider: `${provider}/${model}`,
+    durationMs,
+    status,
+  }
+
+  if (action === 'generateText') {
+    data.request = { prompt: request.prompt, promptLength: request.prompt?.length }
+    if (response?.text) data.response = { text: response.text, textLength: response.text.length }
+  } else {
+    data.request = { ...request, referenceImages: request.referenceImages?.map((r: string) => r.substring(0, 50) + '...') }
+    if (response) data.response = { hasImageUrl: !!response.imageUrl, hasVideoUrl: !!response.videoUrl, hasAudioBuffer: !!response.audioBuffer }
+  }
+
+  if (error) data.error = error
+
+  try { fs.writeFileSync(path.join(LOGS_DIR, filename), JSON.stringify(data, null, 2)) } catch { }
+}
 
 // ── Request/Response types ────────────────────────────────
 
@@ -71,37 +113,86 @@ export function getCredentials(provider: string): { baseUrl: string; apiKey: str
   return { baseUrl, apiKey }
 }
 
-// ── Execute single (sequential fallback) ──────────────────
+// ── Resolve available providers for an action ─────────────
+
+interface ResolvedProvider {
+  name: string
+  model: string
+  handler: Handler<any, any>
+  creds: { baseUrl: string; apiKey: string }
+}
+
+function resolveProviders(action: ActionType): ResolvedProvider[] {
+  const resolved: ResolvedProvider[] = []
+  for (const { provider: name, model } of ACTIONS[action] || []) {
+    const provider = getProvider(name)
+    const handler = provider?.[action] as Handler<any, any> | undefined
+    const creds = getCredentials(name)
+    if (provider && handler && creds) resolved.push({ name, model, handler, creds })
+  }
+  return resolved
+}
+
+// ── Execute single ────────────────────────────────────────
+// Two-pass: first try any provider with a free slot RIGHT NOW,
+// then fall back to waiting for the preferred provider.
+// This prevents 20 requests blocking on air(5rpm) when void(20rpm) is idle.
 
 export async function execute<A extends ActionType>(
   action: A,
   request: ActionMap[A]['req'],
 ): Promise<ActionMap[A]['res']> {
-  const chain = ACTIONS[action]
-  if (!chain?.length) throw new Error(`No models configured for: ${action}`)
+  const chain = resolveProviders(action)
+  if (!chain.length) throw new Error(`No available providers for: ${action}`)
 
   const errors: string[] = []
 
-  for (const { provider: name, model } of chain) {
-    const provider = getProvider(name)
-    const handler = provider?.[action] as Handler<any, any> | undefined
-    const creds = getCredentials(name)
+  // Pass 1: try any provider that has a slot available RIGHT NOW (non-blocking)
+  for (const p of chain) {
+    if (!tryAcquireSlot(p.name)) continue
 
-    if (!provider) { errors.push(`${name}: not registered`); continue }
-    if (!handler) { errors.push(`${name}: does not support ${action}`); continue }
-    if (!creds) { errors.push(`${name}/${model}: missing env ${name.toUpperCase()}_BASE_URL / ${name.toUpperCase()}_API_KEY`); continue }
-
+    const start = Date.now()
     try {
-      log.info(`${action} → ${name}/${model}`)
-      await acquireSlot(name)
-      const start = Date.now()
-      const result = await handler(model, request, creds)
-      log.success(`${action} ← ${name}/${model} (${Date.now() - start}ms)`)
+      log.info(`${action} → ${p.name}/${p.model}`)
+      const result = await p.handler(p.model, request, p.creds)
+      const ms = Date.now() - start
+      log.success(`${action} ← ${p.name}/${p.model} (${ms}ms)`)
+      saveDebug(action, p.name, p.model, request, result, ms)
       return result
     } catch (e: any) {
+      const ms = Date.now() - start
       const msg = e?.message || String(e)
-      log.warn(`${action} ✗ ${name}/${model}: ${msg}`)
-      errors.push(`${name}/${model}: ${msg}`)
+      log.warn(`${action} ✗ ${p.name}/${p.model}: ${msg}`)
+      errors.push(`${p.name}/${p.model}: ${msg}`)
+      saveDebug(action, p.name, p.model, request, null, ms, msg)
+    }
+  }
+
+  // Pass 2: all slots full or all failed — pick the provider with the shortest wait
+  const remaining = chain.filter(p => !errors.some(e => e.startsWith(`${p.name}/${p.model}:`)))
+  const candidates = remaining.length > 0 ? remaining : chain
+
+  // Sort by next available slot time
+  const sorted = candidates
+    .map(p => ({ ...p, waitMs: nextSlotMs(p.name) }))
+    .sort((a, b) => a.waitMs - b.waitMs)
+
+  for (const p of sorted) {
+    const start = Date.now()
+    try {
+      await acquireSlot(p.name)
+      log.info(`${action} → ${p.name}/${p.model}`)
+      const result = await p.handler(p.model, request, p.creds)
+      const ms = Date.now() - start
+      log.success(`${action} ← ${p.name}/${p.model} (${ms}ms)`)
+      saveDebug(action, p.name, p.model, request, result, ms)
+      return result
+    } catch (e: any) {
+      const ms = Date.now() - start
+      const msg = e?.message || String(e)
+      log.warn(`${action} ✗ ${p.name}/${p.model}: ${msg}`)
+      errors.push(`${p.name}/${p.model}: ${msg}`)
+      saveDebug(action, p.name, p.model, request, null, ms, msg)
     }
   }
 

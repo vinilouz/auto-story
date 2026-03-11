@@ -117,71 +117,71 @@ export function useVideoClips() {
   ) => {
     setIsLoading(true)
 
-    const queue: number[] = segments
-      .map((seg, i) => (!seg.imagePrompt || seg.videoClipUrl) ? -1 : i)
-      .filter(i => i >= 0)
+    const clips = segments
+      .map((seg, i) => ({ index: i, prompt: seg.imagePrompt!, referenceImage: seg.imagePath, duration: opts.clipDuration }))
+      .filter(c => c.prompt && !segments[c.index].videoClipUrl)
 
-    const total = queue.length
-    const progress = { done: 0, failed: 0 }
-    console.log(`[video] Queue: ${total} items`)
+    if (!clips.length) { setIsLoading(false); return }
 
-    const failed = new Map<number, number>()
-    const MAX_ATTEMPTS = 3
+    console.log(`[video] Batch: ${clips.length} clips`)
+    clips.forEach(c => setClipStatuses(p => new Map(p).set(c.index, 'generating')))
 
-    while (queue.length > 0) {
-      const batch = queue.splice(0, queue.length)
-      const batchFailed: number[] = []
+    try {
+      const res = await fetch('/api/generate/video-clips-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clips, projectId: opts.projectId, projectName: opts.projectName }),
+      })
+      if (!res.ok) throw new Error('Batch clip generation failed')
 
-      await Promise.all(batch.map(async (i) => {
-        console.log(`[video] ${progress.done + 1}/${total} -> clip ${i + 1}`)
-        setClipStatuses(p => new Map(p).set(i, 'generating'))
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No stream')
 
-        try {
-          const res = await fetch('/api/generate/video-clips', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: segments[i].imagePrompt,
-              referenceImage: segments[i].imagePath,
-              duration: opts.clipDuration,
-              projectId: opts.projectId,
-              projectName: opts.projectName,
-              index: i,
-            }),
-          })
-          if (!res.ok) throw new Error('Clip generation failed')
-          const data = await res.json()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let okCount = 0
+      let failCount = 0
 
-          let updatedSegments: Segment[] = []
-          setSegments(prev => {
-            updatedSegments = prev.map((s, j) => j === i ? { ...s, videoClipUrl: data.videoUrl } : s)
-            return updatedSegments
-          })
-          setClipStatuses(p => new Map(p).set(i, 'completed'))
-          progress.done++
-          console.log(`[video] ${progress.done}/${total} -> done`)
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
 
-          if (opts.onClipCompleted) {
-            await opts.onClipCompleted(updatedSegments)
-          }
-        } catch (e) {
-          const attempts = (failed.get(i) || 0) + 1
-          if (attempts < MAX_ATTEMPTS) {
-            failed.set(i, attempts)
-            batchFailed.push(i)
-            console.warn(`[video] clip ${i + 1} -> retry ${attempts}/${MAX_ATTEMPTS}`)
-          } else {
-            progress.failed++
-            console.error(`[video] clip ${i + 1} -> error`)
-            setClipStatuses(p => new Map(p).set(i, 'error'))
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = JSON.parse(line.slice(6))
+
+          if (data.type === 'result') {
+            const status = data.status === 'success' ? 'completed' : 'error'
+            setClipStatuses(p => new Map(p).set(data.index, status))
+
+            if (data.status === 'success') okCount++
+            else failCount++
+
+            if (data.status === 'success' && data.videoUrl) {
+              let updatedSegments: Segment[] = []
+              setSegments(prev => {
+                updatedSegments = prev.map((s, j) => j === data.index ? { ...s, videoClipUrl: data.videoUrl } : s)
+                return updatedSegments
+              })
+              if (opts.onClipCompleted && updatedSegments.length) {
+                await opts.onClipCompleted(updatedSegments)
+              }
+            }
+          } else if (data.type === 'done') {
+            console.log(`[video] Batch done: ${data.success} success, ${data.failed} failed`)
+          } else if (data.type === 'error') {
+            console.error('[video] Batch error:', data.error)
           }
         }
-      }))
-
-      queue.push(...batchFailed)
+      }
+    } catch (e) {
+      console.error('[video] Batch request failed', e)
+      clips.forEach(c => setClipStatuses(p => new Map(p).set(c.index, 'error')))
     }
 
-    console.log(`[video] Done: ${progress.done}/${total}, failed: ${progress.failed}`)
     setIsLoading(false)
   }
 

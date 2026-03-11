@@ -52,7 +52,7 @@ async function resolveReferenceImages(images?: string[]): Promise<string[]> {
   if (!images?.length) return []
   const results: string[] = []
   for (const img of images) {
-    try { results.push(await ensureHostedUrl(img)) } catch { }
+    results.push(await ensureHostedUrl(img))
   }
   return results
 }
@@ -104,10 +104,9 @@ registerProvider({
   },
 
   async generateVideo(model, req: VideoRequest, creds): Promise<VideoResponse> {
-    let referenceUrl: string | undefined
-    if (req.referenceImage) {
-      try { referenceUrl = await ensureHostedUrl(req.referenceImage) } catch { }
-    }
+    const referenceUrl = req.referenceImage
+      ? await ensureHostedUrl(req.referenceImage)
+      : undefined
 
     const payload: any = {
       model, prompt: req.prompt, n: 1,

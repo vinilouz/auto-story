@@ -1,3 +1,6 @@
+import fs from 'fs/promises'
+import path from 'path'
+
 const ANONDROP_BASE = 'https://anondrop.net'
 
 /**
@@ -88,7 +91,13 @@ export async function ensureHostedUrl(urlOrBase64: string): Promise<string> {
   if (urlOrBase64.startsWith('data:') || (!urlOrBase64.includes(' ') && urlOrBase64.length > 200)) {
     return uploadToAnonDrop(urlOrBase64)
   }
-  // Local path — can't use, skip
-  console.warn(`[AnonDrop] Cannot resolve local path: ${urlOrBase64.substring(0, 50)}`)
-  throw new Error('Cannot resolve local path to hosted URL')
+  if (urlOrBase64.startsWith('/')) {
+    const filePath = path.join(process.cwd(), 'public', urlOrBase64)
+    const buf = await fs.readFile(filePath)
+    const ext = path.extname(urlOrBase64).replace('.', '')
+    const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext || 'png'}`
+    const base64 = `data:${mime};base64,${buf.toString('base64')}`
+    return uploadToAnonDrop(base64, path.basename(urlOrBase64))
+  }
+  throw new Error(`Cannot resolve to hosted URL: ${urlOrBase64.substring(0, 80)}`)
 }
