@@ -1,9 +1,13 @@
-export type ActionType = 'generateText' | 'generateImage' | 'generateAudio' | 'generateVideo'
+export type ActionType =
+  | "generateText"
+  | "generateImage"
+  | "generateAudio"
+  | "generateVideo";
 
 export interface ModelConfig {
-  provider: string
-  model: string
-  clipDuration?: number
+  provider: string;
+  model: string;
+  clipDuration?: number;
 }
 
 /**
@@ -12,20 +16,18 @@ export interface ModelConfig {
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
     // { provider: 'void', model: 'deepseek-v3.2' },
-    { provider: 'void', model: 'gemini-3.1-flash-lite-preview' },
+    { provider: "void", model: "gemini-3.1-flash-lite-preview" },
   ],
   generateImage: [
-    { provider: 'void', model: 'gemini-3.1-flash-image-preview' },
+    { provider: "void", model: "gemini-3.1-flash-image-preview" },
     // { provider: 'air', model: 'nano-banana-2' },
   ],
-  generateAudio: [
-    { provider: 'naga', model: 'eleven-multilingual-v2:free' },
-  ],
+  generateAudio: [{ provider: "naga", model: "eleven-multilingual-v2:free" }],
   generateVideo: [
-    { provider: 'air', model: 'grok-imagine-video', clipDuration: 6 },
+    { provider: "air", model: "grok-imagine-video", clipDuration: 6 },
     // { provider: 'air', model: 'veo-3.1-fast', clipDuration: 8 },
   ],
-}
+};
 
 /**
  * RPM = quantos requests podem *começar* por minuto (janela deslizante 60s).
@@ -35,7 +37,7 @@ export const PROVIDER_RPM: Record<string, number> = {
   void: 30,
   air: 20,
   naga: 10,
-}
+};
 
 /**
  * CONCURRENCY = quantos requests ficam *em-flight simultaneamente*.
@@ -61,8 +63,8 @@ export const PROVIDER_CONCURRENCY: Record<string, number> = {
   void: 30,
   air: 20,
   naga: 10,
-}
+};
 
 export function getVideoClipDuration(): number {
-  return ACTIONS.generateVideo[0]?.clipDuration ?? 6
+  return ACTIONS.generateVideo[0]?.clipDuration ?? 6;
 }

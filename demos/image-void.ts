@@ -5,14 +5,14 @@ const res = await fetch(`${process.env.VOID_BASE_URL}/v1/chat/completions`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${process.env.VOID_API_KEY}`
+    Authorization: `Bearer ${process.env.VOID_API_KEY}`,
   },
   body: JSON.stringify({
     model: "gemini-3.1-flash-image-preview",
     messages: [{ role: "user", content: [{ type: "text", text: prompt }] }],
     responseModalities: ["IMAGE"],
-    image_config: { aspect_ratio: "16:9", image_size: "4K" }
-  })
+    image_config: { aspect_ratio: "16:9", image_size: "4K" },
+  }),
 });
 
 const data = await res.json();
@@ -25,4 +25,4 @@ if (typeof img === "string" && img.startsWith("data:")) {
   console.log(img || JSON.stringify(data, null, 2));
 }
 
-export { };
+export {};

@@ -1,11 +1,10 @@
-
-import React, { useMemo } from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig } from 'remotion';
-import { createTikTokStyleCaptions } from '@remotion/captions';
-import SubtitlePage from './captions/SubtitlePage';
-import { Caption, CaptionStyle } from '@/lib/video/types';
-import { REMOTION_TOKEN_COMBINE_MS } from '@/remotion/constants';
-
+import { createTikTokStyleCaptions } from "@remotion/captions";
+import type React from "react";
+import { useMemo } from "react";
+import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
+import type { Caption, CaptionStyle } from "@/lib/video/types";
+import { REMOTION_TOKEN_COMBINE_MS } from "@/remotion/constants";
+import SubtitlePage from "./captions/SubtitlePage";
 
 interface CaptionsLayerProps {
   captions: Caption[];
@@ -14,14 +13,17 @@ interface CaptionsLayerProps {
 
 const DEFAULT_STYLE: CaptionStyle = {
   fontSize: 70,
-  fontFamily: 'TikTok Sans',
+  fontFamily: "TikTok Sans",
   maxWordsPerLine: 3,
   uppercase: true,
-  highlightColor: '#FFE81F',
-  fontWeight: 700
+  highlightColor: "#FFE81F",
+  fontWeight: 700,
 };
 
-export const CaptionsLayer: React.FC<CaptionsLayerProps> = ({ captions, style }) => {
+export const CaptionsLayer: React.FC<CaptionsLayerProps> = ({
+  captions,
+  style,
+}) => {
   const { fps } = useVideoConfig();
   const activeStyle = { ...DEFAULT_STYLE, ...style };
 
@@ -44,15 +46,15 @@ export const CaptionsLayer: React.FC<CaptionsLayerProps> = ({ captions, style })
       }
     }
 
-    const allPages = chunks.flatMap(chunk => {
+    const allPages = chunks.flatMap((chunk) => {
       const { pages } = createTikTokStyleCaptions({
         combineTokensWithinMilliseconds: REMOTION_TOKEN_COMBINE_MS,
-        captions: chunk.map(c => ({
+        captions: chunk.map((c) => ({
           text: c.text,
           startMs: c.startMs,
           endMs: c.endMs,
           timestampMs: c.startMs,
-          confidence: 0
+          confidence: 0,
         })),
       });
       return pages;
@@ -61,9 +63,8 @@ export const CaptionsLayer: React.FC<CaptionsLayerProps> = ({ captions, style })
     return { pages: allPages };
   }, [captions, activeStyle.maxWordsPerLine]);
 
-
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       {pages.map((page, index) => {
         const nextPage = pages[index + 1];
         const lastToken = page.tokens[page.tokens.length - 1];
@@ -72,7 +73,7 @@ export const CaptionsLayer: React.FC<CaptionsLayerProps> = ({ captions, style })
         const endFrame = Math.round(
           nextPage
             ? (nextPage.startMs / 1000) * fps
-            : (lastToken.toMs / 1000) * fps
+            : (lastToken.toMs / 1000) * fps,
         );
 
         const durationInFrames = endFrame - startFrame;

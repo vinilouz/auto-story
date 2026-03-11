@@ -1,33 +1,35 @@
-import { NextRequest, NextResponse } from "next/server"
-import { bundle } from "@remotion/bundler"
-import { renderMedia, OnStartData } from "@remotion/renderer"
-import path from "path"
-import fs from "fs"
-import os from "os"
-import ffmpeg from "ffmpeg-static"
-// @ts-ignore
-import ffprobe from "ffprobe-static"
-import { getProjectDirName } from "@/lib/utils"
-import { createLogger } from "@/lib/logger"
+import { bundle } from "@remotion/bundler";
+import { type OnStartData, renderMedia } from "@remotion/renderer";
+import ffmpeg from "ffmpeg-static";
+// @ts-expect-error
+import ffprobe from "ffprobe-static";
+import fs from "fs";
+import { type NextRequest, NextResponse } from "next/server";
+import os from "os";
+import path from "path";
+import { createLogger } from "@/lib/logger";
+import { getProjectDirName } from "@/lib/utils";
 import {
-  REMOTION_CACHE_SIZE, REMOTION_CRF, REMOTION_X264_PRESET,
-} from "@/remotion/constants"
+  REMOTION_CACHE_SIZE,
+  REMOTION_CRF,
+  REMOTION_X264_PRESET,
+} from "@/remotion/constants";
 
-const log = createLogger('api/render')
+const log = createLogger("api/render");
 
 if (ffmpeg && ffprobe && ffprobe.path) {
-  const ffmpegDir = path.dirname(ffmpeg)
-  const ffprobeDir = path.dirname(ffprobe.path)
-  process.env.PATH = `${ffmpegDir}${path.delimiter}${ffprobeDir}${path.delimiter}${process.env.PATH}`
+  const ffmpegDir = path.dirname(ffmpeg);
+  const ffprobeDir = path.dirname(ffprobe.path);
+  process.env.PATH = `${ffmpegDir}${path.delimiter}${ffprobeDir}${path.delimiter}${process.env.PATH}`;
 }
 
-let cachedBundleLocation: string | null = null
+let cachedBundleLocation: string | null = null;
 
 const ensureBundle = async (): Promise<string> => {
-  if (cachedBundleLocation) return cachedBundleLocation
+  if (cachedBundleLocation) return cachedBundleLocation;
 
-  const entryPoint = path.join(process.cwd(), "src", "remotion", "index.ts")
-  log.info("Bundling Remotion project (first request, will be cached)...")
+  const entryPoint = path.join(process.cwd(), "src", "remotion", "index.ts");
+  log.info("Bundling Remotion project (first request, will be cached)...");
 
   cachedBundleLocation = await bundle({
     entryPoint,
@@ -35,56 +37,84 @@ const ensureBundle = async (): Promise<string> => {
       ...config,
       resolve: {
         ...config.resolve,
-        alias: { ...(config.resolve?.alias ?? {}), "@": path.join(process.cwd(), "src") },
+        alias: {
+          ...(config.resolve?.alias ?? {}),
+          "@": path.join(process.cwd(), "src"),
+        },
       },
     }),
-  })
+  });
 
-  log.success("Remotion bundle ready")
-  return cachedBundleLocation
-}
+  log.success("Remotion bundle ready");
+  return cachedBundleLocation;
+};
 
 const toAbsoluteUrl = (url: string, origin: string): string => {
-  if (!url) return url
-  if (url.startsWith("data:") || url.startsWith("http://") || url.startsWith("https://")) return url
-  return `${origin}${url.startsWith("/") ? url : `/${url}`}`
-}
+  if (!url) return url;
+  if (
+    url.startsWith("data:") ||
+    url.startsWith("http://") ||
+    url.startsWith("https://")
+  )
+    return url;
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
+};
 
 const normalizeProps = (props: any, origin: string): any => ({
   ...props,
-  scenes: props.scenes?.map((s: any) => ({ ...s, imageUrl: toAbsoluteUrl(s.imageUrl, origin) })) ?? [],
-  audioTracks: props.audioTracks?.map((t: any) => ({ ...t, src: toAbsoluteUrl(t.src, origin) })) ?? [],
-})
+  scenes:
+    props.scenes?.map((s: any) => ({
+      ...s,
+      imageUrl: toAbsoluteUrl(s.imageUrl, origin),
+    })) ?? [],
+  audioTracks:
+    props.audioTracks?.map((t: any) => ({
+      ...t,
+      src: toAbsoluteUrl(t.src, origin),
+    })) ?? [],
+});
 
-const RENDER_CONCURRENCY = Math.max(1, os.cpus().length)
+const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
 
 export async function POST(req: NextRequest) {
-  let tempOutput = ""
+  let tempOutput = "";
   try {
-    const body = await req.json()
-    const { videoProps, projectId, projectName, compositionId = "CaptionedVideo" } = body
+    const body = await req.json();
+    const {
+      videoProps,
+      projectId,
+      projectName,
+      compositionId = "CaptionedVideo",
+    } = body;
 
     if (!videoProps) {
-      return NextResponse.json({ error: "Missing videoProps" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Missing videoProps" },
+        { status: 400 },
+      );
     }
 
-    const origin = req.nextUrl.origin
-    const normalizedProps = normalizeProps(videoProps, origin)
-    const bundleLocation = await ensureBundle()
+    const origin = req.nextUrl.origin;
+    const normalizedProps = normalizeProps(videoProps, origin);
+    const bundleLocation = await ensureBundle();
 
-    log.info(`Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`)
-    tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`)
+    log.info(
+      `Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`,
+    );
+    tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
 
-    const encoder = new TextEncoder()
+    const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         const sendEvent = (data: Record<string, unknown>) => {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
-        }
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
+          );
+        };
 
         try {
-          sendEvent({ type: "progress", progress: 0, stage: "bundling" })
-          let totalFrames = normalizedProps.durationInFrames || 1
+          sendEvent({ type: "progress", progress: 0, stage: "bundling" });
+          let totalFrames = normalizedProps.durationInFrames || 1;
 
           await renderMedia({
             composition: {
@@ -116,58 +146,84 @@ export async function POST(req: NextRequest) {
               gl: "angle-egl",
             },
             onStart: (data: OnStartData) => {
-              totalFrames = data.frameCount
-              sendEvent({ type: "progress", progress: 0, stage: "rendering", totalFrames })
+              totalFrames = data.frameCount;
+              sendEvent({
+                type: "progress",
+                progress: 0,
+                stage: "rendering",
+                totalFrames,
+              });
             },
             onProgress: (progress) => {
-              const pct = Math.round((progress.renderedFrames / totalFrames) * 100)
+              const pct = Math.round(
+                (progress.renderedFrames / totalFrames) * 100,
+              );
               sendEvent({
-                type: "progress", progress: pct, stage: "rendering",
-                renderedFrames: progress.renderedFrames, totalFrames,
-              })
+                type: "progress",
+                progress: pct,
+                stage: "rendering",
+                renderedFrames: progress.renderedFrames,
+                totalFrames,
+              });
             },
-          })
+          });
 
-          sendEvent({ type: "progress", progress: 100, stage: "encoding" })
+          sendEvent({ type: "progress", progress: 100, stage: "encoding" });
 
           // Move to project directory
-          let publicOutput: string
-          let videoUrl: string
+          let publicOutput: string;
+          let videoUrl: string;
 
           if (projectId && projectName) {
-            const dirName = getProjectDirName(projectId, projectName)
-            const rendersDir = path.join(process.cwd(), "public", "projects", dirName, "videos")
-            if (!fs.existsSync(rendersDir)) await fs.promises.mkdir(rendersDir, { recursive: true })
-            const fileName = `render-${Date.now()}.mp4`
-            publicOutput = path.join(rendersDir, fileName)
-            videoUrl = `/projects/${dirName}/videos/${fileName}`
+            const dirName = getProjectDirName(projectId, projectName);
+            const rendersDir = path.join(
+              process.cwd(),
+              "public",
+              "projects",
+              dirName,
+              "videos",
+            );
+            if (!fs.existsSync(rendersDir))
+              await fs.promises.mkdir(rendersDir, { recursive: true });
+            const fileName = `render-${Date.now()}.mp4`;
+            publicOutput = path.join(rendersDir, fileName);
+            videoUrl = `/projects/${dirName}/videos/${fileName}`;
           } else {
-            const rendersDir = path.join(process.cwd(), "public", "renders")
-            if (!fs.existsSync(rendersDir)) await fs.promises.mkdir(rendersDir, { recursive: true })
-            const fileName = `render-${Date.now()}.mp4`
-            publicOutput = path.join(rendersDir, fileName)
-            videoUrl = `/renders/${fileName}`
+            const rendersDir = path.join(process.cwd(), "public", "renders");
+            if (!fs.existsSync(rendersDir))
+              await fs.promises.mkdir(rendersDir, { recursive: true });
+            const fileName = `render-${Date.now()}.mp4`;
+            publicOutput = path.join(rendersDir, fileName);
+            videoUrl = `/renders/${fileName}`;
           }
 
-          await fs.promises.rename(tempOutput, publicOutput)
-          log.success(`Render complete: ${videoUrl}`)
-          sendEvent({ type: "complete", videoUrl })
-          controller.close()
+          await fs.promises.rename(tempOutput, publicOutput);
+          log.success(`Render complete: ${videoUrl}`);
+          sendEvent({ type: "complete", videoUrl });
+          controller.close();
         } catch (error: any) {
-          log.error("Render failed", error)
-          if (tempOutput && fs.existsSync(tempOutput)) fs.promises.unlink(tempOutput).catch(() => { })
-          sendEvent({ type: "error", error: error.message || "Render failed" })
-          controller.close()
+          log.error("Render failed", error);
+          if (tempOutput && fs.existsSync(tempOutput))
+            fs.promises.unlink(tempOutput).catch(() => {});
+          sendEvent({ type: "error", error: error.message || "Render failed" });
+          controller.close();
         }
       },
-    })
+    });
 
     return new Response(stream, {
-      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
-    })
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error: any) {
-    log.error("Render route error", error)
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { })
-    return NextResponse.json({ error: error.message || "Failed to render" }, { status: 500 })
+    log.error("Render route error", error);
+    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
+    return NextResponse.json(
+      { error: error.message || "Failed to render" },
+      { status: 500 },
+    );
   }
 }

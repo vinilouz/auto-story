@@ -7,11 +7,15 @@ export const PROXY_SOURCES = [
     url: "https://free-proxy-list.net/",
     parser: (html: string) => {
       const matches = Array.from(html.matchAll(PROXY_REGEX));
-      return matches
-        // m[3] = Anonymity, m[4] = Https yes/no
-        .filter((m) => m[4] === "yes" && m[3] !== "transparent")
-        .map((m) => `${m[1]}:${m[2]}`)
-        .filter((p) => p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0."));
+      return (
+        matches
+          // m[3] = Anonymity, m[4] = Https yes/no
+          .filter((m) => m[4] === "yes" && m[3] !== "transparent")
+          .map((m) => `${m[1]}:${m[2]}`)
+          .filter(
+            (p) => p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0."),
+          )
+      );
     },
   },
   {
@@ -35,8 +39,8 @@ export const PROXY_SOURCES = [
 
       for (const rowMatch of html.matchAll(rowRegex)) {
         const row = rowMatch[1];
-        const tds = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) =>
-          m[1].trim()
+        const tds = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map(
+          (m) => m[1].trim(),
         );
 
         if (tds.length >= 2) {
@@ -63,18 +67,20 @@ export const PROXY_SOURCES = [
         return (json.data || [])
           .filter(
             (p: any) =>
-              (p?.anonymityLevel === "elite" || p?.anonymityLevel === "anonymous") &&
+              (p?.anonymityLevel === "elite" ||
+                p?.anonymityLevel === "anonymous") &&
               typeof p?.upTime === "number" &&
               p.upTime >= 98 &&
               typeof p?.upTimeTryCount === "number" &&
               p.upTimeTryCount >= 10 &&
               typeof p?.responseTime === "number" &&
               p.responseTime > 0 &&
-              p.responseTime <= 2000
+              p.responseTime <= 2000,
           )
           .map((p: any) => `${p.ip}:${p.port}`)
           .filter(
-            (p: string) => p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0.")
+            (p: string) =>
+              p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0."),
           );
       } catch {
         return [];
@@ -84,6 +90,10 @@ export const PROXY_SOURCES = [
   {
     name: "PubProxy",
     url: "http://pubproxy.com/api/proxy?format=txt&type=http&https=true&limit=5",
-    parser: (text: string) => text.trim().split("\n").filter((p) => p && p.includes(":")),
+    parser: (text: string) =>
+      text
+        .trim()
+        .split("\n")
+        .filter((p) => p && p.includes(":")),
   },
 ];

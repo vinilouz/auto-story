@@ -1,14 +1,13 @@
-
-import React from "react";
+import type { TikTokPage } from "@remotion/captions";
+import type React from "react";
 import {
   AbsoluteFill,
   spring,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import type { CaptionStyle } from "@/lib/video/types";
 import { Page } from "./Page";
-import { CaptionStyle } from "@/lib/video/types";
-import { TikTokPage } from "@remotion/captions";
 
 const SubtitlePage: React.FC<{
   readonly page: TikTokPage;

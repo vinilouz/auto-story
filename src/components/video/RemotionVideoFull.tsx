@@ -1,12 +1,12 @@
-import React from 'react';
-import { AbsoluteFill, Sequence } from 'remotion';
-import { Audio, Video } from '@remotion/media';
-import { TransitionSeries, linearTiming } from '@remotion/transitions';
-import { fade } from '@remotion/transitions/fade';
-import { wipe } from '@remotion/transitions/wipe';
-import { slide } from '@remotion/transitions/slide';
-import { RemotionVideoProps } from '@/lib/video/types';
-import { CaptionsLayer } from './CaptionsLayer';
+import { Audio, Video } from "@remotion/media";
+import { linearTiming, TransitionSeries } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
+import { wipe } from "@remotion/transitions/wipe";
+import React from "react";
+import { AbsoluteFill, Sequence } from "remotion";
+import type { RemotionVideoProps } from "@/lib/video/types";
+import { CaptionsLayer } from "./CaptionsLayer";
 
 const PRESENTATIONS: Record<string, any> = {
   fade: fade(),
@@ -14,12 +14,23 @@ const PRESENTATIONS: Record<string, any> = {
   slide: slide(),
 };
 
-export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({ scenes, audioTracks, captions, captionStyle, transitionOverride, videoVolume }) => {
+export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
+  scenes,
+  audioTracks,
+  captions,
+  captionStyle,
+  transitionOverride,
+  videoVolume,
+}) => {
   return (
-    <AbsoluteFill style={{ backgroundColor: 'black' }}>
+    <AbsoluteFill style={{ backgroundColor: "black" }}>
       {/* Audio Tracks */}
       {audioTracks.map((track, i) => (
-        <Sequence key={`audio-${i}`} from={track.startFrame} durationInFrames={track.durationInFrames}>
+        <Sequence
+          key={`audio-${i}`}
+          from={track.startFrame}
+          durationInFrames={track.durationInFrames}
+        >
           <Audio src={track.src} volume={track.volume || 1} />
         </Sequence>
       ))}
@@ -29,14 +40,18 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({ scenes, audioT
         {scenes.map((scene) => {
           return (
             <React.Fragment key={scene.id}>
-              <TransitionSeries.Sequence durationInFrames={scene.durationInFrames}>
-                <AbsoluteFill style={{ overflow: 'hidden', backgroundColor: 'black' }}>
+              <TransitionSeries.Sequence
+                durationInFrames={scene.durationInFrames}
+              >
+                <AbsoluteFill
+                  style={{ overflow: "hidden", backgroundColor: "black" }}
+                >
                   <Video
                     src={scene.imageUrl}
                     style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
                     }}
                     playbackRate={scene.playbackRate ?? 1}
                     volume={videoVolume ?? 0.2}
@@ -44,12 +59,27 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({ scenes, audioT
                 </AbsoluteFill>
               </TransitionSeries.Sequence>
 
-              {scene.transition && scene.transition.type !== 'none' && transitionOverride !== 'none' && PRESENTATIONS[transitionOverride === 'random' || !transitionOverride ? scene.transition.type : transitionOverride] && (
-                <TransitionSeries.Transition
-                  timing={linearTiming({ durationInFrames: scene.transition.durationInFrames })}
-                  presentation={PRESENTATIONS[transitionOverride === 'random' || !transitionOverride ? scene.transition.type : transitionOverride]}
-                />
-              )}
+              {scene.transition &&
+                scene.transition.type !== "none" &&
+                transitionOverride !== "none" &&
+                PRESENTATIONS[
+                  transitionOverride === "random" || !transitionOverride
+                    ? scene.transition.type
+                    : transitionOverride
+                ] && (
+                  <TransitionSeries.Transition
+                    timing={linearTiming({
+                      durationInFrames: scene.transition.durationInFrames,
+                    })}
+                    presentation={
+                      PRESENTATIONS[
+                        transitionOverride === "random" || !transitionOverride
+                          ? scene.transition.type
+                          : transitionOverride
+                      ]
+                    }
+                  />
+                )}
             </React.Fragment>
           );
         })}

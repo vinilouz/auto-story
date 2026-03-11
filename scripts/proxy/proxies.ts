@@ -16,7 +16,7 @@ const PROXY_SOURCES = [
           .filter((m) => m[4] === "yes" && m[3] !== "transparent")
           .map((m) => `${m[1]}:${m[2]}`)
           .filter(
-            (p) => p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0.")
+            (p) => p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0."),
           )
       );
     },
@@ -43,7 +43,7 @@ const PROXY_SOURCES = [
       for (const rowMatch of html.matchAll(rowRegex)) {
         const row = rowMatch[1];
         const tds = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map(
-          (m) => m[1].trim()
+          (m) => m[1].trim(),
         );
 
         if (tds.length >= 2) {
@@ -78,12 +78,12 @@ const PROXY_SOURCES = [
               p.upTimeTryCount >= 10 &&
               typeof p?.responseTime === "number" &&
               p.responseTime > 0 &&
-              p.responseTime <= 2000
+              p.responseTime <= 2000,
           )
           .map((p: any) => `${p.ip}:${p.port}`)
           .filter(
             (p: string) =>
-              p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0.")
+              p && !p.startsWith("0.0.0.0:") && !p.startsWith("127.0.0."),
           );
       } catch {
         return [];

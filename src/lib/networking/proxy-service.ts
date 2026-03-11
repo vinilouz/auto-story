@@ -9,7 +9,7 @@ const CONCURRENCY = 20;
 
 function httpsGet(
   url: string,
-  agent?: HttpsProxyAgent<string>
+  agent?: HttpsProxyAgent<string>,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("timeout")), TIMEOUT);
@@ -54,23 +54,21 @@ async function fetchAllCandidates(): Promise<string[]> {
         console.warn(`[ProxyService] Failed: ${s.name}`);
         return [];
       }
-    })
+    }),
   );
 
   return [
     ...new Set(
-      results.flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+      results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
     ),
   ]
-    .filter(
-      (p) => /^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(p) && !p.startsWith("0.")
-    )
+    .filter((p) => /^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(p) && !p.startsWith("0."))
     .sort(() => Math.random() - 0.5)
     .slice(0, MAX_TEST);
 }
 
 export async function executeWithAnonymousProxy<T>(
-  execute: (agent: HttpsProxyAgent<string>) => Promise<T>
+  execute: (agent: HttpsProxyAgent<string>) => Promise<T>,
 ): Promise<T> {
   console.log("[ProxyService] Finding anonymous proxies...");
   const baselineIp = await getBaselineIp();
@@ -78,7 +76,7 @@ export async function executeWithAnonymousProxy<T>(
 
   const candidates = await fetchAllCandidates();
   console.log(
-    `[ProxyService] Testing ${candidates.length} candidates for anonymity...`
+    `[ProxyService] Testing ${candidates.length} candidates for anonymity...`,
   );
 
   const anonymousAgents: HttpsProxyAgent<string>[] = [];
@@ -114,12 +112,12 @@ export async function executeWithAnonymousProxy<T>(
           anonymousAgents.push(agent);
           signal();
         }
-      } catch { }
+      } catch {}
     }
   };
 
   const producerPromise = Promise.all(
-    Array.from({ length: CONCURRENCY }).map(testWorker)
+    Array.from({ length: CONCURRENCY }).map(testWorker),
   ).then(() => {
     producerDone = true;
     signal();
@@ -132,7 +130,7 @@ export async function executeWithAnonymousProxy<T>(
       const agent = anonymousAgents[consumed++];
       try {
         console.log(
-          `[ProxyService] Attempting request (proxy ${consumed}/${anonymousAgents.length})...`
+          `[ProxyService] Attempting request (proxy ${consumed}/${anonymousAgents.length})...`,
         );
         return await execute(agent);
       } catch (err) {
@@ -148,6 +146,6 @@ export async function executeWithAnonymousProxy<T>(
 
   await producerPromise;
   throw new Error(
-    `All ${consumed} anonymous proxies exhausted. None could complete the request.`
+    `All ${consumed} anonymous proxies exhausted. None could complete the request.`,
   );
 }

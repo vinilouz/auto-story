@@ -1,7 +1,9 @@
 const toJsonForPrompt = (data: any, minify = false) =>
   JSON.stringify(data, null, minify ? 0 : 2);
 
-export const EXTRACT_ENTITIES_PROMPT = (segments: Array<{ id: number; text: string }>) => `<Role>
+export const EXTRACT_ENTITIES_PROMPT = (
+  segments: Array<{ id: number; text: string }>,
+) => `<Role>
 You are a Script Analyst and Concept Artist specialized in identifying recurring characters and objects.
 </Role>
 
@@ -44,12 +46,13 @@ export const BATCH_DESCRIPTIONS_PROMPT = (
   entities: Array<{ type: string; description: string }>,
   language: string,
 ) => {
-  const entitiesContext = entities.length > 0
-    ? `<EntitiesContext>
+  const entitiesContext =
+    entities.length > 0
+      ? `<EntitiesContext>
 Use these consistency tags when the entity appears in a scene. The tag format is <<EntityName>>.
-${entities.map(e => `<<${e.type}>>: ${e.description}`).join('\n')}
+${entities.map((e) => `<<${e.type}>>: ${e.description}`).join("\n")}
 </EntitiesContext>`
-    : '';
+      : "";
 
   return `<Role>
 You are a Script Analyst and Cinematographer specialized in translating narrative into image generation instructions.
@@ -89,7 +92,7 @@ Example for 2 segments:
 export const GENERATE_ENTITY_IMAGE_PROMPT = (
   description: string,
   styleId: string | undefined,
-  visualPrompt?: string
+  visualPrompt?: string,
 ) => {
   const stylePrompt = visualPrompt ?? styleId ?? "default";
   return `Style: ${stylePrompt}
@@ -111,7 +114,7 @@ Description: ${description}`;
 
 export const GENERATE_SEGMENT_IMAGE_PROMPT = (
   description: string,
-  visualPrompt?: string
+  visualPrompt?: string,
 ) => {
   const stylePrompt = visualPrompt ?? "default";
 
@@ -130,7 +133,10 @@ Create a scene with this description ${description} matching the visual style of
 </rules>`;
 };
 
-export const COMMENTATOR_PROMPT = (commentatorDescription: string, segmentsJson: string) =>
+export const COMMENTATOR_PROMPT = (
+  commentatorDescription: string,
+  segmentsJson: string,
+) =>
   `Given this commentator profile: "${commentatorDescription}",
     generate natural and engaging comments for a story with the following segments.
 
@@ -145,11 +151,11 @@ ${segmentsJson}
           - Include a closing with a conclusion and a hook for commentary
             - Keep comments concise(2 - 4 sentences each)
     - Not every segment needs a comment
-      - Return a JSON array of objects: { type: "scene_text" | "comment", content: string } `
+      - Return a JSON array of objects: { type: "scene_text" | "comment", content: string } `;
 
 export const COMMENTATOR_IMAGE_GENERATION_PROMPT = (description: string) =>
   `Generate a high - fidelity scene based on the provided reference image.
-    ${description} `
+    ${description} `;
 
 export const GENERATE_VIDEO_PROMPT = (prompt: string) =>
-  `${prompt} no voice, no speak, only sfx`
+  `${prompt} no voice, no speak, only sfx`;

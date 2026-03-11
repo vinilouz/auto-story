@@ -1,48 +1,55 @@
-import { EXTRACT_ENTITIES_PROMPT } from '@/lib/ai/prompts/prompts'
-import { execute } from '@/lib/ai/providers'
-import { createLogger } from '@/lib/logger'
-import type { Segment } from '@/lib/flows/types'
+import { EXTRACT_ENTITIES_PROMPT } from "@/lib/ai/prompts/prompts";
+import { execute } from "@/lib/ai/providers";
+import type { Segment } from "@/lib/flows/types";
+import { createLogger } from "@/lib/logger";
 
-const log = createLogger('entity-extractor')
+const log = createLogger("entity-extractor");
 
 export interface ExtractedEntity {
-  type: string
-  segment: number[]
-  description: string
+  type: string;
+  segment: number[];
+  description: string;
 }
 
 function extractJson(raw: string): string {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-  const body = fenced ? fenced[1].trim() : raw.trim()
-  if (body.startsWith('[')) return body
-  if (body.startsWith('{')) return `[${body}]`
-  throw new Error('No JSON found in AI response')
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fenced ? fenced[1].trim() : raw.trim();
+  if (body.startsWith("[")) return body;
+  if (body.startsWith("{")) return `[${body}]`;
+  throw new Error("No JSON found in AI response");
 }
 
-export async function extractEntities(segments: Segment[]): Promise<ExtractedEntity[]> {
-  if (!segments?.length) throw new Error('No segments')
+export async function extractEntities(
+  segments: Segment[],
+): Promise<ExtractedEntity[]> {
+  if (!segments?.length) throw new Error("No segments");
 
-  log.info(`Extracting entities from ${segments.length} segments`)
+  log.info(`Extracting entities from ${segments.length} segments`);
 
-  const { text: raw } = await execute('generateText', {
+  const { text: raw } = await execute("generateText", {
     prompt: EXTRACT_ENTITIES_PROMPT(
-      segments.map((s, i) => ({ id: i + 1, text: s.text }))
+      segments.map((s, i) => ({ id: i + 1, text: s.text })),
     ),
-  })
+  });
 
-  let parsed: any
+  let parsed: any;
   try {
-    parsed = JSON.parse(extractJson(raw))
+    parsed = JSON.parse(extractJson(raw));
   } catch (e) {
-    log.error('Failed to parse entity extraction response', raw.substring(0, 500))
-    throw new Error(`Invalid JSON from AI: ${(e as Error).message}`)
+    log.error(
+      "Failed to parse entity extraction response",
+      raw.substring(0, 500),
+    );
+    throw new Error(`Invalid JSON from AI: ${(e as Error).message}`);
   }
 
   if (!Array.isArray(parsed)) {
-    log.error('Response is not an array', raw.substring(0, 500))
-    throw new Error('Response not an array')
+    log.error("Response is not an array", raw.substring(0, 500));
+    throw new Error("Response not an array");
   }
 
-  log.success(`Extracted ${parsed.length} entities: ${parsed.map((e: any) => e.type).join(', ')}`)
-  return parsed
+  log.success(
+    `Extracted ${parsed.length} entities: ${parsed.map((e: any) => e.type).join(", ")}`,
+  );
+  return parsed;
 }

@@ -18,7 +18,7 @@ const fetchWithTimeout = async (url, opts = {}) => {
 async function getIp(proxy = null) {
   const res = await fetchWithTimeout(
     TEST_URL,
-    proxy ? { proxy: `http://${proxy}` } : {}
+    proxy ? { proxy: `http://${proxy}` } : {},
   );
   return (await res.json()).ip;
 }
@@ -35,12 +35,12 @@ async function main() {
       const list = s.parser(txt) || [];
       console.log(`[${s.name}] +${list.length}`);
       return list;
-    })
+    }),
   );
 
   const proxies = [
     ...new Set(
-      results.flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+      results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
     ),
   ]
     .filter((p) => /^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(p) && !p.startsWith("0."))
@@ -62,7 +62,7 @@ async function main() {
           }
         } catch {}
       }
-    })
+    }),
   );
 
   console.log(`\nOK total: ${ok.length}`);

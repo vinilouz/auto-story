@@ -1,11 +1,12 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Canonical slug — SINGLE SOURCE OF TRUTH.
@@ -14,13 +15,13 @@ export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 export function slugify(text: string): string {
   return text
     .toString()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\s+/g, '-')
-    .substring(0, 40)
+    .replace(/[^a-z0-9 -]/g, "")
+    .replace(/\s+/g, "-")
+    .substring(0, 40);
 }
 
 /**
@@ -28,8 +29,11 @@ export function slugify(text: string): string {
  * Format: `{slug}-{shortId}`
  * Used by: storage, audio, video, render — NEVER compute this inline.
  */
-export function getProjectDirName(projectId: string, projectName: string): string {
-  const slug = slugify(projectName) || 'untitled'
-  const shortId = projectId.split('-')[0] || projectId.substring(0, 8)
-  return `${slug}-${shortId}`
+export function getProjectDirName(
+  projectId: string,
+  projectName: string,
+): string {
+  const slug = slugify(projectName) || "untitled";
+  const shortId = projectId.split("-")[0] || projectId.substring(0, 8);
+  return `${slug}-${shortId}`;
 }

@@ -1,6 +1,6 @@
-import fs from "fs";
 import https from "node:https";
-import { HttpsProxyAgent } from "https-proxy-agent";
+import fs from "fs";
+import type { HttpsProxyAgent } from "https-proxy-agent";
 import { executeWithAnonymousProxy } from "@/lib/networking/proxy-service";
 
 interface ElevenLabsWord {
@@ -21,13 +21,11 @@ interface ElevenLabsResponse {
 function postMultipart(
   url: string,
   formData: FormData,
-  agent?: InstanceType<typeof HttpsProxyAgent>
+  agent?: InstanceType<typeof HttpsProxyAgent>,
 ): Promise<{ status: number; body: string }> {
   return new Promise(async (resolve, reject) => {
     const boundary = `----BunBoundary${Date.now()}${Math.random().toString(36).slice(2)}`;
-    const fileBuffer = fs.readFileSync(
-      (formData as any)._filePath as string
-    );
+    const fileBuffer = fs.readFileSync((formData as any)._filePath as string);
     const fileName = (formData as any)._fileName as string;
 
     const fields: Record<string, string> = {};
@@ -51,7 +49,12 @@ function postMultipart(
     const headerBuf = Buffer.from(fileHeader, "utf-8");
     const footerBuf = Buffer.from(fileFooter, "utf-8");
     const fieldsBuf = Buffer.from(body, "utf-8");
-    const fullBody = Buffer.concat([fieldsBuf, headerBuf, fileBuffer, footerBuf]);
+    const fullBody = Buffer.concat([
+      fieldsBuf,
+      headerBuf,
+      fileBuffer,
+      footerBuf,
+    ]);
 
     const parsed = new URL(url);
     const options: https.RequestOptions = {
@@ -66,7 +69,10 @@ function postMultipart(
       agent,
     };
 
-    const timeout = setTimeout(() => reject(new Error("Request timeout")), 120000);
+    const timeout = setTimeout(
+      () => reject(new Error("Request timeout")),
+      120000,
+    );
 
     const req = https.request(options, (res) => {
       let data = "";
@@ -88,7 +94,7 @@ function postMultipart(
 }
 
 export const transcribeWithElevenLabs = async (
-  filePath: string
+  filePath: string,
 ): Promise<{ text: string; startMs: number; endMs: number }[]> => {
   const fileName = filePath.split("/").pop() ?? "audio.mp3";
 
@@ -100,13 +106,16 @@ export const transcribeWithElevenLabs = async (
   (form as any)._fileName = fileName;
 
   console.log(`[ElevenLabs STT] Transcribing ${fileName}...`);
-  const endpoint = "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1";
+  const endpoint =
+    "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1";
 
   let res = await postMultipart(endpoint, form).catch(() => null);
 
   if (!res || res.status !== 200) {
     console.log(`[ElevenLabs STT] Direct failed, trying proxy...`);
-    res = await executeWithAnonymousProxy((agent) => postMultipart(endpoint, form, agent));
+    res = await executeWithAnonymousProxy((agent) =>
+      postMultipart(endpoint, form, agent),
+    );
   }
 
   if (res.status !== 200) {
@@ -116,7 +125,7 @@ export const transcribeWithElevenLabs = async (
   const data: ElevenLabsResponse = JSON.parse(res.body);
 
   console.log(
-    `[ElevenLabs STT] Got ${data.words.length} tokens, language: ${data.language_code}`
+    `[ElevenLabs STT] Got ${data.words.length} tokens, language: ${data.language_code}`,
   );
 
   return data.words

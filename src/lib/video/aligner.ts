@@ -1,6 +1,15 @@
-
-import { AudioTrackConfig, RemotionVideoProps, VideoScene, SceneEffect, VideoTransition } from "./types";
-import { REMOTION_DEFAULT_FPS, REMOTION_CROPPED_WIDTH, REMOTION_CROPPED_HEIGHT } from "@/remotion/constants";
+import {
+  REMOTION_CROPPED_HEIGHT,
+  REMOTION_CROPPED_WIDTH,
+  REMOTION_DEFAULT_FPS,
+} from "@/remotion/constants";
+import type {
+  AudioTrackConfig,
+  RemotionVideoProps,
+  SceneEffect,
+  VideoScene,
+  VideoTransition,
+} from "./types";
 
 // --- Interfaces & Types ---
 
@@ -43,7 +52,7 @@ function levenshtein(a: string, b: string): number {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1,
           matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
+          matrix[i - 1][j] + 1,
         );
       }
     }
@@ -52,7 +61,11 @@ function levenshtein(a: string, b: string): number {
 }
 
 function normalize(text: string): string {
-  return text.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]|_/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function isWordMatch(a: string, b: string): boolean {
@@ -64,11 +77,10 @@ function isWordMatch(a: string, b: string): boolean {
   return false;
 }
 
-
 function findSegmentEnd(
   segmentText: string,
   words: FlattenedWord[],
-  startWordIndex: number
+  startWordIndex: number,
 ): { index: number; score: number } {
   const normSeg = normalize(segmentText);
   const segWords = normSeg.split(" ").filter(Boolean);
@@ -103,7 +115,7 @@ function findSegmentEnd(
 function findSegmentStartWithConfidence(
   segmentText: string,
   words: FlattenedWord[],
-  startIndex: number
+  startIndex: number,
 ): { index: number; score: number } {
   const normSeg = normalize(segmentText);
   const segWords = normSeg.split(" ");
@@ -140,7 +152,7 @@ function findSegmentStartWithConfidence(
       const score = matchCount / head.length;
 
       if (matchCount >= requiredMatches) {
-        // If we matched an anchor that wasn't the first word, 
+        // If we matched an anchor that wasn't the first word,
         // we should ideally subtract the duration of the words we skipped,
         // but for now, returning i is a good enough approximation for the 'start'.
         return { index: i, score };
@@ -154,8 +166,17 @@ function findSegmentStartWithConfidence(
 // --- Strategies ---
 
 export class PrecisionAlignmentStrategy implements AlignmentStrategy {
-  private static EFFECTS: SceneEffect[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
-  private static TRANSITIONS: VideoTransition['type'][] = ['fade', 'wipe', 'slide'];
+  private static EFFECTS: SceneEffect[] = [
+    "zoom-in",
+    "zoom-out",
+    "pan-left",
+    "pan-right",
+  ];
+  private static TRANSITIONS: VideoTransition["type"][] = [
+    "fade",
+    "wipe",
+    "slide",
+  ];
   private static TRANSITION_DURATION = 30; // Even number as requested
 
   align(context: AlignmentContext): RemotionVideoProps {
@@ -163,21 +184,35 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 
     // 1. Pipeline Stage: Flatten Transcription
     // Audio plays fully from 0 to end. STRICT timings.
-    const { allWords, audioTracks, totalAudioDurationSeconds } = this.flattenTranscription(transcriptionResults, audioUrls, fps, context.audioDurations);
+    const { allWords, audioTracks, totalAudioDurationSeconds } =
+      this.flattenTranscription(
+        transcriptionResults,
+        audioUrls,
+        fps,
+        context.audioDurations,
+      );
 
     // 2. Pipeline Stage: Find Anchors (Time in Seconds)
     // Fuzzy search with confidence match. NO Gap Filling.
-    const segmentTimings = this.findsegmentTimings(segments, allWords, totalAudioDurationSeconds);
+    const segmentTimings = this.findsegmentTimings(
+      segments,
+      allWords,
+      totalAudioDurationSeconds,
+    );
 
     // 3. Pipeline Stage: Generate Scenes (Frame Conversions)
     // Add half-transition duration to maintain strict audio sync.
-    const scenes = this.generateScenes(segments, segmentTimings, fps, totalAudioDurationSeconds);
+    const scenes = this.generateScenes(
+      segments,
+      segmentTimings,
+      fps,
+      totalAudioDurationSeconds,
+    );
 
-
-    const captions = allWords.map(w => ({
+    const captions = allWords.map((w) => ({
       text: w.text,
       startMs: Math.round(w.globalStart * 1000),
-      endMs: Math.round(w.globalEnd * 1000)
+      endMs: Math.round(w.globalEnd * 1000),
     }));
 
     const totalAudioDurationFrames = Math.ceil(totalAudioDurationSeconds * fps);
@@ -187,7 +222,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
       scenes: scenes.length,
       captions: captions.length,
       durationFrames: totalAudioDurationFrames,
-      durationSeconds: totalAudioDurationFrames / fps
+      durationSeconds: totalAudioDurationFrames / fps,
     });
 
     return {
@@ -197,7 +232,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
       height: REMOTION_CROPPED_HEIGHT,
       scenes,
       audioTracks,
-      captions
+      captions,
     };
   }
 
@@ -205,14 +240,14 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
     transcriptionResults: { words: Word[] }[],
     audioUrls: string[],
     fps: number,
-    audioDurations?: number[]
+    audioDurations?: number[],
   ) {
     let globalTimeOffset = 0;
     const allWords: FlattenedWord[] = [];
     const audioTracks: AudioTrackConfig[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : (result.words || []);
+      const words = Array.isArray(result) ? result : result.words || [];
       const lastWord = words[words.length - 1];
 
       let durationSeconds = 0;
@@ -227,7 +262,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
       audioTracks.push({
         src: audioUrls[batchIndex],
         startFrame: Math.round(globalTimeOffset * fps),
-        durationInFrames: durationFrames
+        durationInFrames: durationFrames,
       });
 
       words.forEach((w, i) => {
@@ -241,7 +276,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
           originalIndex: i,
           batchIndex,
           globalStart: globalTimeOffset + startSeconds,
-          globalEnd: globalTimeOffset + endSeconds
+          globalEnd: globalTimeOffset + endSeconds,
         });
       });
 
@@ -256,9 +291,14 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
   private findsegmentTimings(
     segments: { id: string; text: string }[],
     allWords: FlattenedWord[],
-    totalDuration: number
+    totalDuration: number,
   ) {
-    const timings: { start: number; end: number; confidence: number; found: boolean }[] = [];
+    const timings: {
+      start: number;
+      end: number;
+      confidence: number;
+      found: boolean;
+    }[] = [];
     let searchStartWordIndex = 0;
 
     for (let i = 0; i < segments.length; i++) {
@@ -274,14 +314,20 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
         startWordIndex = 0;
         startConfidence = 1;
       } else {
-        const match = findSegmentStartWithConfidence(segments[i].text, allWords, searchStartWordIndex);
+        const match = findSegmentStartWithConfidence(
+          segments[i].text,
+          allWords,
+          searchStartWordIndex,
+        );
         if (match.index !== -1) {
           startWordIndex = match.index;
           startSeconds = allWords[match.index].globalStart;
           startConfidence = match.score;
           searchStartWordIndex = match.index;
         } else {
-          console.warn(`[Aligner] Start not found for ${segments[i].id}: "${segments[i].text.substring(0, 30)}"`);
+          console.warn(
+            `[Aligner] Start not found for ${segments[i].id}: "${segments[i].text.substring(0, 30)}"`,
+          );
           timings.push({ start: -1, end: -1, confidence: 0, found: false });
           continue;
         }
@@ -294,12 +340,18 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
         endSeconds = totalDuration;
         endConfidence = 1;
       } else {
-        const endMatch = findSegmentEnd(segments[i].text, allWords, startWordIndex);
+        const endMatch = findSegmentEnd(
+          segments[i].text,
+          allWords,
+          startWordIndex,
+        );
         if (endMatch.index !== -1) {
           endSeconds = allWords[endMatch.index].globalEnd;
           endConfidence = endMatch.score;
         } else {
-          console.warn(`[Aligner] End not found for ${segments[i].id}, will be resolved in gap fill.`);
+          console.warn(
+            `[Aligner] End not found for ${segments[i].id}, will be resolved in gap fill.`,
+          );
           endSeconds = -1;
           endConfidence = 0;
         }
@@ -309,7 +361,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
         start: startSeconds,
         end: endSeconds,
         confidence: (startConfidence + endConfidence) / 2,
-        found: startSeconds !== -1 && endSeconds !== -1
+        found: startSeconds !== -1 && endSeconds !== -1,
       });
     }
 
@@ -319,12 +371,18 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 
       let prevEnd = 0;
       for (let k = i - 1; k >= 0; k--) {
-        if (timings[k].found) { prevEnd = timings[k].end; break; }
+        if (timings[k].found) {
+          prevEnd = timings[k].end;
+          break;
+        }
       }
 
       let nextStart = totalDuration;
       for (let j = i + 1; j < timings.length; j++) {
-        if (timings[j].found) { nextStart = timings[j].start; break; }
+        if (timings[j].found) {
+          nextStart = timings[j].start;
+          break;
+        }
       }
 
       const missingInGap: number[] = [];
@@ -352,7 +410,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
     segments: { id: string; imageUrl?: string; text?: string }[],
     timings: { start: number; end: number; confidence: number }[],
     fps: number,
-    totalAudioDurationSeconds: number
+    totalAudioDurationSeconds: number,
   ): VideoScene[] {
     const scenes: VideoScene[] = [];
     const TRANSITION_FRAMES = PrecisionAlignmentStrategy.TRANSITION_DURATION;
@@ -375,8 +433,14 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
       const isFirst = i === 0;
       const isLast = i === segments.length - 1;
 
-      const effect = PrecisionAlignmentStrategy.EFFECTS[i % PrecisionAlignmentStrategy.EFFECTS.length];
-      const transitionType = PrecisionAlignmentStrategy.TRANSITIONS[i % PrecisionAlignmentStrategy.TRANSITIONS.length];
+      const effect =
+        PrecisionAlignmentStrategy.EFFECTS[
+          i % PrecisionAlignmentStrategy.EFFECTS.length
+        ];
+      const transitionType =
+        PrecisionAlignmentStrategy.TRANSITIONS[
+          i % PrecisionAlignmentStrategy.TRANSITIONS.length
+        ];
 
       // Determine if this scene has an incoming or outgoing transition
       // A scene has an outgoing transition if it's not the last scene.
@@ -406,7 +470,8 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
           if (prevScene.transition) {
             prevScene.transition = undefined;
             prevScene.durationInFrames -= HALF_TRANSITION;
-            if (prevScene.durationInFrames < TRANSITION_FRAMES) prevScene.durationInFrames = TRANSITION_FRAMES;
+            if (prevScene.durationInFrames < TRANSITION_FRAMES)
+              prevScene.durationInFrames = TRANSITION_FRAMES;
           }
         }
       }
@@ -428,17 +493,20 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
         startFrame,
         durationInFrames: Math.round(finalDuration),
         effect,
-        transition: hasTransitionOut ? { // Only define transition if there's an outgoing one
-          type: transitionType,
-          durationInFrames: TRANSITION_FRAMES
-        } : undefined,
+        transition: hasTransitionOut
+          ? {
+              // Only define transition if there's an outgoing one
+              type: transitionType,
+              durationInFrames: TRANSITION_FRAMES,
+            }
+          : undefined,
         textFragment: seg.text,
         debug: {
           startSeconds,
           endSeconds,
           durationSeconds: endSeconds - startSeconds,
-          confidence: timing.confidence // Add confidence here
-        } as any // Cast to any to allow adding confidence without strict type definition update
+          confidence: timing.confidence, // Add confidence here
+        } as any, // Cast to any to allow adding confidence without strict type definition update
       });
     }
 
@@ -449,19 +517,37 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 // --- Main Export ---
 
 export class ContinuousAlignmentStrategy implements AlignmentStrategy {
-  private static EFFECTS: SceneEffect[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
-  private static TRANSITIONS: VideoTransition['type'][] = ['fade', 'wipe', 'slide'];
+  private static EFFECTS: SceneEffect[] = [
+    "zoom-in",
+    "zoom-out",
+    "pan-left",
+    "pan-right",
+  ];
+  private static TRANSITIONS: VideoTransition["type"][] = [
+    "fade",
+    "wipe",
+    "slide",
+  ];
   private static TRANSITION_DURATION = 30; // 30 frames
 
-  align(context: AlignmentContext & { videoDurations?: number[] }): RemotionVideoProps {
-    const { segments, transcriptionResults, audioUrls, audioDurations, videoDurations, fps } = context;
+  align(
+    context: AlignmentContext & { videoDurations?: number[] },
+  ): RemotionVideoProps {
+    const {
+      segments,
+      transcriptionResults,
+      audioUrls,
+      audioDurations,
+      videoDurations,
+      fps,
+    } = context;
 
     // 1. Calculate Audio Duration
     let totalAudioDurationSeconds = 0;
     const audioTracks: AudioTrackConfig[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : (result.words || []);
+      const words = Array.isArray(result) ? result : result.words || [];
       const lastWord = words[words.length - 1];
 
       let durationSeconds = 0;
@@ -476,7 +562,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       audioTracks.push({
         src: audioUrls[batchIndex],
         startFrame: Math.round(totalAudioDurationSeconds * fps),
-        durationInFrames: durationFrames
+        durationInFrames: durationFrames,
       });
 
       totalAudioDurationSeconds += durationSeconds;
@@ -496,7 +582,10 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
 
     const TRANSITION_FRAMES = ContinuousAlignmentStrategy.TRANSITION_DURATION;
 
-    const targetTotalSeconds = Math.max(totalAudioDurationSeconds, totalRawVideoSeconds);
+    const targetTotalSeconds = Math.max(
+      totalAudioDurationSeconds,
+      totalRawVideoSeconds,
+    );
     const targetTotalFrames = Math.round(targetTotalSeconds * fps);
 
     const scenes: VideoScene[] = [];
@@ -508,10 +597,14 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
 
       let allocatedFrames = naturalFrames;
 
-      if (allocatedFrames < TRANSITION_FRAMES + 1) allocatedFrames = TRANSITION_FRAMES + 1;
+      if (allocatedFrames < TRANSITION_FRAMES + 1)
+        allocatedFrames = TRANSITION_FRAMES + 1;
 
-      const effect: SceneEffect = 'static';
-      const transitionType = ContinuousAlignmentStrategy.TRANSITIONS[i % ContinuousAlignmentStrategy.TRANSITIONS.length];
+      const effect: SceneEffect = "static";
+      const transitionType =
+        ContinuousAlignmentStrategy.TRANSITIONS[
+          i % ContinuousAlignmentStrategy.TRANSITIONS.length
+        ];
 
       scenes.push({
         id: seg.id,
@@ -519,16 +612,18 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
         startFrame: 0,
         durationInFrames: allocatedFrames,
         effect,
-        transition: !isLast ? {
-          type: transitionType,
-          durationInFrames: TRANSITION_FRAMES
-        } : undefined,
+        transition: !isLast
+          ? {
+              type: transitionType,
+              durationInFrames: TRANSITION_FRAMES,
+            }
+          : undefined,
         textFragment: seg.text,
         debug: {
           startSeconds: 0,
           endSeconds: 0,
           durationSeconds: allocatedFrames / fps,
-        } as any
+        } as any,
       });
     }
 
@@ -537,15 +632,16 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     const captions: any[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : (result.words || []);
-      const durationSeconds = audioTracks[batchIndex]?.durationInFrames / fps || 0;
+      const words = Array.isArray(result) ? result : result.words || [];
+      const durationSeconds =
+        audioTracks[batchIndex]?.durationInFrames / fps || 0;
 
       words.forEach((w: any) => {
         if (!w.text.trim()) return;
         captions.push({
           text: w.text,
-          startMs: Math.round((globalTimeOffset + (w.startMs / 1000)) * 1000),
-          endMs: Math.round((globalTimeOffset + (w.endMs / 1000)) * 1000)
+          startMs: Math.round((globalTimeOffset + w.startMs / 1000) * 1000),
+          endMs: Math.round((globalTimeOffset + w.endMs / 1000) * 1000),
         });
       });
       globalTimeOffset += durationSeconds;
@@ -555,7 +651,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       scenes: scenes.length,
       captions: captions.length,
       durationFrames: targetTotalFrames,
-      durationSeconds: targetTotalSeconds
+      durationSeconds: targetTotalSeconds,
     });
 
     return {
@@ -565,7 +661,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       height: REMOTION_CROPPED_HEIGHT,
       scenes,
       audioTracks,
-      captions
+      captions,
     };
   }
 }
@@ -573,24 +669,41 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
 // --- Image Alignment Strategy ---
 
 export class ImageAlignmentStrategy implements AlignmentStrategy {
-  private static EFFECTS: SceneEffect[] = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
-  private static TRANSITIONS: VideoTransition['type'][] = ['fade', 'wipe', 'slide'];
+  private static EFFECTS: SceneEffect[] = [
+    "zoom-in",
+    "zoom-out",
+    "pan-left",
+    "pan-right",
+  ];
+  private static TRANSITIONS: VideoTransition["type"][] = [
+    "fade",
+    "wipe",
+    "slide",
+  ];
   private static TRANSITION_DURATION = 30;
 
   align(context: AlignmentContext): RemotionVideoProps {
     const { segments, transcriptionResults, audioUrls, fps } = context;
 
-    const { allWords, audioTracks, totalAudioDurationSeconds } = this.flattenTranscription(
-      transcriptionResults, audioUrls, fps, context.audioDurations
-    );
+    const { allWords, audioTracks, totalAudioDurationSeconds } =
+      this.flattenTranscription(
+        transcriptionResults,
+        audioUrls,
+        fps,
+        context.audioDurations,
+      );
 
-    const segmentTimings = this.findSegmentTimings(segments, allWords, totalAudioDurationSeconds);
+    const segmentTimings = this.findSegmentTimings(
+      segments,
+      allWords,
+      totalAudioDurationSeconds,
+    );
     const scenes = this.generateScenes(segments, segmentTimings, fps);
 
-    const captions = allWords.map(w => ({
+    const captions = allWords.map((w) => ({
       text: w.text,
       startMs: Math.round(w.globalStart * 1000),
-      endMs: Math.round(w.globalEnd * 1000)
+      endMs: Math.round(w.globalEnd * 1000),
     }));
 
     const totalAudioDurationFrames = Math.ceil(totalAudioDurationSeconds * fps);
@@ -599,7 +712,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
       segments: segments.length,
       audioTracks: audioTracks.length,
       durationSec: totalAudioDurationSeconds,
-      durationFrames: totalAudioDurationFrames
+      durationFrames: totalAudioDurationFrames,
     });
 
     return {
@@ -609,7 +722,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
       height: REMOTION_CROPPED_HEIGHT,
       scenes,
       audioTracks,
-      captions
+      captions,
     };
   }
 
@@ -617,14 +730,14 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
     transcriptionResults: { words: Word[] }[],
     audioUrls: string[],
     fps: number,
-    audioDurations?: number[]
+    audioDurations?: number[],
   ) {
     let globalTimeOffset = 0;
     const allWords: FlattenedWord[] = [];
     const audioTracks: AudioTrackConfig[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : (result.words || []);
+      const words = Array.isArray(result) ? result : result.words || [];
       const lastWord = words[words.length - 1];
 
       let durationSeconds = 0;
@@ -639,7 +752,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
       audioTracks.push({
         src: audioUrls[batchIndex],
         startFrame: Math.round(globalTimeOffset * fps),
-        durationInFrames: durationFrames
+        durationInFrames: durationFrames,
       });
 
       words.forEach((w, i) => {
@@ -653,20 +766,24 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
           originalIndex: i,
           batchIndex,
           globalStart: globalTimeOffset + startSeconds,
-          globalEnd: globalTimeOffset + endSeconds
+          globalEnd: globalTimeOffset + endSeconds,
         });
       });
 
       globalTimeOffset += durationSeconds;
     });
 
-    return { allWords, audioTracks, totalAudioDurationSeconds: globalTimeOffset };
+    return {
+      allWords,
+      audioTracks,
+      totalAudioDurationSeconds: globalTimeOffset,
+    };
   }
 
   private findSegmentTimings(
     segments: { id: string; text: string }[],
     allWords: FlattenedWord[],
-    totalDuration: number
+    totalDuration: number,
   ) {
     const starts: number[] = [];
     let searchFrom = 0;
@@ -677,7 +794,11 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
         continue;
       }
 
-      const match = findSegmentStartWithConfidence(segments[i].text, allWords, searchFrom);
+      const match = findSegmentStartWithConfidence(
+        segments[i].text,
+        allWords,
+        searchFrom,
+      );
       if (match.index !== -1) {
         starts.push(allWords[match.index].globalStart);
         searchFrom = match.index;
@@ -689,10 +810,14 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
     const timings: { start: number; end: number }[] = [];
 
     for (let i = 0; i < segments.length; i++) {
-      const start = starts[i] !== -1 ? starts[i] : (i > 0 ? timings[i - 1].end : 0);
-      const end = i < segments.length - 1
-        ? (starts[i + 1] !== -1 ? starts[i + 1] : totalDuration)
-        : totalDuration;
+      const start =
+        starts[i] !== -1 ? starts[i] : i > 0 ? timings[i - 1].end : 0;
+      const end =
+        i < segments.length - 1
+          ? starts[i + 1] !== -1
+            ? starts[i + 1]
+            : totalDuration
+          : totalDuration;
 
       timings.push({ start, end: Math.max(end, start) });
     }
@@ -703,7 +828,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
   private generateScenes(
     segments: { id: string; imageUrl?: string; text?: string }[],
     timings: { start: number; end: number }[],
-    fps: number
+    fps: number,
   ): VideoScene[] {
     const scenes: VideoScene[] = [];
     const TRANSITION_FRAMES = ImageAlignmentStrategy.TRANSITION_DURATION;
@@ -712,13 +837,21 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       const timing = timings[i];
-      const logicalDurationFrames = Math.round((timing.end - timing.start) * fps);
+      const logicalDurationFrames = Math.round(
+        (timing.end - timing.start) * fps,
+      );
 
       const isFirst = i === 0;
       const isLast = i === segments.length - 1;
 
-      const effect = ImageAlignmentStrategy.EFFECTS[i % ImageAlignmentStrategy.EFFECTS.length];
-      const transitionType = ImageAlignmentStrategy.TRANSITIONS[i % ImageAlignmentStrategy.TRANSITIONS.length];
+      const effect =
+        ImageAlignmentStrategy.EFFECTS[
+          i % ImageAlignmentStrategy.EFFECTS.length
+        ];
+      const transitionType =
+        ImageAlignmentStrategy.TRANSITIONS[
+          i % ImageAlignmentStrategy.TRANSITIONS.length
+        ];
 
       let hasTransitionIn = !isFirst;
       let hasTransitionOut = !isLast;
@@ -749,16 +882,18 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
         startFrame: 0,
         durationInFrames: Math.round(finalDuration),
         effect,
-        transition: hasTransitionOut ? {
-          type: transitionType,
-          durationInFrames: TRANSITION_FRAMES
-        } : undefined,
+        transition: hasTransitionOut
+          ? {
+              type: transitionType,
+              durationInFrames: TRANSITION_FRAMES,
+            }
+          : undefined,
         textFragment: seg.text,
         debug: {
           startSeconds: timing.start,
           endSeconds: timing.end,
           durationSeconds: timing.end - timing.start,
-        } as any
+        } as any,
       });
     }
 
@@ -768,7 +903,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
 
 // --- Main Export ---
 
-export type AlignmentMode = 'image' | 'video';
+export type AlignmentMode = "image" | "video";
 
 export function alignVideoProps(
   segments: { id: string; text: string; imageUrl: string }[],
@@ -777,11 +912,17 @@ export function alignVideoProps(
   audioDurations: number[] = [],
   videoDurations: number[] = [],
   fps: number = REMOTION_DEFAULT_FPS,
-  mode: AlignmentMode = 'video'
+  mode: AlignmentMode = "video",
 ): RemotionVideoProps {
-  if (mode === 'image') {
+  if (mode === "image") {
     const strategy = new PrecisionAlignmentStrategy();
-    return strategy.align({ segments, transcriptionResults, audioUrls, audioDurations, fps });
+    return strategy.align({
+      segments,
+      transcriptionResults,
+      audioUrls,
+      audioDurations,
+      fps,
+    });
   }
 
   const strategy = new ContinuousAlignmentStrategy();
@@ -791,6 +932,6 @@ export function alignVideoProps(
     audioUrls,
     audioDurations,
     videoDurations,
-    fps
+    fps,
   });
 }

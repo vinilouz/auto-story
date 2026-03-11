@@ -1,6 +1,10 @@
 function toJsonForPrompt(data: any, includeIndex = false): string {
   if (Array.isArray(data) && includeIndex) {
-    return JSON.stringify(data.map((item, index) => ({ index, ...item })), null, 2);
+    return JSON.stringify(
+      data.map((item, index) => ({ index, ...item })),
+      null,
+      2,
+    );
   }
   return JSON.stringify(data, null, 2);
 }
@@ -113,7 +117,7 @@ Return ONLY a JSON Key-Value in the language ${language}:
   generateEntityImage: (
     description: string,
     styleId: string | undefined,
-    visualPrompt?: string
+    visualPrompt?: string,
   ) => {
     const stylePrompt = visualPrompt ?? styleId ?? "default";
     return `<Role>
@@ -138,7 +142,7 @@ Create a high-fidelity visual asset, with this description ${description} and fo
     description: string,
     styleId: string | undefined,
     isStyleReference: boolean,
-    visualPrompt?: string
+    visualPrompt?: string,
   ) => {
     const stylePrompt = visualPrompt ?? styleId ?? "default";
 

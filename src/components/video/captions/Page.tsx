@@ -1,14 +1,13 @@
-
-import React from "react";
+import { makeTransform, scale, translateY } from "@remotion/animation-utils";
+import type { TikTokPage } from "@remotion/captions";
+import type React from "react";
 import {
   AbsoluteFill,
   interpolate,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { makeTransform, scale, translateY } from "@remotion/animation-utils";
-import { TikTokPage } from "@remotion/captions";
-import { CaptionStyle } from "@/lib/video/types";
+import type { CaptionStyle } from "@/lib/video/types";
 
 const containerStyle: React.CSSProperties = {
   justifyContent: "center",
@@ -44,12 +43,12 @@ export const Page: React.FC<{
           fontFamily,
           textTransform: uppercase ? "uppercase" : "none",
           fontWeight,
-          textAlign: 'center',
+          textAlign: "center",
           lineHeight: 1.2,
-          width: '100%',
+          width: "100%",
           paddingLeft: 20,
           paddingRight: 20,
-          whiteSpace: 'normal'
+          whiteSpace: "normal",
         }}
       >
         <span>
@@ -66,7 +65,7 @@ export const Page: React.FC<{
                   display: "inline-block",
                   whiteSpace: "pre",
                   color: active ? highlightColor : "white",
-                  marginRight: '0.25em',
+                  marginRight: "0.25em",
                 }}
               >
                 {t.text}

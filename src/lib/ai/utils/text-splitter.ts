@@ -1,16 +1,22 @@
-export const splitTextIntoBatches = (text: string, maxLength: number = 2000, header: string = ""): string[] => {
+export const splitTextIntoBatches = (
+  text: string,
+  maxLength: number = 2000,
+  header: string = "",
+): string[] => {
   // Normalize line endings
-  const normalizedText = text.replace(/\r\n/g, '\n').trim();
+  const normalizedText = text.replace(/\r\n/g, "\n").trim();
 
   // Header handling
   const effectiveMaxLength = maxLength - (header ? header.length + 2 : 0); // +2 for \n\n
   if (effectiveMaxLength <= 100) {
-    console.warn("Header is too long for the maxLength, minimal space left for content.");
+    console.warn(
+      "Header is too long for the maxLength, minimal space left for content.",
+    );
   }
 
   // Split into logical lines (assuming input format has one speaker segment per line/block)
   // We filter out empty lines to avoid noise
-  const lines = normalizedText.split('\n').filter(l => l.trim().length > 0);
+  const lines = normalizedText.split("\n").filter((l) => l.trim().length > 0);
 
   const batches: string[] = [];
   let currentBatch = "";
@@ -29,7 +35,7 @@ export const splitTextIntoBatches = (text: string, maxLength: number = 2000, hea
 
     // Determine if adding this line would exceed effectiveMaxLength
     // +1 for the newline check if we join with \n or space
-    if ((currentBatch.length + trimmedLine.length + 1) <= effectiveMaxLength) {
+    if (currentBatch.length + trimmedLine.length + 1 <= effectiveMaxLength) {
       currentBatch += (currentBatch ? "\n" : "") + trimmedLine;
     } else {
       // Adding this line would overflow.
@@ -45,7 +51,7 @@ export const splitTextIntoBatches = (text: string, maxLength: number = 2000, hea
       } else {
         // The line itself is larger than effectiveMaxLength. We must split it hard (preserving context).
         let remainingLine = trimmedLine;
-        // The line likely starts with "speaker: ...". 
+        // The line likely starts with "speaker: ...".
         // If it continues in chunks, we must prepend "speaker: " to chunks.
 
         // Re-detect speaker for this specific line (it should match since we are here)
@@ -59,7 +65,8 @@ export const splitTextIntoBatches = (text: string, maxLength: number = 2000, hea
 
         // Loop to chop the giant line
         while (remainingLine.length > 0) {
-          const prefixToUse = (remainingLine !== trimmedLine && linePrefix) ? linePrefix : "";
+          const prefixToUse =
+            remainingLine !== trimmedLine && linePrefix ? linePrefix : "";
           const availableSpace = effectiveMaxLength - prefixToUse.length;
 
           if (remainingLine.length <= availableSpace) {
@@ -74,16 +81,16 @@ export const splitTextIntoBatches = (text: string, maxLength: number = 2000, hea
 
           // Intelligent split (punctuation)
           const lastPunc = Math.max(
-            searchRegion.lastIndexOf('.'),
-            searchRegion.lastIndexOf('!'),
-            searchRegion.lastIndexOf('?')
+            searchRegion.lastIndexOf("."),
+            searchRegion.lastIndexOf("!"),
+            searchRegion.lastIndexOf("?"),
           );
 
           if (lastPunc > availableSpace * 0.5) {
             splitIndex = lastPunc + 1;
           } else {
-            const lastSpace = searchRegion.lastIndexOf(' ');
-            splitIndex = (lastSpace > -1) ? lastSpace : availableSpace;
+            const lastSpace = searchRegion.lastIndexOf(" ");
+            splitIndex = lastSpace > -1 ? lastSpace : availableSpace;
           }
 
           const part = remainingLine.substring(0, splitIndex).trim();
@@ -102,4 +109,4 @@ export const splitTextIntoBatches = (text: string, maxLength: number = 2000, hea
   }
 
   return batches;
-}
+};
