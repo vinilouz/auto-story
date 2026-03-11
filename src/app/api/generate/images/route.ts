@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import "@/lib/ai/providers"
-import { executeBatch, BatchResult } from "@/lib/ai/queue"
+import { executeBatch } from "@/lib/ai/queue"
 import { ImageRequest, ImageResponse } from "@/lib/ai/registry"
 import { StorageService } from "@/lib/storage"
 import { createLogger } from "@/lib/logger"
@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing imagePrompt" }, { status: 400 })
     }
 
-    // Single request — index pode ser passado para nomear o arquivo corretamente
-    const segmentIndex: number = body.index ?? 0
+    // index undefined = imagem avulsa (ex: entity, commentator) — sem patchSegmentImage
+    const segmentIndex: number | undefined = body.index
 
     const singleReq: ImageRequest = {
       prompt: body.imagePrompt,
@@ -40,13 +40,19 @@ export async function POST(request: NextRequest) {
       const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/)
       if (m) {
         const ext = m[1] === 'jpeg' ? 'jpg' : m[1]
-        // img-1.jpg, img-2.jpg ... (1-indexed)
-        const fileName = `img-${segmentIndex + 1}.${ext}`
+        // Se tem index explícito → nome img-N.jpg e patch no config
+        // Se não tem index (entity, etc) → nome genérico sem patch de segmento
+        const fileName = segmentIndex !== undefined
+          ? `img-${segmentIndex + 1}.${ext}`
+          : `img-${Date.now()}.${ext}`
+
         const local = await StorageService.saveBase64Image(body.projectId, fileName, m[2], body.projectName)
         if (local) {
           imageUrl = local
-          // Patch imediato no config
-          await StorageService.patchSegmentImage(body.projectId, body.projectName, segmentIndex, imageUrl)
+          // Só patcha o config se for uma imagem de segmento (index explícito)
+          if (segmentIndex !== undefined) {
+            await StorageService.patchSegmentImage(body.projectId, body.projectName, segmentIndex, imageUrl)
+          }
         }
       }
     }
@@ -63,7 +69,6 @@ async function handleBatch(
   projectId?: string,
   projectName?: string,
 ) {
-  // Cada request deve incluir `index` (índice do segmento) para nomear o arquivo
   const batchRequests: ImageRequest[] = requests.map(r => ({
     prompt: r.imagePrompt,
     referenceImages: r.referenceImages || (r.referenceImage ? [r.referenceImage] : undefined),
@@ -76,7 +81,10 @@ async function handleBatch(
     results.map(async (r, i) => {
       if (r.status === 'error') return r
 
-      const segmentIndex: number = requests[i]?.index ?? i
+      // index undefined → imagem de entity/commentator, sem patchSegmentImage
+      // index explícito → imagem de segmento, patcha o config
+      const segmentIndex: number | undefined = requests[i]?.index
+
       const imgRes = r.data as ImageResponse
       let imageUrl = imgRes.imageUrl
 
@@ -84,13 +92,16 @@ async function handleBatch(
         const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/)
         if (m) {
           const ext = m[1] === 'jpeg' ? 'jpg' : m[1]
-          // img-1.jpg, img-2.jpg ... usa o índice real do segmento
-          const fileName = `img-${segmentIndex + 1}.${ext}`
+          const fileName = segmentIndex !== undefined
+            ? `img-${segmentIndex + 1}.${ext}`
+            : `img-${Date.now()}.${ext}`
+
           const local = await StorageService.saveBase64Image(projectId, fileName, m[2], projectName)
           if (local) {
             imageUrl = local
-            // Patch imediato no config — não espera o cliente salvar
-            await StorageService.patchSegmentImage(projectId, projectName, segmentIndex, imageUrl)
+            if (segmentIndex !== undefined) {
+              await StorageService.patchSegmentImage(projectId, projectName, segmentIndex, imageUrl)
+            }
           }
         }
       }

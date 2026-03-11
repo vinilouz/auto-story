@@ -19,6 +19,8 @@ interface Job<Req> {
   id: number
   request: Req
   attempts: number
+  lastProvider?: string   // para log de crossover
+  notBefore?: number      // backoff: não processar antes deste timestamp
 }
 
 export interface BatchResult<Res> {
@@ -32,13 +34,7 @@ export interface BatchResult<Res> {
 }
 
 // ── Error classifier ───────────────────────────────────────
-//
-// Distingue a origem do erro para diagnóstico e decisão de retry:
-//   rate-limit → 429 — estamos enviando rápido demais
-//   server     → 5xx — provider com problema (retry faz sentido)
-//   payload    → 4xx (não 429) — nosso payload está errado (retry NÃO ajuda)
-//   unknown    → erro de rede, timeout, parse — investigar
-//
+
 function classifyError(msg: string): BatchResult<any>['errorKind'] {
   const m = msg.toLowerCase()
   if (m.includes('429') || m.includes('rate limit') || m.includes('too many requests')) return 'rate-limit'
@@ -56,14 +52,35 @@ function errorLabel(kind: BatchResult<any>['errorKind']): string {
   }
 }
 
+/**
+ * Backoff exponencial com jitter.
+ *   attempt=1 → ~500ms   (dá tempo para void pegar o job)
+ *   attempt=2 → ~1000ms
+ *   attempt=3 → ~2000ms
+ *   rate-limit → base maior (5s) para deixar o provider respirar
+ */
+function calcBackoff(attempt: number, kind: BatchResult<any>['errorKind']): number {
+  const base = kind === 'rate-limit' ? 5_000 : 500
+  const exp = Math.min(base * Math.pow(2, attempt - 1), 30_000)
+  const jitter = Math.random() * 0.3 * exp
+  return Math.round(exp + jitter)
+}
+
 // ── Batch executor ────────────────────────────────────────
 //
-// Modelo mental:
-//   - CONCURRENCY workers por provider (não RPM — são conceitos diferentes!)
-//   - Cada worker: aguarda slot de rate-limit → executa → sucesso/retry
-//   - rate-limit (429): acquireSlot já desacelera automaticamente
-//   - payload (4xx):    falha imediata, retry não vai resolver
-//   - server/unknown:   retry até maxRetries
+//  Melhorias vs versão anterior:
+//
+//  1. BACKOFF EXPONENCIAL — retries não são imediatos.
+//     Antes: retry air em 219ms → provedor rejeita de novo em <250ms.
+//     Agora: retry air aguarda ≥500ms → worker void tem tempo de pegar o job.
+//
+//  2. CROSSOVER AUTOMÁTICO — fila é SHARED entre todos os providers.
+//     Quando air falha e coloca job no backlog com delay=500ms, e um worker
+//     void está disponível antes disso, void pega o job (crossover logado).
+//
+//  3. WORKERS LAZY NO BACKLOG — workers não ficam em spin-loop.
+//     Quando todos os jobs disponíveis foram distribuídos mas há backlog futuro,
+//     o worker dorme até o próximo job ficar pronto (max 500ms por ciclo).
 //
 export async function executeBatch<A extends ActionType>(
   action: A,
@@ -83,7 +100,6 @@ export async function executeBatch<A extends ActionType>(
     const provider = getProvider(cfg.provider)
     const handler = provider?.[action] as Handler<any, any> | undefined
     const creds = getCredentials(cfg.provider)
-
     if (!provider || !handler || !creds) {
       log.warn(`Skipping ${cfg.provider}/${cfg.model}: ${!provider ? 'not registered' : !handler ? 'no handler' : 'no credentials'}`)
       continue
@@ -99,32 +115,65 @@ export async function executeBatch<A extends ActionType>(
     .join(', ')
   log.info(`Batch: ${total} × ${action} | ${info}`)
 
-  // 2. Fila compartilhada
+  // 2. Fila principal + backlog (jobs aguardando backoff)
   const results: BatchResult<ActionMap[A]['res']>[] = new Array(total)
-  const queue: Job<ActionMap[A]['req']>[] = requests.map((req, i) => ({
+  const mainQueue: Job<ActionMap[A]['req']>[] = requests.map((req, i) => ({
     id: i, request: req, attempts: 0,
   }))
-  let queueIdx = 0
+  let mainIdx = 0
   let completed = 0
+  const backlog: Job<ActionMap[A]['req']>[] = []
 
   function takeJob(): Job<ActionMap[A]['req']> | null {
-    if (queueIdx < queue.length) return queue[queueIdx++]
+    const now = Date.now()
+    // Backlog primeiro: jobs que já cumpriram o backoff
+    const bi = backlog.findIndex(j => !j.notBefore || j.notBefore <= now)
+    if (bi !== -1) return backlog.splice(bi, 1)[0]
+    // Fila principal
+    if (mainIdx < mainQueue.length) return mainQueue[mainIdx++]
     return null
   }
 
-  function requeueJob(job: Job<ActionMap[A]['req']>): void {
-    queue.push(job)
+  function hasWork(): boolean {
+    return mainIdx < mainQueue.length || backlog.length > 0
   }
 
-  // 3. Worker
+  function requeue(job: Job<ActionMap[A]['req']>, kind: BatchResult<any>['errorKind']): void {
+    const delay = calcBackoff(job.attempts, kind)
+    job.notBefore = Date.now() + delay
+    backlog.push(job)
+    log.warn(`  ↳ #${job.id + 1} backoff ${delay}ms — outro provider pode pegar antes`)
+  }
+
+  // 3. Worker — usa o slot do seu provider mas compete pela fila global
   async function worker(slot: ProviderSlot): Promise<void> {
     while (true) {
       const job = takeJob()
-      if (!job) break
 
+      if (!job) {
+        if (!hasWork()) break  // sem mais trabalho para ninguém → encerra
+
+        // Tem backlog mas ainda não disponível → aguarda até o próximo ficar pronto
+        if (backlog.length > 0) {
+          const nearest = Math.min(...backlog.map(j => j.notBefore ?? 0))
+          const sleepMs = Math.max(50, Math.min(nearest - Date.now(), 500))
+          await new Promise(r => setTimeout(r, sleepMs))
+          continue
+        }
+
+        // Fila principal vazia e sem backlog → encerra
+        break
+      }
+
+      // Aguarda slot de rate-limit (async — não bloqueia outros workers)
       await acquireSlot(slot.providerName)
+
       const start = Date.now()
       job.attempts++
+
+      if (job.lastProvider && job.lastProvider !== `${slot.providerName}/${slot.model}`) {
+        log.info(`#${job.id + 1} ↪ crossover ${job.lastProvider} → ${slot.providerName}/${slot.model}`)
+      }
 
       try {
         const data = await slot.handler(slot.model, job.request, slot.creds)
@@ -146,8 +195,9 @@ export async function executeBatch<A extends ActionType>(
         const msg = e?.message || String(e)
         const kind = classifyError(msg)
         saveDebug(action, slot.providerName, slot.model, job.request, null, ms, msg)
+        job.lastProvider = `${slot.providerName}/${slot.model}`
 
-        // Payload errado → retry nunca vai funcionar
+        // Payload errado → retry não adianta
         if (kind === 'payload') {
           const result: BatchResult<ActionMap[A]['res']> = {
             id: job.id, status: 'error', error: msg, errorKind: kind,
@@ -173,13 +223,13 @@ export async function executeBatch<A extends ActionType>(
           opts.onResult?.(result)
         } else {
           log.warn(`#${job.id + 1} ✗ ${slot.providerName}/${slot.model} ${errorLabel(kind)} (${ms}ms) — retry ${job.attempts}/${maxRetries}\n  → ${msg.substring(0, 300)}`)
-          requeueJob(job)
+          requeue(job, kind)
         }
       }
     }
   }
 
-  // 4. Spawna workers com CONCURRENCY (não RPM!)
+  // 4. Spawna workers (cap em total para não criar workers completamente ociosos)
   const workerPromises: Promise<void>[] = []
   for (const slot of slots) {
     const concurrency = Math.min(PROVIDER_CONCURRENCY[slot.providerName] ?? 3, total)
@@ -198,12 +248,10 @@ export async function executeBatch<A extends ActionType>(
     }
   }
 
-  // 6. Resumo final com breakdown por tipo de erro
+  // 6. Resumo final
   const ok = results.filter(r => r?.status === 'success').length
   const byKind = results.filter(r => r?.status === 'error').reduce((acc, r) => {
-    const k = r.errorKind ?? 'unknown'
-    acc[k] = (acc[k] ?? 0) + 1
-    return acc
+    const k = r.errorKind ?? 'unknown'; acc[k] = (acc[k] ?? 0) + 1; return acc
   }, {} as Record<string, number>)
 
   const failSummary = Object.entries(byKind).map(([k, n]) => `${n}×${k}`).join(', ')

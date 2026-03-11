@@ -1,9 +1,15 @@
 import { registerProvider, ImageRequest, ImageResponse, VideoRequest, VideoResponse } from '@/lib/ai/registry'
 import { ensureHostedUrl } from '@/lib/ai/utils/anondrop'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('air')
 
 // ── SSE parser ─────────────────────────────────────────────
+// Problema anterior: quando o provider retorna JSON plano (ex: erro 200 com body JSON)
+// ou resposta vazia, events ficava [] e o erro era opaco ("Last events: []").
+// Agora: loga o raw buffer para diagnóstico + tenta JSON fallback.
 
-async function parseSSE(response: Response): Promise<any[]> {
+async function parseSSE(response: Response, timeoutMs = 120_000): Promise<any[]> {
   const reader = response.body?.getReader()
   if (!reader) throw new Error('No response body')
 
@@ -11,20 +17,66 @@ async function parseSSE(response: Response): Promise<any[]> {
   let buffer = ''
   const events: any[] = []
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  const timer = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`SSE timeout after ${timeoutMs / 1000}s`)), timeoutMs)
+  )
 
-    buffer += decoder.decode(value)
-    const chunks = buffer.split('\n\n')
-    buffer = chunks.pop() || ''
+  const read = async () => {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
 
-    for (const chunk of chunks) {
-      for (const line of chunk.split('\n')) {
+      const chunks = buffer.split('\n\n')
+      buffer = chunks.pop() || ''
+
+      for (const chunk of chunks) {
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (raw === '[DONE]' || raw === ': keepalive' || !raw) continue
+          try { events.push(JSON.parse(raw)) } catch { }
+        }
+      }
+    }
+
+    // Process any remaining buffer after stream ends
+    if (buffer.trim()) {
+      for (const line of buffer.split('\n')) {
         if (!line.startsWith('data: ')) continue
         const raw = line.slice(6).trim()
-        if (raw === '[DONE]' || raw === ': keepalive' || !raw) continue
-        try { events.push(JSON.parse(raw)) } catch { }
+        if (raw && raw !== '[DONE]') {
+          try { events.push(JSON.parse(raw)) } catch { }
+        }
+      }
+    }
+  }
+
+  try {
+    await Promise.race([read(), timer])
+  } finally {
+    reader.cancel().catch(() => { })
+  }
+
+  // Se nenhum evento SSE foi parseado, tenta interpretar o buffer como JSON puro
+  // (alguns providers retornam JSON quando a geração falha, mesmo com sse:true)
+  if (events.length === 0) {
+    const rawTrim = buffer.trim()
+    if (rawTrim) {
+      log.warn(`SSE vazio, tentando JSON fallback. Raw: ${rawTrim.substring(0, 200)}`)
+      try {
+        const parsed = JSON.parse(rawTrim)
+        // Se tem campo de erro explícito, joga como erro para classificação correta
+        if (parsed?.error) {
+          throw new Error(`Provider error: ${JSON.stringify(parsed.error).substring(0, 200)}`)
+        }
+        events.push(parsed)
+      } catch (e: any) {
+        // Se não é JSON nem SSE, joga o raw como contexto do erro
+        if (!e.message.startsWith('Provider error:')) {
+          throw new Error(`SSE vazio e resposta não-JSON. Raw: ${rawTrim.substring(0, 300)}`)
+        }
+        throw e
       }
     }
   }
@@ -43,6 +95,14 @@ function extractUrl(events: any[]): string | null {
     if (e?.choices?.[0]?.message?.content) {
       const c = e.choices[0].message.content
       if (typeof c === 'string' && c.startsWith('http')) return c
+    }
+    // Formato alternativo: array de choices com image
+    if (Array.isArray(e?.choices)) {
+      for (const ch of e.choices) {
+        const img = ch?.message?.images?.[0]
+        if (img?.image_url?.url) return img.image_url.url
+        if (img?.url) return img.url
+      }
     }
   }
   return null
@@ -82,18 +142,29 @@ registerProvider({
 
     const res = await fetch(`${creds.baseUrl}/v1/images/generations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${creds.apiKey}`,
+        'Accept': 'text/event-stream',
+      },
       body: JSON.stringify(payload),
     })
+
     if (!res.ok) {
       const body = await res.text().catch(() => '')
       throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
     }
 
     const events = await parseSSE(res)
+
+    if (events.length === 0) {
+      throw new Error(`No SSE events received from air/${model} (empty response after stream)`)
+    }
+
     const rawUrl = extractUrl(events)
     if (!rawUrl) {
-      throw new Error(`No image URL in SSE response. Last events: ${JSON.stringify(events.slice(-2)).substring(0, 300)}`)
+      const sample = JSON.stringify(events.slice(-3)).substring(0, 400)
+      throw new Error(`No image URL in SSE response. Last events: ${sample}`)
     }
 
     const imageUrl = rawUrl.startsWith('http')
@@ -127,18 +198,29 @@ registerProvider({
 
     const res = await fetch(`${creds.baseUrl}/v1/images/generations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${creds.apiKey}`,
+        'Accept': 'text/event-stream',
+      },
       body: JSON.stringify(payload),
     })
+
     if (!res.ok) {
       const body = await res.text().catch(() => '')
       throw new Error(`HTTP ${res.status}: ${body.substring(0, 300)}`)
     }
 
-    const events = await parseSSE(res)
+    const events = await parseSSE(res, 180_000) // vídeos podem demorar mais
+
+    if (events.length === 0) {
+      throw new Error(`No SSE events received from air/${model} (empty response after stream)`)
+    }
+
     const rawUrl = extractUrl(events)
     if (!rawUrl) {
-      throw new Error(`No video URL in SSE response. Last events: ${JSON.stringify(events.slice(-2)).substring(0, 300)}`)
+      const sample = JSON.stringify(events.slice(-3)).substring(0, 400)
+      throw new Error(`No video URL in SSE response. Last events: ${sample}`)
     }
 
     const videoUrl = rawUrl.startsWith('http')

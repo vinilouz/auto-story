@@ -256,7 +256,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     } catch { toast.error("Failed") } finally { setLoading(false) }
   }
 
-  const extractEntities = async () => {
+  const extractAndGenerateEntities = async () => {
     setLoading(true)
     try {
       const res = await fetch("/api/generate/entities", {
@@ -273,6 +273,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       }))
       setEntities(ents)
       await save({ entities: ents })
+
+      if (ents.length > 0 && ents.some(e => e.description)) {
+        await generateEntities(ents, true)
+      }
     } catch { toast.error("Failed to extract entities") } finally { setLoading(false) }
   }
 
@@ -301,15 +305,16 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     } catch { toast.error("Failed") } finally { setLoading(false) }
   }
 
-  const generateEntities = async () => {
-    setLoading(true)
+  const generateEntities = async (entitiesList?: EntityAsset[], skipLoading = false) => {
+    if (!skipLoading) setLoading(true)
     try {
       let pid = project.projectId; if (!pid) { const s = await save(); pid = s?.id }
 
-      const missing = entities.filter(e => !e.imageUrl)
-      const targets = missing.length > 0 ? missing : entities
+      const source = entitiesList ?? entities
+      const missing = source.filter(e => !e.imageUrl)
+      const targets = missing.length > 0 ? missing : source
 
-      const processing = entities.map(e => {
+      const processing = source.map(e => {
         if (!targets.some(t => t.name === e.name)) return e
         return { ...e, status: 'generating' as const }
       })
@@ -344,7 +349,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       })
 
       setEntities(completed); await save({ entities: completed })
-    } catch { toast.error("Failed") } finally { setLoading(false) }
+    } catch { toast.error("Failed") } finally { if (!skipLoading) setLoading(false) }
   }
 
   const generateSingleImage = async (segIndex: number) => {
@@ -523,7 +528,14 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       case 'descriptions':
         return { fn: generateDescriptions, ok: segments.length > 0, label: hasPrompts ? "Regenerate" : "Generate Descriptions", busy: loading }
       case 'entities':
-        return { fn: extractEntities, ok: segments.length > 0, label: entities.length > 0 ? "Regenerate" : "Extract Entities", busy: loading }
+        return {
+          fn: extractAndGenerateEntities,
+          ok: segments.length > 0,
+          label: entities.length > 0
+            ? (entities.some(e => e.imageUrl) ? "Regenerate" : "Generate Images")
+            : "Extract & Generate Entities",
+          busy: loading,
+        }
       case 'images':
         return { fn: generateAllImages, ok: hasPrompts, label: hasImages ? "Regenerate" : "Generate Images", busy: imageStatuses.size > 0 }
       case 'audio':

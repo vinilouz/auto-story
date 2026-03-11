@@ -11,11 +11,11 @@ export interface ModelConfig {
  */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gpt-5.3-chat-latest' },
+    { provider: 'void', model: 'gpt-5.4' },
   ],
   generateImage: [
     { provider: 'void', model: 'gemini-3-pro-image-preview' },
-    { provider: 'air', model: 'nano-banana-2' },
+    // { provider: 'air', model: 'nano-banana-2' },
   ],
   generateAudio: [
     { provider: 'naga', model: 'eleven-multilingual-v2:free' },

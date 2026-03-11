@@ -4,10 +4,16 @@ registerProvider({
   name: 'void',
 
   async generateText(model, req: TextRequest, creds): Promise<TextResponse> {
+    const wantsJson = req.prompt.includes('Return ONLY a JSON') || req.prompt.includes('```json')
     const res = await fetch(`${creds.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${creds.apiKey}` },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: req.prompt }], stream: true }),
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: req.prompt }],
+        stream: true,
+        ...(wantsJson && { response_format: { type: 'json_object' } }),
+      }),
     })
     if (!res.ok) {
       const body = await res.text().catch(() => '')
