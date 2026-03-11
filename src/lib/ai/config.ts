@@ -11,7 +11,7 @@ export interface ModelConfig {
  */
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: 'void', model: 'gemini-2.5-flash' },
+    { provider: 'void', model: 'gpt-5.3-chat-latest' },
   ],
   generateImage: [
     { provider: 'void', model: 'gemini-3-pro-image-preview' },

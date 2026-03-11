@@ -24,9 +24,13 @@ export async function extractEntities(segments: Segment[]): Promise<ExtractedEnt
 
   let clean = raw.trim()
   const m =
-    clean.match(/```json\s*(\[[\s\S]*?\])\s*```/) ||
-    clean.match(/(\[[\s\S]*?\])/)
+    clean.match(/```json\s*(\[[\s\S]*\])\s*```/) ||
+    clean.match(/(\[[\s\S]*\])/)
   if (m) clean = m[1]
+
+  clean = clean
+    .replace(/"(\w+)\s+\[/g, '"$1": [')
+    .replace(/"(\w+)\s+\{/g, '"$1": {')
 
   let parsed: any
   try {

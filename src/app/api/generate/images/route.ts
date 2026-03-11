@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import "@/lib/ai/providers"
 import { executeBatch, BatchResult } from "@/lib/ai/queue"
 import { ImageRequest, ImageResponse } from "@/lib/ai/registry"
 import { StorageService } from "@/lib/storage"

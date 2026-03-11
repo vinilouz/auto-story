@@ -21,7 +21,7 @@ interface ElevenLabsResponse {
 function postMultipart(
   url: string,
   formData: FormData,
-  agent: InstanceType<typeof HttpsProxyAgent>
+  agent?: InstanceType<typeof HttpsProxyAgent>
 ): Promise<{ status: number; body: string }> {
   return new Promise(async (resolve, reject) => {
     const boundary = `----BunBoundary${Date.now()}${Math.random().toString(36).slice(2)}`;
@@ -99,25 +99,21 @@ export const transcribeWithElevenLabs = async (
   (form as any)._filePath = filePath;
   (form as any)._fileName = fileName;
 
-  console.log(`[ElevenLabs STT] Transcribing ${fileName} via anonymous proxy...`);
+  console.log(`[ElevenLabs STT] Transcribing ${fileName}...`);
+  const endpoint = "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1";
 
-  const result = await executeWithAnonymousProxy(async (agent) => {
-    const res = await postMultipart(
-      "https://api.elevenlabs.io/v1/speech-to-text?allow_unauthenticated=1",
-      form,
-      agent
-    );
+  let res = await postMultipart(endpoint, form).catch(() => null);
 
-    if (res.status !== 200) {
-      throw new Error(
-        `ElevenLabs STT failed: ${res.status} - ${res.body}`
-      );
-    }
+  if (!res || res.status !== 200) {
+    console.log(`[ElevenLabs STT] Direct failed, trying proxy...`);
+    res = await executeWithAnonymousProxy((agent) => postMultipart(endpoint, form, agent));
+  }
 
-    return res;
-  });
+  if (res.status !== 200) {
+    throw new Error(`ElevenLabs STT failed: ${res.status} - ${res.body}`);
+  }
 
-  const data: ElevenLabsResponse = JSON.parse(result.body);
+  const data: ElevenLabsResponse = JSON.parse(res.body);
 
   console.log(
     `[ElevenLabs STT] Got ${data.words.length} tokens, language: ${data.language_code}`
