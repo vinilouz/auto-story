@@ -27,7 +27,7 @@ interface FlattenedWord extends Word {
 }
 
 interface AlignmentContext {
-  segments: { id: string; text: string; imageUrl: string }[];
+  segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[];
   transcriptionResults: { words: Word[] }[];
   audioUrls: string[];
   audioDurations?: number[];
@@ -407,7 +407,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
   }
 
   private generateScenes(
-    segments: { id: string; imageUrl?: string; text?: string }[],
+    segments: { id: string; imageUrl?: string; videoClipUrl?: string; text?: string }[],
     timings: { start: number; end: number; confidence: number }[],
     fps: number,
     totalAudioDurationSeconds: number,
@@ -490,6 +490,7 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
       scenes.push({
         id: seg.id,
         imageUrl: seg.imageUrl || "",
+        videoClipUrl: seg.videoClipUrl,
         startFrame,
         durationInFrames: Math.round(finalDuration),
         effect,
@@ -609,6 +610,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       scenes.push({
         id: seg.id,
         imageUrl: seg.imageUrl || "",
+        videoClipUrl: seg.videoClipUrl,
         startFrame: 0,
         durationInFrames: allocatedFrames,
         effect,
@@ -826,7 +828,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
   }
 
   private generateScenes(
-    segments: { id: string; imageUrl?: string; text?: string }[],
+    segments: { id: string; imageUrl?: string; videoClipUrl?: string; text?: string }[],
     timings: { start: number; end: number }[],
     fps: number,
   ): VideoScene[] {
@@ -879,6 +881,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
       scenes.push({
         id: seg.id,
         imageUrl: seg.imageUrl || "",
+        videoClipUrl: seg.videoClipUrl,
         startFrame: 0,
         durationInFrames: Math.round(finalDuration),
         effect,
@@ -906,7 +909,7 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
 export type AlignmentMode = "image" | "video";
 
 export function alignVideoProps(
-  segments: { id: string; text: string; imageUrl: string }[],
+  segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[],
   transcriptionResults: { words: Word[] }[],
   audioUrls: string[],
   audioDurations: number[] = [],

@@ -52,14 +52,20 @@ export function nextSlotMs(provider: string): number {
   return w[0] + WINDOW_MS - now;
 }
 
-/** Blocking: waits until a slot is available, then acquires it. */
+const _rateLimitLoggedUntil = new Map<string, number>();
+
 export async function acquireSlot(provider: string): Promise<void> {
   while (true) {
     if (tryAcquireSlot(provider)) return;
     const waitMs = nextSlotMs(provider);
-    log.warn(
-      `${provider} — window full (${PROVIDER_RPM[provider]}rpm), waiting ${Math.ceil(waitMs / 1000)}s`,
-    );
+    const now = Date.now();
+    const loggedUntil = _rateLimitLoggedUntil.get(provider) ?? 0;
+    if (now >= loggedUntil) {
+      log.warn(
+        `${provider} — window full (${PROVIDER_RPM[provider]}rpm), waiting ${Math.ceil(waitMs / 1000)}s`,
+      );
+      _rateLimitLoggedUntil.set(provider, now + waitMs);
+    }
     await new Promise<void>((r) => setTimeout(r, waitMs + 50));
   }
 }

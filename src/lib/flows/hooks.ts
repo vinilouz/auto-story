@@ -326,7 +326,7 @@ export function useVideo() {
   } | null>(null);
 
   const generate = async (
-    segments: { id: string; text: string; imageUrl: string }[],
+    segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[],
     audioBatches: AudioBatch[],
     transcriptionResults: TranscriptionResult[],
     alignmentMode: AlignmentMode = "video",

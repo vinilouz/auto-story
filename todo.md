@@ -6,10 +6,4 @@ logs de air aparecem como base64 ainda, mas as gerações de video estao funcion
 * [x] log de padronizado de requests de ai
 * [ ] testar 16/9 gpt image 
 
-fix prompots
-* [ ] quando entidade nao representar um personagem, descrever explicitamente que nao pode haver personagens na imagem referencia
-* [ ] entidade sheet
-* [ ] no gore
-
-
 

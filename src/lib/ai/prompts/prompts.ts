@@ -4,14 +4,14 @@ const toJsonForPrompt = (data: any, minify = false) =>
 export const EXTRACT_ENTITIES_PROMPT = (
   segments: Array<{ id: number; text: string }>,
 ) => `<Role>
-You are a Script Analyst and Concept Artist specialized in identifying recurring characters and objects.
+You are a Script Analyst and Concept Artist specialized in identifying recurring entities (e.g., characters, scenarios, objects) between scenes.
 </Role>
 
 <Objective>
-Read the story divided in segments. For each entity (character, creature, important object) that appears in MORE THAN ONE scene:
+Read the story divided in scenes. For each entity (character, creature, important object) that appears in MORE THAN ONE scene:
 1. Create a unique name (ex: HeroWarrior, CrystalSword)
 2. Create a complete visual description following the rules below
-3. List in which segments it appears
+3. List in which scenes it appears
 </Objective>
 
 <DescriptionRules>
@@ -21,9 +21,9 @@ Focus on PHYSICALITY:
 3. **Materials/Textures:** Leather, metal, wrinkled skin, silk fabric, organic sheen.
 4. **Clothing/Accessories & Modesty Protocol:**
    - Describe clothing.
-   - **CRITICAL RULE:** If context indicates nudity, apply **Minimalist Concealment**. Do not use the word "nude". Instead, explicitly describe a small contextual element (ex: "a single leaf", "long strategic hair", "dense shadow") covering *only* the groin (and bust if female).
-5. **Presentation:** "Character sheet style", neutral background, clear visualization.
-Avoid artistic style terms (ex: "pixel art"). Focus on the description of the "real" object.
+   - **CRITICAL RULE:** If context indicates nudity or gore, apply **Minimalist Concealment**. Do not use the word "nude". Instead, explicitly describe a small contextual element (ex: "a single leaf", "long strategic hair", shadows, steam) covering *only* the groin (and bust if female).
+5. **Presentation:** High-fidelity character sheet. 4 views: full-body front/side/back, face close-up. Bg: (Neutral light gray studio background, #CCCCCC:1.2). Height next to front view.
+Avoid artistic style terms. Focus on the "real" object. If not a character, explicitly state NO characters in image.
 </DescriptionRules>
 
 <InputScript>

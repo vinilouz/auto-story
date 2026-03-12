@@ -16,25 +16,7 @@ export interface VideoClipRequest {
   duration?: number;
 }
 
-async function resolveImage(url?: string): Promise<string | undefined> {
-  if (!url) return undefined;
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("data:")
-  )
-    return url;
-  if (url.startsWith("/")) {
-    try {
-      const buf = await fsp.readFile(path.join(process.cwd(), "public", url));
-      const ext = path.extname(url).replace(".", "");
-      return `data:image/${ext === "jpg" ? "jpeg" : ext};base64,${buf.toString("base64")}`;
-    } catch {
-      return undefined;
-    }
-  }
-  return url;
-}
+
 
 /**
  * Salva o vídeo no disco com nome baseado no índice do segmento.
@@ -68,10 +50,9 @@ export async function generateAndSaveVideoClip(
   projectName: string,
   segmentIndex = 0,
 ): Promise<string> {
-  const referenceImage = await resolveImage(req.referenceImage);
   const { videoUrl } = await execute("generateVideo", {
     prompt: req.prompt,
-    referenceImage,
+    referenceImage: req.referenceImage,
     duration: req.duration,
   });
 
@@ -112,14 +93,11 @@ export async function generateAndSaveVideoClipBatch(
   projectName: string,
   onResult?: (result: BatchClipResult) => void,
 ): Promise<BatchClipResult[]> {
-  // Resolve imagens de referência antes de enviar para a queue
-  const resolved = await Promise.all(
-    requests.map(async (r) => ({
-      prompt: r.prompt,
-      referenceImage: await resolveImage(r.referenceImage),
-      duration: r.duration,
-    })),
-  );
+  const resolved = requests.map((r) => ({
+    prompt: r.prompt,
+    referenceImage: r.referenceImage,
+    duration: r.duration,
+  }));
 
   const dir = getProjectDirName(projectId, projectName);
   const pubDir = path.join(process.cwd(), "public", "projects", dir, "clips");

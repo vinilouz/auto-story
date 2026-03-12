@@ -900,7 +900,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         .map((s, i) => ({
           id: `seg-${i}`,
           text: s.text,
-          imageUrl: s.videoClipUrl || s.imagePath || "",
+          imageUrl: s.imagePath || "",
+          videoClipUrl: s.videoClipUrl || undefined,
         }));
       const alignmentMode =
         mode === "video-story" ? ("video" as const) : ("image" as const);
@@ -919,19 +920,8 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
   const renderVideoAction = async () => {
     if (!video.videoProps) return;
     try {
-      // For video-story, map videoClipUrl into the scenes
-      const props =
-        mode === "video-story"
-          ? {
-              ...video.videoProps,
-              scenes: video.videoProps.scenes.map((scene, i) => ({
-                ...scene,
-                videoClipUrl: segments[i]?.videoClipUrl || undefined,
-              })),
-            }
-          : video.videoProps;
       await video.render(
-        props,
+        video.videoProps,
         captionStyle,
         project.projectId || undefined,
         title,

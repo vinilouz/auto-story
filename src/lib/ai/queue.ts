@@ -65,9 +65,12 @@ function classifyError(msg: string): BatchResult<any>["errorKind"] {
     m.includes("400") ||
     m.includes("401") ||
     m.includes("403") ||
+    m.includes("413") ||
     m.includes("422") ||
     m.includes("bad request") ||
-    m.includes("invalid")
+    m.includes("invalid") ||
+    m.includes("payload too large") ||
+    m.includes("request entity too large")
   )
     return "payload";
   return "unknown";

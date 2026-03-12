@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("anondrop");
@@ -42,10 +43,25 @@ function extractAnonDropUrl(text: string, filename: string): string | null {
   return extractedUrl;
 }
 
-/**
- * Uploads a Buffer directly to AnonDrop and returns the public URL.
- * More efficient than converting local files back-and-forth from base64.
- */
+const ANONDROP_MAX_BYTES = 9 * 1024 * 1024;
+
+async function compressForUpload(
+  buffer: Buffer,
+  mimeType: string,
+  filename: string,
+): Promise<{ buffer: Buffer; mimeType: string; filename: string }> {
+  if (buffer.length <= ANONDROP_MAX_BYTES) {
+    return { buffer, mimeType, filename };
+  }
+  const name = filename.replace(/\.[^.]+$/, ".jpg");
+  let compressed = buffer;
+  for (const quality of [80, 60, 40]) {
+    compressed = await sharp(buffer).jpeg({ quality }).toBuffer();
+    if (compressed.length <= ANONDROP_MAX_BYTES) break;
+  }
+  return { buffer: compressed, mimeType: "image/jpeg", filename: name };
+}
+
 export async function uploadBufferToAnonDrop(
   buffer: Buffer,
   mimeType: string,
@@ -54,8 +70,14 @@ export async function uploadBufferToAnonDrop(
   const key = process.env.ANONDROP_KEY;
   if (!key) throw new Error("ANONDROP_KEY not set");
 
+  const upload = await compressForUpload(buffer, mimeType, filename);
+
   const form = new FormData();
-  form.append("file", new Blob([buffer as any], { type: mimeType }), filename);
+  form.append(
+    "file",
+    new Blob([upload.buffer as any], { type: upload.mimeType }),
+    upload.filename,
+  );
 
   const res = await fetch(`${ANONDROP_BASE}/upload?key=${key}`, {
     method: "POST",
@@ -65,19 +87,21 @@ export async function uploadBufferToAnonDrop(
   const responseText = await res.text().catch(() => "");
 
   if (!res.ok) {
-    throw new Error(
-      `AnonDrop upload failed: HTTP ${res.status} — ${responseText.substring(0, 200)}`,
-    );
+    const detail = responseText.trimStart().startsWith("<")
+      ? "(HTML error page)"
+      : responseText.substring(0, 120);
+    throw new Error(`AnonDrop upload failed: HTTP ${res.status} — ${detail}`);
   }
-  const url = extractAnonDropUrl(responseText, filename);
+
+  const url = extractAnonDropUrl(responseText, upload.filename);
   if (!url) {
     throw new Error(
       `AnonDrop: não foi possível extrair URL da resposta: "${responseText.substring(0, 200)}"`,
     );
   }
-  // Single, clean log line with size, filename, and final URL
-  const sizeKb = Math.round(buffer.length / 1024);
-  log.success(`AnonDrop: Uploaded ${filename} (${sizeKb}kb) -> ${url}`);
+
+  const sizeKb = Math.round(upload.buffer.length / 1024);
+  log.success(`AnonDrop: Uploaded ${upload.filename} (${sizeKb}kb) -> ${url}`);
 
   return url;
 }
