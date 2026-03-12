@@ -20,7 +20,7 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   ],
   generateImage: [
     { provider: "void", model: "gemini-3.1-flash-image-preview" },
-    // { provider: 'air', model: 'nano-banana-2' },
+    { provider: 'air', model: 'nano-banana-2' },
   ],
   generateAudio: [{ provider: "naga", model: "eleven-multilingual-v2:free" }],
   generateVideo: [
@@ -34,8 +34,8 @@ export const ACTIONS: Record<ActionType, ModelConfig[]> = {
  * Usado pelo rate-limiter — controla o ritmo de disparo.
  */
 export const PROVIDER_RPM: Record<string, number> = {
-  void: 30,
-  air: 20,
+  void: 20,
+  air: 10,
   naga: 10,
 };
 
@@ -61,7 +61,7 @@ export const PROVIDER_RPM: Record<string, number> = {
  */
 export const PROVIDER_CONCURRENCY: Record<string, number> = {
   void: 30,
-  air: 20,
+  air: 10,
   naga: 10,
 };
 

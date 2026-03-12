@@ -34,9 +34,28 @@ registerProvider({
 
   async generateImage(model, req: ImageRequest, creds): Promise<ImageResponse> {
     const content: any[] = [{ type: "text", text: req.prompt }];
-    req.referenceImages?.forEach((url) =>
-      content.push({ type: "image_url", image_url: { url } }),
-    );
+    
+    if (req.referenceImages?.length) {
+      for (const urlOrPath of req.referenceImages) {
+        if (urlOrPath.startsWith("http")) {
+           content.push({ type: "image_url", image_url: { url: urlOrPath } });
+        } else if (urlOrPath.startsWith("/")) {
+            // Read local file from absolute path in public folder and convert to base64
+            const filePath = require("path").join(process.cwd(), "public", urlOrPath);
+            const ext = require("path").extname(filePath).replace(".", "");
+            const mime = ext === "jpg" ? "image/jpeg" : `image/${ext || "png"}`;
+            try {
+              const buf = require("fs").readFileSync(filePath);
+              const b64 = `data:${mime};base64,${buf.toString("base64")}`;
+              content.push({ type: "image_url", image_url: { url: b64 } });
+            } catch (e) {
+              require("@/lib/logger").createLogger("void").warn(`Failed to buffer ${filePath}:`, e);
+            }
+        } else if (urlOrPath.startsWith("data:")) {
+           content.push({ type: "image_url", image_url: { url: urlOrPath } });
+        }
+      }
+    }
 
     const payload: any = {
       model,

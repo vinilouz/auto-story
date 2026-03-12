@@ -522,6 +522,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                   imagePromptStyle,
                 ),
                 imageConfig: { aspect_ratio: "16:9" },
+                entityName: e.name,
               }
             : null,
         )
@@ -628,6 +629,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         imageConfig: { aspect_ratio: "16:9" },
         projectId: pid,
         projectName: title,
+        entityName: e.name,
       };
 
       const res = await fetch("/api/generate/images", {
@@ -679,13 +681,23 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         index: segIndex,
       };
       const matches = prompt.match(/<<([^>]+)>>/g);
-      if (matches && entities.length) {
-        const refs = entities
-          .filter((e) => matches.some((m) => m.includes(e.name)) && e.imageUrl)
+      let refs: string[] = [];
+      if (entities.length > 0) {
+        refs = entities
+          .filter((e) => {
+            const hasImage = !!e.imageUrl;
+            const isMatch = matches?.some((m) => m.includes(e.name));
+            const inSegment = e.segment?.includes(segIndex + 1);
+            return hasImage && (isMatch || inSegment);
+          })
           .map((e) => e.imageUrl!);
-        if (refs.length) payload.referenceImages = refs;
-      } else if (mode === "commentator" && commentator?.appearance?.imageUrl)
+      }
+      
+      if (refs.length > 0) {
+        payload.referenceImages = refs;
+      } else if (mode === "commentator" && commentator?.appearance?.imageUrl) {
         payload.referenceImage = commentator.appearance.imageUrl;
+      }
       const res = await fetch("/api/generate/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -727,7 +739,15 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     }
 
     const isRegen = segments.every((s) => s.imagePath);
-    const indices = segments
+    let currentSegments = segments;
+
+    if (isRegen) {
+      currentSegments = segments.map((s) => ({ ...s, imagePath: undefined }));
+      setSegments(currentSegments);
+      await save({ segments: currentSegments });
+    }
+
+    const indices = currentSegments
       .map((seg, i) =>
         !seg.imagePrompt || (!isRegen && seg.imagePath) ? -1 : i,
       )
@@ -741,7 +761,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     setImageStatuses(statusMap);
 
     const requests = indices.map((segIndex) => {
-      const seg = segments[segIndex];
+      const seg = currentSegments[segIndex];
       const prompt =
         mode === "commentator" && commentator?.appearance?.imageUrl
           ? COMMENTATOR_IMAGE_GENERATION_PROMPT(seg.imagePrompt!)
@@ -753,11 +773,20 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         index: segIndex,
       };
       const matches = prompt.match(/<<([^>]+)>>/g);
-      if (matches && entities.length) {
-        const refs = entities
-          .filter((e) => matches.some((m) => m.includes(e.name)) && e.imageUrl)
+      let refs: string[] = [];
+      if (entities.length > 0) {
+        refs = entities
+          .filter((e) => {
+            const hasImage = !!e.imageUrl;
+            const isMatch = matches?.some((m) => m.includes(e.name));
+            const inSegment = e.segment?.includes(segIndex + 1);
+            return hasImage && (isMatch || inSegment);
+          })
           .map((e) => e.imageUrl!);
-        if (refs.length) payload.referenceImages = refs;
+      }
+      
+      if (refs.length > 0) {
+        payload.referenceImages = refs;
       } else if (mode === "commentator" && commentator?.appearance?.imageUrl) {
         payload.referenceImage = commentator.appearance.imageUrl;
       }

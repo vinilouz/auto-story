@@ -55,7 +55,7 @@ export async function uploadBufferToAnonDrop(
   if (!key) throw new Error("ANONDROP_KEY not set");
 
   const form = new FormData();
-  form.append("file", new Blob([buffer], { type: mimeType }), filename);
+  form.append("file", new Blob([buffer as any], { type: mimeType }), filename);
 
   const res = await fetch(`${ANONDROP_BASE}/upload?key=${key}`, {
     method: "POST",

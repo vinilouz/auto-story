@@ -124,6 +124,7 @@ async function handleBatch(
               }
 
               const segmentIndex: number | undefined = requests[r.id]?.index;
+              const entityName: string | undefined = requests[r.id]?.entityName;
               const imgRes = r.data as ImageResponse;
               let imageUrl = imgRes.imageUrl;
 
@@ -137,10 +138,14 @@ async function handleBatch(
                 );
                 if (m) {
                   const ext = m[1] === "jpeg" ? "jpg" : m[1];
-                  const fileName =
-                    segmentIndex !== undefined
-                      ? `img-${segmentIndex + 1}.${ext}`
-                      : `img-${Date.now()}.${ext}`;
+                  let fileName = `img-${Date.now()}.${ext}`;
+
+                  if (entityName !== undefined) {
+                    const cleanName = entityName.replace(/[^a-zA-Z0-9_-]/g, "");
+                    fileName = `entity-${cleanName}.${ext}`;
+                  } else if (segmentIndex !== undefined) {
+                    fileName = `img-${segmentIndex + 1}.${ext}`;
+                  }
 
                   const local = await StorageService.saveBase64Image(
                     projectId,
