@@ -518,18 +518,14 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 // --- Main Export ---
 
 export class ContinuousAlignmentStrategy implements AlignmentStrategy {
-  private static EFFECTS: SceneEffect[] = [
-    "zoom-in",
-    "zoom-out",
-    "pan-left",
-    "pan-right",
-  ];
-  private static TRANSITIONS: VideoTransition["type"][] = [
+  // 92% speed → each clip yields ~(slowedFrames - naturalFrames) transition frames
+  private static readonly PLAYBACK_RATE = 0.92;
+
+  private static readonly TRANSITIONS: VideoTransition["type"][] = [
     "fade",
     "wipe",
     "slide",
   ];
-  private static TRANSITION_DURATION = 30; // 30 frames
 
   align(
     context: AlignmentContext & { videoDurations?: number[] },
@@ -550,7 +546,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       );
     }
 
-    // ── 1. Audio tracks — duration strictly from audioDurations[] ──────────────
+    // ── 1. Audio tracks ───────────────────────────────────────────────────────
     let totalAudioDurationSeconds = 0;
     const audioTracks: AudioTrackConfig[] = [];
 
@@ -558,63 +554,84 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       const durationSeconds = audioDurations[batchIndex];
       if (durationSeconds == null || durationSeconds <= 0) {
         throw new Error(
-          `[ContinuousAligner] audioDurations[${batchIndex}] is missing or zero. ` +
-          `Fetch real audio duration before calling alignVideoProps.`,
+          `[ContinuousAligner] audioDurations[${batchIndex}] is missing or zero.`,
         );
       }
-
       const durationFrames = Math.ceil(durationSeconds * fps);
-
       audioTracks.push({
         src: audioUrls[batchIndex],
         startFrame: Math.round(totalAudioDurationSeconds * fps),
         durationInFrames: durationFrames,
       });
-
       totalAudioDurationSeconds += durationSeconds;
     });
 
-    // ── 2. Scenes — duration strictly from videoDurations[] ────────────────────
-    // No minimum enforcement, no transition padding — fullvideo uses raw Sequences.
-    let totalVideoSeconds = 0;
+    // ── 2. Scenes with playbackRate-derived transitions ───────────────────────
     const scenes: VideoScene[] = [];
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
-      const durationSeconds = videoDurations[i];
+      const realDurationSeconds = videoDurations[i];
 
-      if (durationSeconds == null || durationSeconds <= 0) {
+      if (realDurationSeconds == null || realDurationSeconds <= 0) {
         throw new Error(
-          `[ContinuousAligner] videoDurations[${i}] is missing or zero for segment "${seg.id}". ` +
-          `Fetch real video clip duration before calling alignVideoProps.`,
+          `[ContinuousAligner] videoDurations[${i}] is missing or zero for "${seg.id}".`,
         );
       }
 
-      const durationInFrames = Math.round(durationSeconds * fps);
-      totalVideoSeconds += durationSeconds;
+      const slowedDurationSeconds =
+        realDurationSeconds / ContinuousAlignmentStrategy.PLAYBACK_RATE;
+
+      const naturalFrames = Math.round(realDurationSeconds * fps);
+      const slowedFrames = Math.round(slowedDurationSeconds * fps);
+      const transitionFrames = slowedFrames - naturalFrames;
+
+      const isLast = i === segments.length - 1;
+      const transitionType =
+        ContinuousAlignmentStrategy.TRANSITIONS[
+        i % ContinuousAlignmentStrategy.TRANSITIONS.length
+        ];
 
       scenes.push({
         id: seg.id,
         imageUrl: seg.imageUrl,
         videoClipUrl: seg.videoClipUrl,
-        startFrame: 0,           // RemotionVideoFull computes cursor independently
-        durationInFrames,
+        startFrame: 0,
+        durationInFrames: slowedFrames,
         effect: "static",
-        transition: undefined,   // fullvideo: no transitions
+        // playbackRate stored on scene so RemotionVideoFull can forward it
+        // to OffthreadVideo + Audio (both must use the same rate)
+        playbackRate: ContinuousAlignmentStrategy.PLAYBACK_RATE,
+        transition: !isLast
+          ? { type: transitionType, durationInFrames: transitionFrames }
+          : undefined,
         textFragment: seg.text,
         debug: {
-          startSeconds: totalVideoSeconds - durationSeconds,
-          endSeconds: totalVideoSeconds,
-          durationSeconds,
+          startSeconds: 0,
+          endSeconds: slowedDurationSeconds,
+          durationSeconds: slowedDurationSeconds,
+          naturalDurationSeconds: realDurationSeconds,
+          playbackRate: ContinuousAlignmentStrategy.PLAYBACK_RATE,
+          transitionFrames,
         } as any,
       });
     }
 
-    const totalVideoFrames = Math.round(totalVideoSeconds * fps);
+    // ── 3. Total duration ─────────────────────────────────────────────────────
+    // TransitionSeries subtracts (n-1)×transitionFrames from the total.
+    // Each clip's transitionFrames may differ slightly (rounding), so we sum
+    // exactly what TransitionSeries will compute.
+    const totalTransitionFrames = scenes
+      .filter((s) => s.transition)
+      .reduce((acc, s) => acc + s.transition!.durationInFrames, 0);
+    const totalVideoFrames =
+      scenes.reduce((acc, s) => acc + s.durationInFrames, 0) -
+      totalTransitionFrames;
+
     const totalAudioFrames = Math.ceil(totalAudioDurationSeconds * fps);
     const totalFrames = Math.max(totalVideoFrames, totalAudioFrames);
 
-    // ── 3. Captions — strictly from audioTracks (no || 0 anywhere) ─────────────
+    // ── 4. Captions ───────────────────────────────────────────────────────────
     let globalTimeOffset = 0;
     const captions: Caption[] = [];
 
@@ -637,8 +654,9 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     console.log("[ContinuousAligner] Complete.", {
       scenes: scenes.length,
       captions: captions.length,
-      videoFrames: totalVideoFrames,
-      audioFrames: totalAudioFrames,
+      playbackRate: ContinuousAlignmentStrategy.PLAYBACK_RATE,
+      totalVideoFrames,
+      totalAudioFrames,
       totalFrames,
       fps,
     });

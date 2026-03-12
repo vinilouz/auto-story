@@ -1,6 +1,10 @@
-import { Audio, Video } from "@remotion/media";
+import { Audio } from "@remotion/media";
+import { linearTiming, TransitionSeries } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
+import { wipe } from "@remotion/transitions/wipe";
 import React from "react";
-import { AbsoluteFill, Sequence } from "remotion";
+import { AbsoluteFill, Sequence, OffthreadVideo } from "remotion";
 import type { RemotionVideoProps } from "@/lib/video/types";
 import { CaptionsLayer } from "./CaptionsLayer";
 
@@ -14,50 +18,80 @@ import { CaptionsLayer } from "./CaptionsLayer";
  *
  * Each layer is self-contained and does NOT depend on the others.
  */
+const PRESENTATIONS: Record<string, ReturnType<typeof fade>> = {
+  fade: fade(),
+  wipe: wipe(),
+  slide: slide(),
+};
+
 export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
   scenes,
   audioTracks,
   captions,
   captionStyle,
-  videoVolume = 0.2, // default 20% as required
+  videoVolume = 0.2,
+  transitionOverride,
 }) => {
-  // ── 1. Compute cumulative start frames for raw concatenation ──────────────
-  // No TransitionSeries — each clip plays in full, back-to-back.
-  let cursor = 0;
-  const videoSequences = scenes.map((scene) => {
-    const startFrame = cursor;
-    cursor += scene.durationInFrames;
-    return { scene, startFrame };
-  });
-
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
 
-      {/* ── Layer 1: Videos (raw concatenation) ──────────────────────────── */}
-      {videoSequences.map(({ scene, startFrame }) => (
-        <Sequence
-          key={`video-${scene.id}`}
-          from={startFrame}
-          durationInFrames={scene.durationInFrames}
-          layout="none"
-        >
-          <AbsoluteFill style={{ overflow: "hidden" }}>
-            <Video
-              src={scene.videoClipUrl || scene.imageUrl}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              volume={videoVolume}
-            />
-          </AbsoluteFill>
-        </Sequence>
-      ))}
+      {/* ── Layer 1: Video visuals with transitions ────────────────────────── */}
+      <TransitionSeries>
+        {scenes.map((scene) => (
+          <React.Fragment key={scene.id}>
+            <TransitionSeries.Sequence durationInFrames={scene.durationInFrames}>
+              <AbsoluteFill style={{ overflow: "hidden" }}>
+                {/* OffthreadVideo: canvas-based, consumes NO audio tag */}
+                <OffthreadVideo
+                  src={scene.videoClipUrl ?? scene.imageUrl}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  playbackRate={scene.playbackRate ?? 1}
+                  muted
+                />
+              </AbsoluteFill>
 
-      {/* ── Layer 2: Captions (independent) ──────────────────────────────── */}
-      <CaptionsLayer captions={captions || []} style={captionStyle} />
+              {/* Clip ambient audio — isolated from narration pool.
+                  videoVolume===0 → skip entirely (no audio tag allocated). */}
+              {videoVolume > 0 && (
+                <Audio
+                  src={scene.videoClipUrl ?? scene.imageUrl}
+                  volume={videoVolume}
+                  playbackRate={scene.playbackRate ?? 1}
+                />
+              )}
+            </TransitionSeries.Sequence>
 
-      {/* ── Layer 3: Audio tracks (independent) ──────────────────────────── */}
+            {/* Transition to next clip — present only when scene defines one */}
+            {scene.transition &&
+              scene.transition.type !== "none" &&
+              transitionOverride !== "none" && (() => {
+                const type = transitionOverride === "random" || !transitionOverride
+                  ? scene.transition.type
+                  : transitionOverride;
+                const presentation = PRESENTATIONS[type];
+                if (!presentation) return null;
+                return (
+                  <TransitionSeries.Transition
+                    timing={linearTiming({
+                      durationInFrames: scene.transition.durationInFrames,
+                    })}
+                    presentation={presentation}
+                  />
+                );
+              })()}
+          </React.Fragment>
+        ))}
+      </TransitionSeries>
+
+      {/* ── Layer 2: Captions (independent) ────────────────────────────────── */}
+      <CaptionsLayer captions={captions ?? []} style={captionStyle} />
+
+      {/* ── Layer 3: Narration audio ──────────────────────────────────────────
+          Outside TransitionSeries entirely — clip lifecycle events cannot
+          glitch these tracks. */}
       {audioTracks.map((track, i) => (
         <Sequence
-          key={`audio-${i}`}
+          key={`narration-${i}`}
           from={track.startFrame}
           durationInFrames={track.durationInFrames}
           layout="none"

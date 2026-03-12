@@ -49,6 +49,23 @@ export interface CaptionStyle {
   fontWeight?: number;
 }
 
+export interface VideoScene {
+  id: string;
+  imageUrl: string;
+  videoClipUrl?: string;
+  startFrame: number;
+  durationInFrames: number;
+  effect: SceneEffect;
+  playbackRate?: number;
+  transition?: VideoTransition;
+  textFragment?: string;
+  debug?: {
+    startSeconds: number;
+    endSeconds: number;
+    durationSeconds: number;
+  };
+}
+
 export interface RemotionVideoProps {
   fps: number;
   durationInFrames: number;
