@@ -66,6 +66,9 @@ const normalizeProps = (props: any, origin: string): any => ({
     props.scenes?.map((s: any) => ({
       ...s,
       imageUrl: toAbsoluteUrl(s.imageUrl, origin),
+      videoClipUrl: s.videoClipUrl
+        ? toAbsoluteUrl(s.videoClipUrl, origin)
+        : undefined,
     })) ?? [],
   audioTracks:
     props.audioTracks?.map((t: any) => ({
@@ -73,6 +76,7 @@ const normalizeProps = (props: any, origin: string): any => ({
       src: toAbsoluteUrl(t.src, origin),
     })) ?? [],
 });
+
 
 const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
 
@@ -204,7 +208,7 @@ export async function POST(req: NextRequest) {
         } catch (error: any) {
           log.error("Render failed", error);
           if (tempOutput && fs.existsSync(tempOutput))
-            fs.promises.unlink(tempOutput).catch(() => {});
+            fs.promises.unlink(tempOutput).catch(() => { });
           sendEvent({ type: "error", error: error.message || "Render failed" });
           controller.close();
         }
@@ -220,7 +224,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     log.error("Render route error", error);
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
+    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { });
     return NextResponse.json(
       { error: error.message || "Failed to render" },
       { status: 500 },

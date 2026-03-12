@@ -58,4 +58,6 @@ export interface RemotionVideoProps {
   audioTracks: AudioTrackConfig[];
   captions: Caption[];
   captionStyle?: CaptionStyle;
+  videoVolume?: number;
+  transitionOverride?: string;
 }

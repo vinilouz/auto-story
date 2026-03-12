@@ -45,8 +45,8 @@ export function useAudio() {
         const exists = prev.find((b) => b.index === index);
         return exists
           ? prev.map((b) =>
-              b.index === index ? { ...b, status: "generating" as const } : b,
-            )
+            b.index === index ? { ...b, status: "generating" as const } : b,
+          )
           : [...prev, { index, text: "", status: "generating" as const }];
       });
       try {
@@ -334,13 +334,13 @@ export function useVideo() {
     const completed = audioBatches.filter(
       (b) => b.status === "completed" && b.url,
     );
-    const urls = completed.map((b) => b.url!);
+    const audioUrls = completed.map((b) => b.url!);
     const tMap = new Map(
       transcriptionResults
         .filter((r) => r.status === "completed" && r.data)
         .map((r) => [r.url, r.data]),
     );
-    const validUrls = urls.filter((u) => tMap.has(u));
+    const validUrls = audioUrls.filter((u) => tMap.has(u));
     if (!validUrls.length) throw new Error("No valid transcriptions");
 
     setIsGenerating(true);
@@ -349,7 +349,7 @@ export function useVideo() {
         const raw = tMap.get(u)!;
         const words: TranscriptionWord[] = Array.isArray(raw)
           ? raw
-          : (raw as any).words || [];
+          : (raw as any).words;
         return {
           words: words.map((w) => ({
             text: w.text,
@@ -359,20 +359,52 @@ export function useVideo() {
         };
       });
 
-      const durations = await Promise.all(
+      // ── Measure real audio durations (HTMLAudioElement) ──────────────────────
+      const audioDurations = await Promise.all(
         validUrls.map(
           (url) =>
-            new Promise<number>((resolve) => {
-              const t = setTimeout(() => resolve(0), 5000);
-              const a = new Audio(url);
-              a.onloadedmetadata = () => {
-                clearTimeout(t);
-                resolve(a.duration);
+            new Promise<number>((resolve, reject) => {
+              const timeout = setTimeout(
+                () => reject(new Error(`Audio metadata timeout: ${url}`)),
+                8000,
+              );
+              const el = new Audio(url);
+              el.onloadedmetadata = () => { clearTimeout(timeout); resolve(el.duration); };
+              el.onerror = () => { clearTimeout(timeout); reject(new Error(`Audio load error: ${url}`)); };
+            }),
+        ),
+      );
+
+      // ── Measure real video clip durations (HTMLVideoElement) ─────────────────
+      // Every segment must have a measurable videoClipUrl when mode === "video".
+      // If videoClipUrl is absent for a segment, reject early — do not silently default.
+      const videoDurations = await Promise.all(
+        segments.map(
+          (seg, i) =>
+            new Promise<number>((resolve, reject) => {
+              if (!seg.videoClipUrl) {
+                if (alignmentMode === "video") {
+                  return reject(
+                    new Error(
+                      `[generate] Segment ${i} ("${seg.id}") has no videoClipUrl but alignmentMode is "video".`,
+                    ),
+                  );
+                }
+                // image mode: video duration unused by PrecisionAlignmentStrategy
+                return resolve(0);
+              }
+              const timeout = setTimeout(
+                () => reject(new Error(`Video metadata timeout: ${seg.videoClipUrl}`)),
+                8000,
+              );
+              const el = document.createElement("video");
+              el.preload = "metadata";
+              el.onloadedmetadata = () => { clearTimeout(timeout); resolve(el.duration); };
+              el.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error(`Video load error: ${seg.videoClipUrl}`));
               };
-              a.onerror = () => {
-                clearTimeout(t);
-                resolve(0);
-              };
+              el.src = seg.videoClipUrl;
             }),
         ),
       );
@@ -381,12 +413,13 @@ export function useVideo() {
         segments,
         transcriptions,
         validUrls,
-        durations,
-        [],
+        audioDurations,
+        videoDurations,
         undefined,
         alignmentMode,
       );
-      if (props.durationInFrames <= 0) throw new Error("Zero duration");
+
+      if (props.durationInFrames <= 0) throw new Error("Zero duration after alignment");
       setVideoProps(props);
       return props;
     } finally {
@@ -502,7 +535,7 @@ export function useProject() {
         throw e;
       });
 
-    saveQueue.current = task.catch(() => {});
+    saveQueue.current = task.catch(() => { });
     return task;
   };
 

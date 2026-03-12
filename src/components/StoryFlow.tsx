@@ -333,12 +333,12 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
     text:
       mode === "commentator"
         ? segments
-            .filter((s) => s.type)
-            .map(
-              (s) =>
-                `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`,
-            )
-            .join("\n")
+          .filter((s) => s.type)
+          .map(
+            (s) =>
+              `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`,
+          )
+          .join("\n")
         : scriptText,
     voice: audioVoice,
     systemPrompt: audioSystemPrompt,
@@ -449,13 +449,13 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
       const segsForApi =
         mode === "commentator"
           ? segments.map((s) =>
-              s.type === "comment"
-                ? {
-                    ...s,
-                    text: `[Commentary by ${commentator?.name}]: ${s.text}`,
-                  }
-                : s,
-            )
+            s.type === "comment"
+              ? {
+                ...s,
+                text: `[Commentary by ${commentator?.name}]: ${s.text}`,
+              }
+              : s,
+          )
           : segments;
       const entitiesForApi = entities.map((e) => ({
         type: e.name,
@@ -516,14 +516,14 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
         .map((e) =>
           targets.some((t) => t.name === e.name) && e.description
             ? {
-                imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(
-                  e.description,
-                  undefined,
-                  imagePromptStyle,
-                ),
-                imageConfig: { aspect_ratio: "16:9" },
-                entityName: e.name,
-              }
+              imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(
+                e.description,
+                undefined,
+                imagePromptStyle,
+              ),
+              imageConfig: { aspect_ratio: "16:9" },
+              entityName: e.name,
+            }
             : null,
         )
         .filter(Boolean);
@@ -579,10 +579,10 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
             latestEnts = latestEnts.map((e, j) =>
               j === targetIdx
                 ? {
-                    ...e,
-                    imageUrl: event.data.imageUrl,
-                    status: "completed" as const,
-                  }
+                  ...e,
+                  imageUrl: event.data.imageUrl,
+                  status: "completed" as const,
+                }
                 : e,
             );
           } else {
@@ -692,7 +692,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
           })
           .map((e) => e.imageUrl!);
       }
-      
+
       if (refs.length > 0) {
         payload.referenceImages = refs;
       } else if (mode === "commentator" && commentator?.appearance?.imageUrl) {
@@ -784,7 +784,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
           })
           .map((e) => e.imageUrl!);
       }
-      
+
       if (refs.length > 0) {
         payload.referenceImages = refs;
       } else if (mode === "commentator" && commentator?.appearance?.imageUrl) {
@@ -1901,7 +1901,7 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                         className={cn(
                           "w-6 h-6 rounded-full border",
                           captionStyle.highlightColor === c &&
-                            "ring-2 ring-primary ring-offset-2",
+                          "ring-2 ring-primary ring-offset-2",
                         )}
                         style={{ backgroundColor: c }}
                         onClick={() =>
@@ -1982,34 +1982,112 @@ export default function StoryFlow({ mode, projectId, onBack }: Props) {
                   </p>
                 </div>
               )}
-              {video.videoProps && (
-                <details className="text-sm text-muted-foreground">
-                  <summary className="cursor-pointer hover:text-foreground font-medium">
-                    Debug
-                  </summary>
-                  <div className="mt-2 text-xs font-mono bg-muted p-3 rounded max-h-60 overflow-y-auto">
-                    <p>
-                      Scenes: {video.videoProps.scenes.length} | Duration:{" "}
-                      {video.videoProps.durationInFrames}f (
-                      {(
-                        video.videoProps.durationInFrames / video.videoProps.fps
-                      ).toFixed(1)}
-                      s)
-                    </p>
-                    <p>
-                      Audio: {video.videoProps.audioTracks.length} tracks |
-                      Captions: {video.videoProps.captions.length}
-                    </p>
-                    <p>
-                      Video clips:{" "}
-                      {
-                        video.videoProps.scenes.filter((s) => s.videoClipUrl)
-                          .length
-                      }
-                    </p>
-                  </div>
-                </details>
-              )}
+              {video.videoProps && (() => {
+                const { scenes, audioTracks, captions, fps, durationInFrames } = video.videoProps;
+
+                // Compute cumulative start offsets (mirrors RemotionVideoFull cursor logic)
+                let cursor = 0;
+                const sceneRows = scenes.map((s, i) => {
+                  const startFrame = cursor;
+                  cursor += s.durationInFrames;
+                  const durationSec = (s.durationInFrames / fps).toFixed(2);
+                  const startSec = (startFrame / fps).toFixed(2);
+                  return { i, s, startFrame, startSec, durationSec };
+                });
+
+                const totalVideoDurationSec = (cursor / fps).toFixed(2);
+                const audioDurationSec = (
+                  audioTracks.reduce((acc, t) => acc + t.durationInFrames, 0) / fps
+                ).toFixed(2);
+                const withClips = scenes.filter((s) => s.videoClipUrl).length;
+                const compositionSec = (durationInFrames / fps).toFixed(1);
+
+                return (
+                  <details className="text-sm text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground font-medium">
+                      Debug — {scenes.length} scenes · {compositionSec}s composition
+                    </summary>
+                    <div className="mt-2 space-y-3">
+
+                      {/* ── Summary ── */}
+                      <div className="text-xs font-mono bg-muted p-3 rounded grid grid-cols-2 gap-x-6 gap-y-1">
+                        <span>Composition</span>
+                        <span>{durationInFrames}f ({compositionSec}s) @ {fps}fps</span>
+                        <span>Video total (sum of scenes)</span>
+                        <span>{cursor}f ({totalVideoDurationSec}s)</span>
+                        <span>Audio total</span>
+                        <span>{audioDurationSec}s · {audioTracks.length} track(s)</span>
+                        <span>Scenes</span>
+                        <span>{scenes.length} ({withClips} with clip, {scenes.length - withClips} image-only)</span>
+                        <span>Captions</span>
+                        <span>{captions.length} words</span>
+                        {cursor !== durationInFrames && (
+                          <>
+                            <span className="text-yellow-500 font-semibold">⚠ drift</span>
+                            <span className="text-yellow-500">
+                              scenes sum {cursor}f ≠ composition {durationInFrames}f
+                              ({((durationInFrames - cursor) / fps).toFixed(2)}s gap)
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* ── Per-scene table ── */}
+                      <div className="text-xs font-mono bg-muted p-3 rounded max-h-72 overflow-y-auto">
+                        <div className="grid grid-cols-[2rem_1fr_5rem_5rem_5rem_3rem] gap-x-2 text-muted-foreground/70 mb-1 border-b pb-1">
+                          <span>#</span>
+                          <span>id / text</span>
+                          <span>start</span>
+                          <span>dur (s)</span>
+                          <span>dur (f)</span>
+                          <span>clip</span>
+                        </div>
+                        {sceneRows.map(({ i, s, startFrame, startSec, durationSec }) => (
+                          <div
+                            key={s.id}
+                            className="grid grid-cols-[2rem_1fr_5rem_5rem_5rem_3rem] gap-x-2 py-0.5 border-b border-border/30 hover:bg-accent/30"
+                          >
+                            <span className="text-muted-foreground/50">{i + 1}</span>
+                            <span className="truncate" title={s.textFragment ?? s.id}>
+                              {s.textFragment
+                                ? s.textFragment.slice(0, 40) + (s.textFragment.length > 40 ? "…" : "")
+                                : s.id}
+                            </span>
+                            <span>{startSec}s</span>
+                            <span
+                              className={
+                                parseFloat(durationSec) < 2
+                                  ? "text-red-400 font-bold"
+                                  : parseFloat(durationSec) < 4
+                                    ? "text-yellow-400"
+                                    : "text-green-400"
+                              }
+                            >
+                              {durationSec}s
+                            </span>
+                            <span>{s.durationInFrames}f</span>
+                            <span>{s.videoClipUrl ? "✓" : "–"}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* ── Audio tracks ── */}
+                      <div className="text-xs font-mono bg-muted p-3 rounded">
+                        <p className="text-muted-foreground/70 mb-1">Audio tracks</p>
+                        {audioTracks.map((t, i) => (
+                          <div key={i} className="flex gap-4">
+                            <span>Track {i + 1}</span>
+                            <span>start: {(t.startFrame / fps).toFixed(2)}s</span>
+                            <span>dur: {(t.durationInFrames / fps).toFixed(2)}s</span>
+                            <span>vol: {t.volume ?? 1}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                    </div>
+                  </details>
+                );
+              })()}
             </CardContent>
           </Card>
         )}

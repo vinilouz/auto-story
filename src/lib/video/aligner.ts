@@ -435,11 +435,11 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
 
       const effect =
         PrecisionAlignmentStrategy.EFFECTS[
-          i % PrecisionAlignmentStrategy.EFFECTS.length
+        i % PrecisionAlignmentStrategy.EFFECTS.length
         ];
       const transitionType =
         PrecisionAlignmentStrategy.TRANSITIONS[
-          i % PrecisionAlignmentStrategy.TRANSITIONS.length
+        i % PrecisionAlignmentStrategy.TRANSITIONS.length
         ];
 
       // Determine if this scene has an incoming or outgoing transition
@@ -496,10 +496,10 @@ export class PrecisionAlignmentStrategy implements AlignmentStrategy {
         effect,
         transition: hasTransitionOut
           ? {
-              // Only define transition if there's an outgoing one
-              type: transitionType,
-              durationInFrames: TRANSITION_FRAMES,
-            }
+            // Only define transition if there's an outgoing one
+            type: transitionType,
+            durationInFrames: TRANSITION_FRAMES,
+          }
           : undefined,
         textFragment: seg.text,
         debug: {
@@ -543,19 +543,24 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       fps,
     } = context;
 
-    // 1. Calculate Audio Duration
+    if (!videoDurations || videoDurations.length !== segments.length) {
+      throw new Error(
+        `[ContinuousAligner] videoDurations must have exactly one entry per segment. ` +
+        `Got ${videoDurations?.length ?? 0}, expected ${segments.length}.`,
+      );
+    }
+
+    // ── 1. Audio tracks — duration strictly from audioDurations[] ──────────────
     let totalAudioDurationSeconds = 0;
     const audioTracks: AudioTrackConfig[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : result.words || [];
-      const lastWord = words[words.length - 1];
-
-      let durationSeconds = 0;
-      if (audioDurations && audioDurations[batchIndex]) {
-        durationSeconds = audioDurations[batchIndex];
-      } else {
-        durationSeconds = lastWord ? lastWord.endMs / 1000 : 0;
+      const durationSeconds = audioDurations[batchIndex];
+      if (durationSeconds == null || durationSeconds <= 0) {
+        throw new Error(
+          `[ContinuousAligner] audioDurations[${batchIndex}] is missing or zero. ` +
+          `Fetch real audio duration before calling alignVideoProps.`,
+        );
       }
 
       const durationFrames = Math.ceil(durationSeconds * fps);
@@ -569,76 +574,55 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       totalAudioDurationSeconds += durationSeconds;
     });
 
-    // 2. Calculate Video Duration (raw, sem subtrair overlaps)
-    let totalRawVideoSeconds = 0;
-    const rawVideoDurationsSeconds: number[] = [];
-    segments.forEach((seg, i) => {
-      let dur = 5;
-      if (videoDurations && videoDurations[i]) {
-        dur = videoDurations[i];
-      }
-      rawVideoDurationsSeconds.push(dur);
-      totalRawVideoSeconds += dur;
-    });
-
-    const TRANSITION_FRAMES = ContinuousAlignmentStrategy.TRANSITION_DURATION;
-
-    const targetTotalSeconds = Math.max(
-      totalAudioDurationSeconds,
-      totalRawVideoSeconds,
-    );
-    const targetTotalFrames = Math.round(targetTotalSeconds * fps);
-
+    // ── 2. Scenes — duration strictly from videoDurations[] ────────────────────
+    // No minimum enforcement, no transition padding — fullvideo uses raw Sequences.
+    let totalVideoSeconds = 0;
     const scenes: VideoScene[] = [];
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
-      const naturalFrames = Math.round(rawVideoDurationsSeconds[i] * fps);
-      const isLast = i === segments.length - 1;
+      const durationSeconds = videoDurations[i];
 
-      let allocatedFrames = naturalFrames;
+      if (durationSeconds == null || durationSeconds <= 0) {
+        throw new Error(
+          `[ContinuousAligner] videoDurations[${i}] is missing or zero for segment "${seg.id}". ` +
+          `Fetch real video clip duration before calling alignVideoProps.`,
+        );
+      }
 
-      if (allocatedFrames < TRANSITION_FRAMES + 1)
-        allocatedFrames = TRANSITION_FRAMES + 1;
-
-      const effect: SceneEffect = "static";
-      const transitionType =
-        ContinuousAlignmentStrategy.TRANSITIONS[
-          i % ContinuousAlignmentStrategy.TRANSITIONS.length
-        ];
+      const durationInFrames = Math.round(durationSeconds * fps);
+      totalVideoSeconds += durationSeconds;
 
       scenes.push({
         id: seg.id,
-        imageUrl: seg.imageUrl || "",
+        imageUrl: seg.imageUrl,
         videoClipUrl: seg.videoClipUrl,
-        startFrame: 0,
-        durationInFrames: allocatedFrames,
-        effect,
-        transition: !isLast
-          ? {
-              type: transitionType,
-              durationInFrames: TRANSITION_FRAMES,
-            }
-          : undefined,
+        startFrame: 0,           // RemotionVideoFull computes cursor independently
+        durationInFrames,
+        effect: "static",
+        transition: undefined,   // fullvideo: no transitions
         textFragment: seg.text,
         debug: {
-          startSeconds: 0,
-          endSeconds: 0,
-          durationSeconds: allocatedFrames / fps,
+          startSeconds: totalVideoSeconds - durationSeconds,
+          endSeconds: totalVideoSeconds,
+          durationSeconds,
         } as any,
       });
     }
 
-    // 4. Captions (Strictly aligned to Audio)
+    const totalVideoFrames = Math.round(totalVideoSeconds * fps);
+    const totalAudioFrames = Math.ceil(totalAudioDurationSeconds * fps);
+    const totalFrames = Math.max(totalVideoFrames, totalAudioFrames);
+
+    // ── 3. Captions — strictly from audioTracks (no || 0 anywhere) ─────────────
     let globalTimeOffset = 0;
-    const captions: any[] = [];
+    const captions: Caption[] = [];
 
     transcriptionResults.forEach((result, batchIndex) => {
-      const words = Array.isArray(result) ? result : result.words || [];
-      const durationSeconds =
-        audioTracks[batchIndex]?.durationInFrames / fps || 0;
+      const words: any[] = Array.isArray(result) ? result : result.words;
+      const trackDurationSeconds = audioTracks[batchIndex].durationInFrames / fps;
 
-      words.forEach((w: any) => {
+      words.forEach((w) => {
         if (!w.text.trim()) return;
         captions.push({
           text: w.text,
@@ -646,19 +630,22 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
           endMs: Math.round((globalTimeOffset + w.endMs / 1000) * 1000),
         });
       });
-      globalTimeOffset += durationSeconds;
+
+      globalTimeOffset += trackDurationSeconds;
     });
 
-    console.log("[Video] Continuous Alignment Complete.", {
+    console.log("[ContinuousAligner] Complete.", {
       scenes: scenes.length,
       captions: captions.length,
-      durationFrames: targetTotalFrames,
-      durationSeconds: targetTotalSeconds,
+      videoFrames: totalVideoFrames,
+      audioFrames: totalAudioFrames,
+      totalFrames,
+      fps,
     });
 
     return {
       fps,
-      durationInFrames: Math.max(1, targetTotalFrames), // Ensure > 0
+      durationInFrames: totalFrames,
       width: REMOTION_CROPPED_WIDTH,
       height: REMOTION_CROPPED_HEIGHT,
       scenes,
@@ -848,11 +835,11 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
 
       const effect =
         ImageAlignmentStrategy.EFFECTS[
-          i % ImageAlignmentStrategy.EFFECTS.length
+        i % ImageAlignmentStrategy.EFFECTS.length
         ];
       const transitionType =
         ImageAlignmentStrategy.TRANSITIONS[
-          i % ImageAlignmentStrategy.TRANSITIONS.length
+        i % ImageAlignmentStrategy.TRANSITIONS.length
         ];
 
       let hasTransitionIn = !isFirst;
@@ -887,9 +874,9 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
         effect,
         transition: hasTransitionOut
           ? {
-              type: transitionType,
-              durationInFrames: TRANSITION_FRAMES,
-            }
+            type: transitionType,
+            durationInFrames: TRANSITION_FRAMES,
+          }
           : undefined,
         textFragment: seg.text,
         debug: {
