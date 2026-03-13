@@ -38,6 +38,10 @@ async function saveClip(
   } else {
     const res = await fetch(videoUrl);
     if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.startsWith("video/") && !ct.startsWith("application/octet-stream")) {
+      throw new Error(`Invalid content-type: ${ct} (expected video)`);
+    }
     fs.writeFileSync(filepath, Buffer.from(await res.arrayBuffer()));
   }
 

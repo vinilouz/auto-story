@@ -36,6 +36,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
   const [entities, setEntities] = useState<StoryFlowState["entities"]>([]);
   const [imageStatuses, setImageStatuses] = useState<StoryFlowState["imageStatuses"]>(new Map());
   const [captionStyle, setCaptionStyle] = useState<StoryFlowState["captionStyle"]>(DEFAULT_CAPTION_STYLE);
+  const [videoVolume, setVideoVolume] = useState(0.1);
   const [loading, setLoading] = useState(false);
 
   const audio = useAudio();
@@ -133,6 +134,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
         if (p.audioBatches) audio.setBatches(p.audioBatches);
         if (p.audioSystemPrompt) setAudioSystemPrompt(p.audioSystemPrompt);
         if (p.transcriptionResults) transcription.setResults(p.transcriptionResults);
+        if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
 
         if (mode === "video-story") {
           if (p.segments?.some((s: any) => s.videoClipUrl)) setStage("clips");
@@ -149,7 +151,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
           else if (p.segments?.length) setStage(mode === "commentator" ? "commentator" : "descriptions");
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [projectId]);
 
   return {
@@ -191,6 +193,8 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
     setImageStatuses,
     captionStyle,
     setCaptionStyle,
+    videoVolume,
+    setVideoVolume,
     loading,
     setLoading,
     stages,

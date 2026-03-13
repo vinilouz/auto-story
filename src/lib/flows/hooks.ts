@@ -330,6 +330,7 @@ export function useVideo() {
     audioBatches: AudioBatch[],
     transcriptionResults: TranscriptionResult[],
     alignmentMode: AlignmentMode = "video",
+    videoVolume: number = 0.1,
   ) => {
     const completed = audioBatches.filter(
       (b) => b.status === "completed" && b.url,
@@ -394,7 +395,7 @@ export function useVideo() {
                 return resolve(0);
               }
               const timeout = setTimeout(
-                () => reject(new Error(`Video metadata timeout: ${seg.videoClipUrl}`)),
+                () => reject(new Error(`Video load error: ${seg.videoClipUrl}`)),
                 8000,
               );
               const el = document.createElement("video");
@@ -417,6 +418,7 @@ export function useVideo() {
         videoDurations,
         undefined,
         alignmentMode,
+        videoVolume,
       );
 
       if (props.durationInFrames <= 0) throw new Error("Zero duration after alignment");

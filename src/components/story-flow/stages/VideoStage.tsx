@@ -15,7 +15,7 @@ interface VideoStageProps {
 }
 
 export function VideoStage({ state, actions }: VideoStageProps) {
-  const { video, captionStyle, setCaptionStyle } = state;
+  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume } = state;
 
   return (
     <Card>
@@ -23,7 +23,7 @@ export function VideoStage({ state, actions }: VideoStageProps) {
         <CardTitle>Video Compilation</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Font Size ({captionStyle.fontSize}px)</label>
             <Slider
@@ -66,6 +66,16 @@ export function VideoStage({ state, actions }: VideoStageProps) {
               ))}
             </div>
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Clip Audio ({Math.round(videoVolume * 100)}%)</label>
+            <Slider
+              min={0}
+              max={100}
+              step={5}
+              value={[videoVolume * 100]}
+              onValueChange={(v) => setVideoVolume(v[0] / 100)}
+            />
+          </div>
         </div>
         <div className="flex justify-end">
           <Button
@@ -107,7 +117,7 @@ export function VideoStage({ state, actions }: VideoStageProps) {
           </div>
         )}
         {video.videoProps ? (
-          <VideoPlayer props={{ ...video.videoProps, captionStyle }} />
+          <VideoPlayer props={{ ...video.videoProps, captionStyle, videoVolume }} />
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
             <p className="text-muted-foreground">Click "Generate Preview" below</p>

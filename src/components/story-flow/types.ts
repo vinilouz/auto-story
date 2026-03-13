@@ -69,6 +69,8 @@ export interface StoryFlowState {
   setImageStatuses: (statuses: Map<number, "generating" | "error"> | ((prev: Map<number, "generating" | "error">) => Map<number, "generating" | "error">)) => void;
   captionStyle: CaptionStyle;
   setCaptionStyle: (style: CaptionStyle | ((prev: CaptionStyle) => CaptionStyle)) => void;
+  videoVolume: number;
+  setVideoVolume: (volume: number) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
   stages: Stage[];
@@ -123,7 +125,7 @@ export interface StoryFlowState {
   video: {
     videoProps: any;
     setVideoProps: (props: any) => void;
-    generate: (segments: any[], batches: AudioBatch[], results: TranscriptionResult[], mode: "image" | "video") => Promise<void>;
+    generate: (segments: any[], batches: AudioBatch[], results: TranscriptionResult[], mode: "image" | "video", videoVolume?: number) => Promise<any>;
     render: (props: any, captionStyle: CaptionStyle, projectId?: string, title?: string) => Promise<void>;
     isGenerating: boolean;
     isRendering: boolean;

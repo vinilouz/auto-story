@@ -921,25 +921,30 @@ export function alignVideoProps(
   videoDurations: number[] = [],
   fps: number = REMOTION_DEFAULT_FPS,
   mode: AlignmentMode = "video",
+  videoVolume: number = 0.1,
 ): RemotionVideoProps {
   if (mode === "image") {
     const strategy = new PrecisionAlignmentStrategy();
-    return strategy.align({
+    return {
+      ...strategy.align({
+        segments,
+        transcriptionResults,
+        audioUrls,
+        audioDurations,
+        fps,
+      }), videoVolume
+    };
+  }
+
+  const strategy = new ContinuousAlignmentStrategy();
+  return {
+    ...strategy.align({
       segments,
       transcriptionResults,
       audioUrls,
       audioDurations,
+      videoDurations,
       fps,
-    });
-  }
-
-  const strategy = new ContinuousAlignmentStrategy();
-  return strategy.align({
-    segments,
-    transcriptionResults,
-    audioUrls,
-    audioDurations,
-    videoDurations,
-    fps,
-  });
+    }), videoVolume
+  };
 }

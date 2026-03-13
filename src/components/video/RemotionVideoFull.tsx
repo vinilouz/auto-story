@@ -29,7 +29,7 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
   audioTracks,
   captions,
   captionStyle,
-  videoVolume = 0.2,
+  videoVolume = 0.1,
   transitionOverride,
 }) => {
   return (

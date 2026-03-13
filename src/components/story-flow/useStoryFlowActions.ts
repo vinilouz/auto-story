@@ -7,6 +7,7 @@ import {
   GENERATE_ENTITY_IMAGE_PROMPT,
   GENERATE_SEGMENT_IMAGE_PROMPT,
 } from "@/lib/ai/prompts/prompts";
+import { splitTranscriptionByDuration } from "@/lib/flows/hooks";
 import type { StoryFlowState } from "./types";
 
 export function useStoryFlowActions(state: StoryFlowState) {
@@ -35,6 +36,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     imageStatuses,
     setImageStatuses,
     captionStyle,
+    videoVolume,
     loading,
     setLoading,
     clipDuration,
@@ -63,6 +65,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         audioBatches: audio.batches,
         audioSystemPrompt,
         transcriptionResults: transcription.results,
+        videoVolume,
         ...extra,
       };
       const saved = await project.save(data);
@@ -83,6 +86,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       audio.batches,
       audioSystemPrompt,
       transcription.results,
+      videoVolume,
       mode,
       project,
     ],
@@ -639,21 +643,21 @@ export function useStoryFlowActions(state: StoryFlowState) {
           videoClipUrl: s.videoClipUrl || undefined,
         }));
       const alignmentMode = mode === "video-story" ? ("video" as const) : ("image" as const);
-      await video.generate(segs, audio.batches, transcription.results, alignmentMode);
+      await video.generate(segs, audio.batches, transcription.results, alignmentMode, videoVolume);
       setStage("video");
     } catch (e: any) {
       toast.error(`Video generation failed: ${e.message}`);
     }
-  }, [segments, mode, audio.batches, transcription.results, video, setStage]);
+  }, [segments, mode, audio.batches, transcription.results, video, videoVolume, setStage]);
 
   const renderVideoAction = useCallback(async () => {
     if (!video.videoProps) return;
     try {
-      await video.render(video.videoProps, captionStyle, project.projectId || undefined, title);
+      await video.render({ ...video.videoProps, videoVolume }, captionStyle, project.projectId || undefined, title);
     } catch (e: any) {
       toast.error(`Render failed: ${e.message}`);
     }
-  }, [video, captionStyle, project.projectId, title]);
+  }, [video, captionStyle, videoVolume, project.projectId, title]);
 
   const downloadZipAction = useCallback(async () => {
     try {
