@@ -97,9 +97,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
       text:
         mode === "commentator"
           ? segments
-              .filter((s) => s.type)
-              .map((s) => `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`)
-              .join("\n")
+            .filter((s) => s.type)
+            .map((s) => `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`)
+            .join("\n")
           : scriptText,
       voice: audioVoice,
       systemPrompt: audioSystemPrompt,
@@ -177,10 +177,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
       const segsForApi =
         mode === "commentator"
           ? segments.map((s) =>
-              s.type === "comment"
-                ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
-                : s,
-            )
+            s.type === "comment"
+              ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
+              : s,
+          )
           : segments;
       const entitiesForApi = entities.map((e) => ({
         type: e.name,
@@ -209,6 +209,61 @@ export function useStoryFlowActions(state: StoryFlowState) {
       setLoading(false);
     }
   }, [mode, segments, entities, language, imagePromptStyle, commentator, setSegments, save, setLoading]);
+
+  const generateMissingDescriptions = useCallback(async () => {
+    const missingIndices = segments
+      .map((s, i) => (!s.imagePrompt ? i : -1))
+      .filter((i) => i >= 0);
+
+    if (missingIndices.length === 0) return;
+
+    setLoading(true);
+    try {
+      const missingSegments = missingIndices.map((i) => segments[i]);
+      const segsForApi =
+        mode === "commentator"
+          ? missingSegments.map((s) =>
+            s.type === "comment"
+              ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
+              : s,
+          )
+          : missingSegments;
+
+      const res = await fetch("/api/generate/descriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          segments: segsForApi,
+          entities: entities.map((e) => ({
+            type: e.name,
+            description: e.description || "",
+            segment: e.segment || [],
+          })),
+          language,
+          style: imagePromptStyle,
+          commentatorName: commentator?.name,
+          commentatorPersonality: commentator?.personality,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      let newIdx = 0;
+      const updatedSegs = segments.map((s) => {
+        if (!s.imagePrompt && newIdx < data.segments.length) {
+          return { ...s, imagePrompt: data.segments[newIdx++].imagePrompt };
+        }
+        return s;
+      });
+
+      setSegments(updatedSegs);
+      await save({ segments: updatedSegs });
+    } catch {
+      toast.error("Failed to generate descriptions");
+    } finally {
+      setLoading(false);
+    }
+  }, [segments, mode, commentator, entities, language, imagePromptStyle, setSegments, save, setLoading]);
 
   const extractAndGenerateEntities = useCallback(async () => {
     setLoading(true);
@@ -268,10 +323,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
           .map((e) =>
             targets.some((t) => t.name === e.name) && e.description
               ? {
-                  imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
-                  imageConfig: { aspect_ratio: "16:9" },
-                  entityName: e.name,
-                }
+                imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
+                imageConfig: { aspect_ratio: "16:9" },
+                entityName: e.name,
+              }
               : null,
           )
           .filter(Boolean);
@@ -606,7 +661,22 @@ export function useStoryFlowActions(state: StoryFlowState) {
   }, [transcription, audio.batches, language, setStage, save]);
 
   const splitByDuration = useCallback(async () => {
-    const newSegs = splitTranscriptionByDuration(transcription.results, audio.batches, clipDuration);
+    const completedBatches = audio.batches.filter((b) => b.status === "completed" && b.url);
+    if (completedBatches.length === 0) {
+      toast.error("No completed audio batches");
+      return;
+    }
+    const audioDurationsMs = await Promise.all(
+      completedBatches.map(
+        (b) =>
+          new Promise<number>((resolve, reject) => {
+            const el = new Audio(b.url!);
+            el.onloadedmetadata = () => resolve(el.duration * 1000);
+            el.onerror = () => reject(new Error(`Audio load error: ${b.url}`));
+          }),
+      ),
+    );
+    const newSegs = splitTranscriptionByDuration(transcription.results, audio.batches, clipDuration, audioDurationsMs);
     if (newSegs.length === 0) {
       toast.error("No words found in transcription");
       return;
@@ -634,14 +704,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
 
   const generateVideoPreview = useCallback(async () => {
     try {
-      const segs = segments
-        .filter((s) => s.imagePrompt)
-        .map((s, i) => ({
-          id: `seg-${i}`,
-          text: s.text,
-          imageUrl: s.imagePath || "",
-          videoClipUrl: s.videoClipUrl || undefined,
-        }));
+      const missingPromptIdx = segments.findIndex((s) => !s.imagePrompt);
+      if (missingPromptIdx !== -1) {
+        throw new Error(`Segment ${missingPromptIdx + 1} has no image prompt`);
+      }
+      const segs = segments.map((s, i) => ({
+        id: `seg-${i}`,
+        text: s.text,
+        imageUrl: s.imagePath || "",
+        videoClipUrl: s.videoClipUrl || undefined,
+      }));
       const alignmentMode = mode === "video-story" ? ("video" as const) : ("image" as const);
       await video.generate(segs, audio.batches, transcription.results, alignmentMode, videoVolume);
       setStage("video");
@@ -686,6 +758,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     saveCommentator,
     generateComments,
     generateDescriptions,
+    generateMissingDescriptions,
     extractAndGenerateEntities,
     generateEntities: generateEntitiesInternal,
     generateSingleEntity,

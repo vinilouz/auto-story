@@ -49,7 +49,7 @@ async function parseSSE(
           if (raw === "[DONE]" || raw === ": keepalive" || !raw) continue;
           try {
             events.push(JSON.parse(raw));
-          } catch {}
+          } catch { }
         }
       }
     }
@@ -62,7 +62,7 @@ async function parseSSE(
         if (raw && raw !== "[DONE]") {
           try {
             events.push(JSON.parse(raw));
-          } catch {}
+          } catch { }
         }
       }
     }
@@ -71,7 +71,7 @@ async function parseSSE(
   try {
     await Promise.race([read(), timer]);
   } finally {
-    reader.cancel().catch(() => {});
+    reader.cancel().catch(() => { });
   }
 
   // Se nenhum evento SSE foi parseado, tenta interpretar o buffer como JSON puro
@@ -220,6 +220,7 @@ registerProvider({
 
     if (model === "grok-imagine-video") {
       payload.mode = "normal";
+      payload.resolution = "720p";
       if (referenceUrl) payload.image_urls = [referenceUrl];
     } else if (model === "veo-3.1-fast") {
       if (referenceUrl) payload.reference_image_url = referenceUrl;

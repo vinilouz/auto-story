@@ -1,3 +1,4 @@
+import type React from "react";
 import type { CaptionStyle, CommentatorConfig, EntityAsset, Segment } from "@/lib/flows/types";
 import type { AudioBatch, TranscriptionResult } from "@/lib/flows/types";
 
@@ -94,30 +95,30 @@ export interface StoryFlowState {
     results: TranscriptionResult[];
     setResults: (results: TranscriptionResult[]) => void;
     transcribe: (batches: AudioBatch[], language: string) => Promise<TranscriptionResult[] | undefined>;
-    retry: (url: string, language: string) => Promise<void>;
+    retry: (url: string, language: string) => Promise<TranscriptionResult[] | undefined>;
     isLoading: boolean;
   };
   videoClips: {
-    clipStatuses: Map<number, "generating" | "error">;
+    clipStatuses: Map<number, "generating" | "error" | "completed">;
     generateAll: (
       segments: Segment[],
-      setSegments: (segs: Segment[]) => void,
+      setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
       opts: {
-        projectId: string;
-        projectName: string;
-        clipDuration: number;
-        onClipCompleted: (segments: Segment[]) => Promise<void>;
+        projectId?: string | null;
+        projectName?: string;
+        clipDuration?: number;
+        onClipCompleted?: (segments: Segment[]) => Promise<void>;
       }
     ) => Promise<void>;
     regenerateClip: (
       index: number,
       segments: Segment[],
-      setSegments: (segs: Segment[]) => void,
+      setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
       opts: {
-        projectId: string;
-        projectName: string;
-        clipDuration: number;
-        onClipCompleted: (segments: Segment[]) => Promise<void>;
+        projectId?: string | null;
+        projectName?: string;
+        clipDuration?: number;
+        onClipCompleted?: (segments: Segment[]) => Promise<void>;
       }
     ) => Promise<void>;
     isLoading: boolean;

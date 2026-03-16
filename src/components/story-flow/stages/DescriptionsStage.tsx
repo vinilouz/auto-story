@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,8 +14,8 @@ interface DescriptionsStageProps {
 }
 
 export function DescriptionsStage({ state, actions }: DescriptionsStageProps) {
-  const { segments } = state;
-  const { updateSegmentImagePrompt } = actions;
+  const { segments, loading } = state;
+  const { updateSegmentImagePrompt, generateMissingDescriptions } = actions;
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -35,8 +35,28 @@ export function DescriptionsStage({ state, actions }: DescriptionsStageProps) {
     setEditingIdx(null);
   };
 
+  const missingCount = segments.filter((s) => !s.imagePrompt).length;
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>Descriptions</span>
+        <span className="font-mono bg-muted px-2 py-0.5 rounded">
+          {segments.filter((s) => s.imagePrompt).length}/{segments.length}
+        </span>
+        {missingCount > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => generateMissingDescriptions()}
+            disabled={loading}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Generate Missing
+          </Button>
+        )}
+      </div>
       {segments.map((seg, i) => (
         <Card key={i}>
           <CardContent className="p-4 space-y-2">

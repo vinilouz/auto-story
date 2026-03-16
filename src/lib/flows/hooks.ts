@@ -586,8 +586,8 @@ export function splitTranscriptionByDuration(
   transcriptionResults: TranscriptionResult[],
   audioBatches: AudioBatch[],
   clipDurationSec: number,
+  audioDurationsMs: number[],
 ): Segment[] {
-  // Flatten all words with global timing
   const allWords: (TranscriptionWord & {
     globalStartMs: number;
     globalEndMs: number;
@@ -598,24 +598,25 @@ export function splitTranscriptionByDuration(
     (b) => b.status === "completed" && b.url,
   );
 
-  for (const batch of completedBatches) {
+  for (let batchIdx = 0; batchIdx < completedBatches.length; batchIdx++) {
+    const batch = completedBatches[batchIdx];
+    const batchDurationMs = audioDurationsMs[batchIdx];
     const result = transcriptionResults.find(
       (r) => r.url === batch.url && r.status === "completed" && r.data,
     );
-    if (!result?.data) continue;
 
-    const words: TranscriptionWord[] = Array.isArray(result.data)
-      ? result.data
-      : result.data.words || [];
-    const lastWord = words[words.length - 1];
-    const batchDurationMs = lastWord ? lastWord.endMs : 0;
+    if (result?.data) {
+      const words: TranscriptionWord[] = Array.isArray(result.data)
+        ? result.data
+        : result.data.words || [];
 
-    for (const w of words) {
-      allWords.push({
-        ...w,
-        globalStartMs: globalOffsetMs + w.startMs,
-        globalEndMs: globalOffsetMs + w.endMs,
-      });
+      for (const w of words) {
+        allWords.push({
+          ...w,
+          globalStartMs: globalOffsetMs + w.startMs,
+          globalEndMs: globalOffsetMs + w.endMs,
+        });
+      }
     }
 
     globalOffsetMs += batchDurationMs;
@@ -623,7 +624,7 @@ export function splitTranscriptionByDuration(
 
   if (allWords.length === 0) return [];
 
-  const totalDurationMs = allWords[allWords.length - 1].globalEndMs;
+  const totalDurationMs = audioDurationsMs.reduce((a, b) => a + b, 0);
   const clipDurationMs = clipDurationSec * 1000;
   const numSegments = Math.ceil(totalDurationMs / clipDurationMs);
 

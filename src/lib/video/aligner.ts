@@ -3,8 +3,10 @@ import {
   REMOTION_CROPPED_WIDTH,
   REMOTION_DEFAULT_FPS,
 } from "@/remotion/constants";
+
 import type {
   AudioTrackConfig,
+  Caption,
   RemotionVideoProps,
   SceneEffect,
   VideoScene,
@@ -550,8 +552,9 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     let totalAudioDurationSeconds = 0;
     const audioTracks: AudioTrackConfig[] = [];
 
+    const safeAudioDurations = audioDurations ?? [];
     transcriptionResults.forEach((result, batchIndex) => {
-      const durationSeconds = audioDurations[batchIndex];
+      const durationSeconds = safeAudioDurations[batchIndex];
       if (durationSeconds == null || durationSeconds <= 0) {
         throw new Error(
           `[ContinuousAligner] audioDurations[${batchIndex}] is missing or zero.`,
@@ -618,9 +621,6 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     }
 
     // ── 3. Total duration ─────────────────────────────────────────────────────
-    // TransitionSeries subtracts (n-1)×transitionFrames from the total.
-    // Each clip's transitionFrames may differ slightly (rounding), so we sum
-    // exactly what TransitionSeries will compute.
     const totalTransitionFrames = scenes
       .filter((s) => s.transition)
       .reduce((acc, s) => acc + s.transition!.durationInFrames, 0);
@@ -629,7 +629,14 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       totalTransitionFrames;
 
     const totalAudioFrames = Math.ceil(totalAudioDurationSeconds * fps);
-    const totalFrames = Math.max(totalVideoFrames, totalAudioFrames);
+
+    if (totalAudioFrames > totalVideoFrames) {
+      throw new Error(
+        `[ContinuousAligner] Audio (${totalAudioFrames}f / ${totalAudioDurationSeconds.toFixed(2)}s) exceeds video (${totalVideoFrames}f / ${(totalVideoFrames / fps).toFixed(2)}s). Segment count mismatch: ${scenes.length} scenes for ${totalAudioDurationSeconds.toFixed(2)}s of audio.`,
+      );
+    }
+
+    const totalFrames = totalAudioFrames;
 
     // ── 4. Captions ───────────────────────────────────────────────────────────
     let globalTimeOffset = 0;
