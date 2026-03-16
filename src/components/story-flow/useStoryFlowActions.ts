@@ -672,6 +672,13 @@ export function useStoryFlowActions(state: StoryFlowState) {
     }
   }, [segments, audio.batches, transcription.results, mode, dl]);
 
+  const updateSegmentImagePrompt = useCallback(
+    (index: number, imagePrompt: string) => {
+      setSegments((prev) => prev.map((s, i) => (i === index ? { ...s, imagePrompt } : s)));
+    },
+    [setSegments],
+  );
+
   return {
     save,
     audioOpts,
@@ -691,6 +698,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     generateVideoPreview,
     renderVideoAction,
     downloadZipAction,
+    updateSegmentImagePrompt,
   };
 }
 

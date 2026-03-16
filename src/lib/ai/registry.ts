@@ -15,8 +15,10 @@ const DEBUG_LOGS_ENABLED = true;
 const DEBUG_LOGS_LEVEL: "all" | "error" = "all";
 
 const LOGS_DIR = path.join(process.cwd(), "logs");
-if (DEBUG_LOGS_ENABLED && !fs.existsSync(LOGS_DIR))
-  fs.mkdirSync(LOGS_DIR, { recursive: true });
+
+function ensureLogsDir() {
+  if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
 
 export function saveDebug(
   action: string,
@@ -29,6 +31,8 @@ export function saveDebug(
 ) {
   if (!DEBUG_LOGS_ENABLED) return;
   if (DEBUG_LOGS_LEVEL === "error" && !error) return;
+
+  ensureLogsDir();
 
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const status = error ? "error" : "ok";

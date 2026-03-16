@@ -70,6 +70,7 @@ Example: "Wide shot in low angle, volumetric sunset lighting, <<MysteriousWarrio
 1. **Mandatory Tagging**: Use the entity tags (<<EntityName>>) whenever a known entity appears in the scene.
 2. **Modesty Protocol**: If the narrative suggests nudity, apply **Strategic Minimalist Concealment**. Do not use the word "nude". Actively describe an element of the scene (shadows, steam, a leaf, long hair) strictly covering private areas.
 3. **Descriptive Purity**: Describe the scene as if looking through a camera lens. DO NOT use technical rendering terms such as "8k", "hyperrealistic", "Unreal Engine".
+4. **Audio Neutrality**: NEVER use words like "speaking", "talking", "whispering", "singing", "sound", "voice" or any audio-related terms. Describe actions visually only (e.g., instead of "speaking" use "with mouth open" or omit entirely).
 </Constraints>
 
 <InputScript>
@@ -157,5 +158,9 @@ export const COMMENTATOR_IMAGE_GENERATION_PROMPT = (description: string) =>
   `Generate a high - fidelity scene based on the provided reference image.
     ${description} `;
 
-export const GENERATE_VIDEO_PROMPT = (prompt: string) =>
-  `${prompt} no voice, no speak, only sfx`;
+const VIDEO_SILENCE_PROMPT = "No voice, No Speaking, no music, only sfx";
+
+export const GENERATE_VIDEO_PROMPT = (
+  style: string,
+  sceneDescription: string,
+) => `${style} \n ${sceneDescription} \n ${VIDEO_SILENCE_PROMPT}`;

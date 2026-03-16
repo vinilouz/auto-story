@@ -3,6 +3,7 @@
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LazyVideo } from "@/components/ui/lazy-video";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
 
@@ -39,7 +40,7 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                   </p>
                   {seg.videoClipUrl && st !== "generating" ? (
                     <div className="relative group">
-                      <video src={seg.videoClipUrl} controls className="w-full rounded" />
+                      <LazyVideo src={seg.videoClipUrl} className="w-full rounded" />
                       <Button
                         size="icon"
                         variant="secondary"

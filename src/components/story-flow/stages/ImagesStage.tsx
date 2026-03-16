@@ -55,6 +55,7 @@ export function ImagesStage({ state, actions }: ImagesStageProps) {
                       <img
                         src={seg.imagePath}
                         alt=""
+                        loading="lazy"
                         className="w-full rounded"
                       />
                     </div>
