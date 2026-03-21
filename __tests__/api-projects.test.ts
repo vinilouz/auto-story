@@ -6,6 +6,7 @@ import { StorageService } from "@/lib/storage";
 jest.mock("@/lib/storage", () => ({
   StorageService: {
     saveProject: jest.fn().mockResolvedValue("mock-id"),
+    getProject: jest.fn().mockResolvedValue(null),
   },
 }));
 

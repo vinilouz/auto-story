@@ -18,6 +18,7 @@ import { SplitStage } from "./stages/SplitStage";
 import { ClipsStage } from "./stages/ClipsStage";
 import { VideoStage } from "./stages/VideoStage";
 import { DownloadStage } from "./stages/DownloadStage";
+import { MusicStage } from "./stages/MusicStage";
 import { STAGE_LABELS } from "./config";
 import type { StoryFlowProps, Stage, ExecuteConfig } from "./types";
 
@@ -25,7 +26,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
   const state = useStoryFlowState(mode, projectId);
   const actions = useStoryFlowActions(state);
 
-  const { stage, stages, maxStep, stageIdx, hasPrompts, hasImages, hasClips, hasComments, hasAudio, hasTranscription, loading, imageStatuses, videoClips, audio, transcription, video } = state;
+  const { stage, stages, maxStep, stageIdx, hasPrompts, hasImages, hasClips, hasMusic, hasComments, hasAudio, hasTranscription, loading, imageStatuses, videoClips, audio, transcription, video } = state;
 
   const canNext = stageIdx < maxStep;
 
@@ -43,6 +44,13 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           fn: actions.splitScenes,
           ok: !!state.scriptText.trim(),
           label: "Split Scenes",
+          busy: loading,
+        };
+      case "music":
+        return {
+          fn: actions.generateMusic,
+          ok: true,
+          label: hasMusic ? "Regenerate" : "Generate Music",
           busy: loading,
         };
       case "commentator":
@@ -148,6 +156,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     hasPrompts,
     hasImages,
     hasClips,
+    hasMusic,
     hasComments,
     hasAudio,
     hasTranscription,
@@ -193,6 +202,8 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         return <SplitStage {...props} />;
       case "clips":
         return <ClipsStage {...props} />;
+      case "music":
+        return <MusicStage {...props} />;
       case "video":
         return <VideoStage {...props} />;
       case "download":

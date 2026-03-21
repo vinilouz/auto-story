@@ -41,14 +41,8 @@ export interface TranscriptionWord {
   endMs: number;
 }
 
-export interface CaptionStyle {
-  fontSize: number;
-  fontFamily: string;
-  fontWeight: number;
-  maxWordsPerLine: number;
-  uppercase: boolean;
-  highlightColor: string;
-}
+export type { CaptionStyle } from "../video/types";
+export { DEFAULT_CAPTION_STYLE } from "../video/types";
 
 export interface CommentatorConfig {
   id: string;
@@ -61,12 +55,3 @@ export interface CommentatorConfig {
   };
   voice?: string;
 }
-
-export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
-  fontSize: 60,
-  fontFamily: "TikTok Sans, sans-serif",
-  fontWeight: 800,
-  maxWordsPerLine: 3,
-  uppercase: true,
-  highlightColor: "#FFE81F",
-};

@@ -78,7 +78,7 @@ describe("StorageService", () => {
 
     const extractedUrl = loadedProject.segments?.[0]?.imagePath;
     expect(extractedUrl).not.toContain("data:image/");
-    expect(extractedUrl).toMatch(/\/projects\/.*\/images\/scene-0-\d+\.png/);
+    expect(extractedUrl).toMatch(/\/projects\/.*\/images\/img-\d+\.png/);
 
     const shortId = loadedProject.id.split("-")[0];
     const dirName = `test-project-${shortId}`;

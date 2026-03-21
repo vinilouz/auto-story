@@ -11,13 +11,7 @@ export interface ExtractedEntity {
   description: string;
 }
 
-function extractJson(raw: string): string {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced ? fenced[1].trim() : raw.trim();
-  if (body.startsWith("[")) return body;
-  if (body.startsWith("{")) return `[${body}]`;
-  throw new Error("No JSON found in AI response");
-}
+import { parseJsonArray } from "@/lib/ai/parsers/json-parser";
 
 export async function extractEntities(
   segments: Segment[],
@@ -32,21 +26,7 @@ export async function extractEntities(
     ),
   });
 
-  let parsed: any;
-  try {
-    parsed = JSON.parse(extractJson(raw));
-  } catch (e) {
-    log.error(
-      "Failed to parse entity extraction response",
-      raw.substring(0, 500),
-    );
-    throw new Error(`Invalid JSON from AI: ${(e as Error).message}`);
-  }
-
-  if (!Array.isArray(parsed)) {
-    log.error("Response is not an array", raw.substring(0, 500));
-    throw new Error("Response not an array");
-  }
+  const parsed = parseJsonArray<any>(raw);
 
   log.success(
     `Extracted ${parsed.length} entities: ${parsed.map((e: any) => e.type).join(", ")}`,

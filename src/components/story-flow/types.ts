@@ -14,7 +14,8 @@ export type Stage =
   | "split"
   | "clips"
   | "video"
-  | "download";
+  | "download"
+  | "music";
 
 export type FlowMode = "simple" | "commentator" | "video-story";
 
@@ -50,6 +51,10 @@ export interface StoryFlowState {
   setAudioVoice: (voice: string) => void;
   consistency: boolean;
   setConsistency: (consistency: boolean) => void;
+  music: boolean;
+  setMusic: (music: boolean) => void;
+  musicUrl: string | null;
+  setMusicUrl: (url: string | null) => void;
   commentator: CommentatorConfig | null;
   setCommentator: (commentator: CommentatorConfig | null) => void;
   commName: string;
@@ -80,6 +85,7 @@ export interface StoryFlowState {
   hasPrompts: boolean;
   hasImages: boolean;
   hasClips: boolean;
+  hasMusic: boolean;
   hasComments: boolean;
   hasAudio: boolean;
   hasTranscription: boolean;

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
-import { splitText } from "@/lib/text-segmentation";
+import { splitBySentences } from "@/lib/utils/text";
 
 const log = createLogger("api/split");
 
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const segments = splitText(text, segmentLength);
+    const segments = splitBySentences(text, segmentLength);
     log.success(
       `Split ${text.length} chars → ${segments.length} segments (max ${segmentLength})`,
     );

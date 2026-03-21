@@ -32,6 +32,7 @@ export interface ProjectData {
   style?: string;
   voice?: string;
   consistency?: boolean;
+  musicEnabled?: boolean;
   segments?: Segment[];
   entities?: EntityAsset[];
   audioUrls?: string[];
@@ -40,6 +41,7 @@ export interface ProjectData {
   audioBatches?: AudioBatch[];
   transcriptionResults?: TranscriptionResult[];
   videoModel?: string;
+  music?: string;
 }
 
 export interface ProjectSummary {
@@ -223,6 +225,31 @@ export const StorageService = {
         `patchSegmentImage falhou para segmento ${segmentIndex}`,
         e.message,
       );
+    }
+  },
+
+  async patchMusic(
+    projectId: string,
+    projectName: string,
+    musicUrl: string,
+  ): Promise<void> {
+    try {
+      const dirName = resolveDir(projectId, projectName);
+      const configPath = path.join(DATA_DIR, dirName, "config.json");
+      if (!existsSync(configPath)) return;
+
+      const project: ProjectData = JSON.parse(
+        await fs.readFile(configPath, "utf-8"),
+      );
+
+      project.music = musicUrl;
+      project.musicEnabled = true;
+      project.updatedAt = new Date().toISOString();
+
+      await fs.writeFile(configPath, JSON.stringify(project, null, 2));
+      log.success(`Patched config: music = ${musicUrl}`);
+    } catch (e: any) {
+      log.error("patchMusic falhou", e.message);
     }
   },
 

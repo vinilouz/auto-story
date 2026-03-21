@@ -40,6 +40,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
     loading,
     setLoading,
     clipDuration,
+    music,
+    musicUrl,
+    setMusicUrl,
     audio,
     transcription,
     videoClips,
@@ -66,6 +69,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
         audioSystemPrompt,
         transcriptionResults: transcription.results,
         videoVolume,
+        musicEnabled: music,
+        music: musicUrl,
         ...extra,
       };
       const saved = await project.save(data);
@@ -87,6 +92,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
       audioSystemPrompt,
       transcription.results,
       videoVolume,
+      music,
+      musicUrl,
       mode,
       project,
     ],
@@ -751,6 +758,62 @@ export function useStoryFlowActions(state: StoryFlowState) {
     [setSegments],
   );
 
+  const generateMusic = useCallback(async () => {
+    setLoading(true);
+    try {
+      let pid = project.projectId;
+      if (!pid) {
+        const s = await save();
+        pid = s?.id;
+      }
+
+      const res = await fetch("/api/generate/music", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: pid || state.projectId,
+          projectName: title || "untitled",
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setMusicUrl(data.musicUrl);
+      await save({ music: data.musicUrl });
+      toast.success("Music generated!");
+    } catch {
+      toast.error("Failed to generate music");
+    } finally {
+      setLoading(false);
+    }
+  }, [project.projectId, state.projectId, title, setMusicUrl, save, setLoading]);
+
+  const generateCommentatorImage = useCallback(async () => {
+    if (!commImagePrompt.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/generate/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imagePrompt: commImagePrompt,
+          projectId: project.projectId || state.projectId,
+          projectName: title || "untitled",
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageUrl) {
+          state.setCommImage(data.imageUrl);
+        }
+      }
+    } catch {
+      toast.error("Failed to generate image");
+    } finally {
+      setLoading(false);
+    }
+  }, [commImagePrompt, project.projectId, state.projectId, title, state, setLoading]);
+
   return {
     save,
     audioOpts,
@@ -772,6 +835,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
     renderVideoAction,
     downloadZipAction,
     updateSegmentImagePrompt,
+    generateMusic,
+    generateCommentatorImage,
   };
 }
 

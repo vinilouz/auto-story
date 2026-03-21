@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import "@/lib/ai/providers";
 import { executeBatch } from "@/lib/ai/queue";
-import type { ImageRequest, ImageResponse } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
-import { StorageService } from "@/lib/storage";
+import {
+  processSingleImage,
+  createBatchHandler,
+  type BatchImageItem,
+} from "@/lib/services/image-service";
 
 const log = createLogger("api/images");
 
@@ -22,62 +25,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // index undefined = imagem avulsa (ex: entity, commentator) — sem patchSegmentImage
-    const segmentIndex: number | undefined = body.index;
+    const result = await processSingleImage(
+      {
+        imagePrompt: body.imagePrompt,
+        referenceImage: body.referenceImage,
+        referenceImages: body.referenceImages,
+        imageConfig: body.imageConfig,
+        index: body.index,
+        projectId: body.projectId,
+        projectName: body.projectName,
+      },
+      executeBatch,
+    );
 
-    const singleReq: ImageRequest = {
-      prompt: body.imagePrompt,
-      referenceImages:
-        body.referenceImages ||
-        (body.referenceImage ? [body.referenceImage] : undefined),
-      config: body.imageConfig,
-    };
-    const results = await executeBatch("generateImage", [singleReq]);
-    const result = results[0];
-
-    if (result.status === "error") {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
-
-    let imageUrl = result.data!.imageUrl;
-
-    if (
-      body.projectId &&
-      body.projectName &&
-      imageUrl.startsWith("data:image/")
-    ) {
-      const m = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-      if (m) {
-        const ext = m[1] === "jpeg" ? "jpg" : m[1];
-        // Se tem index explícito → nome img-N.jpg e patch no config
-        // Se não tem index (entity, etc) → nome genérico sem patch de segmento
-        const fileName =
-          segmentIndex !== undefined
-            ? `img-${segmentIndex + 1}.${ext}`
-            : `img-${Date.now()}.${ext}`;
-
-        const local = await StorageService.saveBase64Image(
-          body.projectId,
-          fileName,
-          m[2],
-          body.projectName,
-        );
-        if (local) {
-          imageUrl = local;
-          // Só patcha o config se for uma imagem de segmento (index explícito)
-          if (segmentIndex !== undefined) {
-            await StorageService.patchSegmentImage(
-              body.projectId,
-              body.projectName,
-              segmentIndex,
-              imageUrl,
-            );
-          }
-        }
-      }
-    }
-
-    return NextResponse.json({ imageUrl, id: result.id });
+    return NextResponse.json({ imageUrl: result.imageUrl, id: result.id });
   } catch (e: any) {
     log.error("Image generation failed", e);
     return NextResponse.json(
@@ -92,14 +53,24 @@ async function handleBatch(
   projectId?: string,
   projectName?: string,
 ) {
-  const batchRequests: ImageRequest[] = requests.map((r) => ({
-    prompt: r.imagePrompt,
-    referenceImages:
-      r.referenceImages || (r.referenceImage ? [r.referenceImage] : undefined),
-    config: r.imageConfig,
+  const items: BatchImageItem[] = requests.map((r, i) => ({
+    index: i,
+    imagePrompt: r.imagePrompt,
+    referenceImage: r.referenceImage,
+    referenceImages: r.referenceImages,
+    imageConfig: r.imageConfig,
+    entityName: r.entityName,
+    projectId,
+    projectName,
   }));
 
   const encoder = new TextEncoder();
+  const { requests: batchRequests, processResult } = createBatchHandler(
+    items,
+    executeBatch,
+    encoder,
+  );
+
   const stream = new ReadableStream({
     async start(controller) {
       let closed = false;
@@ -110,64 +81,11 @@ async function handleBatch(
 
       const pending: Promise<void>[] = [];
       await executeBatch("generateImage", batchRequests, {
-        onResult: (r) => {
+        onResult: async (r) => {
           const p = (async () => {
             try {
-              if (r.status === "error") {
-                send({
-                  id: r.id,
-                  status: "error",
-                  error: r.error,
-                  errorKind: r.errorKind,
-                });
-                return;
-              }
-
-              const segmentIndex: number | undefined = requests[r.id]?.index;
-              const entityName: string | undefined = requests[r.id]?.entityName;
-              const imgRes = r.data as ImageResponse;
-              let imageUrl = imgRes.imageUrl;
-
-              if (
-                projectId &&
-                projectName &&
-                imageUrl.startsWith("data:image/")
-              ) {
-                const m = imageUrl.match(
-                  /^data:image\/([a-zA-Z0-9]+);base64,(.+)$/,
-                );
-                if (m) {
-                  const ext = m[1] === "jpeg" ? "jpg" : m[1];
-                  let fileName = `img-${Date.now()}.${ext}`;
-
-                  if (entityName !== undefined) {
-                    const cleanName = entityName.replace(/[^a-zA-Z0-9_-]/g, "");
-                    fileName = `entity-${cleanName}.${ext}`;
-                  } else if (segmentIndex !== undefined) {
-                    fileName = `img-${segmentIndex + 1}.${ext}`;
-                  }
-
-                  const local = await StorageService.saveBase64Image(
-                    projectId,
-                    fileName,
-                    m[2],
-                    projectName,
-                  );
-                  if (local) {
-                    imageUrl = local;
-                    if (segmentIndex !== undefined) {
-                      await StorageService.patchSegmentImage(
-                        projectId,
-                        projectName,
-                        segmentIndex,
-                        imageUrl,
-                      );
-                    }
-                  }
-                }
-              }
-
-              send({ id: r.id, status: "success", data: { imageUrl } });
+              const result = await processResult(r);
+              send(result);
             } catch (e: any) {
               send({ id: r.id, status: "error", error: e.message });
             }

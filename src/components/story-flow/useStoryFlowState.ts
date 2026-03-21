@@ -12,6 +12,7 @@ import {
   useVideoClips,
 } from "@/lib/flows/hooks";
 import { getVideoClipDuration } from "@/lib/ai/config";
+import { calculateMaxStep, determineInitialStage } from "@/lib/domain/navigation";
 import { getStages } from "./config";
 import type { StoryFlowState, Stage, FlowMode } from "./types";
 
@@ -24,6 +25,8 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
   const [imagePromptStyle, setImagePromptStyle] = useState("");
   const [audioVoice, setAudioVoice] = useState("nPczCjzI2devNBz1zQrb");
   const [consistency, setConsistency] = useState(false);
+  const [music, setMusic] = useState(false);
+  const [musicUrl, setMusicUrl] = useState<string | null>(null);
 
   const [commentator, setCommentator] = useState<StoryFlowState["commentator"]>(null);
   const [commName, setCommName] = useState("");
@@ -48,68 +51,48 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
 
   const clipDuration = getVideoClipDuration();
 
-  const stages = useMemo(() => getStages(mode, consistency), [mode, consistency]);
+  const stages = useMemo(() => getStages(mode, consistency, music), [mode, consistency, music]);
   const stageIdx = stages.indexOf(stage);
 
   const hasPrompts = segments.some((s) => s.imagePrompt);
   const hasImages = segments.some((s) => s.imagePath);
   const hasClips = segments.some((s) => s.videoClipUrl);
+  const hasMusic = !!musicUrl;
   const hasComments = segments.some((s) => s.type === "comment");
   const hasAudio = audio.batches.some((b) => b.status === "completed" && b.url);
   const hasTranscription = transcription.results.length > 0;
 
-  const maxStep = useMemo(() => {
-    const idx = (s: Stage) => {
-      const i = stages.indexOf(s);
-      return i === -1 ? 0 : i;
-    };
-
-    if (mode === "video-story") {
-      if (video.videoProps) return idx("download");
-      if (hasClips) return idx("video");
-      if (hasImages) return idx("clips");
-      if (hasPrompts) return idx("images");
-      if (consistency && entities.length > 0) return idx("descriptions");
-      if (segments.length > 0) return idx(consistency ? "entities" : "descriptions");
-      if (hasTranscription) return idx("split");
-      if (hasAudio) return idx("transcription");
-      return 0;
-    }
-
-    if (video.videoProps) return idx("download");
-    if (hasTranscription) return idx("video");
-    if (hasAudio) return idx("transcription");
-    if (hasImages) return idx("audio");
-    if (hasPrompts) return idx("images");
-    if (consistency && entities.length > 0) return idx("descriptions");
-    if (hasComments && mode === "commentator") return idx(consistency ? "entities" : "descriptions");
-    if (commentator && mode === "commentator") return idx("comments");
-    if (segments.length > 0)
-      return idx(
-        mode === "commentator"
-          ? consistency
-            ? "commentator"
-            : "descriptions"
-          : consistency
-            ? "entities"
-            : "descriptions",
-      );
-    return 0;
-  }, [
-    stages,
-    mode,
-    video.videoProps,
-    hasTranscription,
-    hasAudio,
-    hasImages,
-    hasClips,
-    hasPrompts,
-    entities,
-    hasComments,
-    commentator,
-    segments,
-    consistency,
-  ]);
+  const maxStep = useMemo(
+    () =>
+      calculateMaxStep(stages, mode, {
+        hasVideoProps: !!video.videoProps,
+        hasClips,
+        hasImages,
+        hasPrompts,
+        hasEntities: entities.length > 0,
+        hasComments,
+        hasAudio,
+        hasTranscription,
+        hasCommentator: !!commentator,
+        hasSegments: segments.length > 0,
+        consistency,
+      }),
+    [
+      stages,
+      mode,
+      video.videoProps,
+      hasClips,
+      hasImages,
+      hasPrompts,
+      entities.length,
+      hasComments,
+      hasAudio,
+      hasTranscription,
+      commentator,
+      segments.length,
+      consistency,
+    ],
+  );
 
   useEffect(() => {
     project
@@ -123,6 +106,8 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
         if (p.style) setImagePromptStyle(p.style);
         if (p.voice) setAudioVoice(p.voice);
         if (p.consistency) setConsistency(p.consistency);
+        if (p.musicEnabled) setMusic(p.musicEnabled);
+        if (p.music) setMusicUrl(p.music);
         if (p.segments) setSegments(p.segments);
         if (p.entities) setEntities(p.entities);
         if (p.commentator) {
@@ -136,20 +121,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
         if (p.transcriptionResults) transcription.setResults(p.transcriptionResults);
         if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
 
-        if (mode === "video-story") {
-          if (p.segments?.some((s: any) => s.videoClipUrl)) setStage("clips");
-          else if (p.segments?.some((s: any) => s.imagePath)) setStage("images");
-          else if (p.segments?.some((s: any) => s.imagePrompt)) setStage("descriptions");
-          else if (p.segments?.length) setStage("split");
-          else if (p.transcriptionResults?.length) setStage("transcription");
-          else if (p.audioBatches?.some((b: any) => b.status === "completed")) setStage("audio");
-        } else {
-          if (p.transcriptionResults?.length) setStage("video");
-          else if (p.audioBatches?.some((b: any) => b.status === "completed")) setStage("audio");
-          else if (p.segments?.some((s: any) => s.imagePath)) setStage("images");
-          else if (p.segments?.some((s: any) => s.imagePrompt)) setStage("descriptions");
-          else if (p.segments?.length) setStage(mode === "commentator" ? "commentator" : "descriptions");
-        }
+        setStage(determineInitialStage(mode, p));
       })
       .catch(() => { });
   }, [projectId]);
@@ -173,6 +145,10 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
     setAudioVoice,
     consistency,
     setConsistency,
+    music,
+    setMusic,
+    musicUrl,
+    setMusicUrl,
     commentator,
     setCommentator,
     commName,
@@ -203,6 +179,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
     hasPrompts,
     hasImages,
     hasClips,
+    hasMusic,
     hasComments,
     hasAudio,
     hasTranscription,

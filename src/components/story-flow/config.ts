@@ -13,9 +13,10 @@ export const STAGE_LABELS: Record<Stage, string> = {
   download: "Download",
   split: "Split",
   clips: "Video Clips",
+  music: "Música",
 };
 
-export function getStages(mode: FlowMode, consistency: boolean): Stage[] {
+export function getStages(mode: FlowMode, consistency: boolean, music: boolean): Stage[] {
   if (mode === "video-story") {
     return [
       "input",
@@ -26,6 +27,7 @@ export function getStages(mode: FlowMode, consistency: boolean): Stage[] {
       "descriptions",
       "images",
       "clips",
+      ...(music ? ["music" as Stage] : []),
       "video",
       "download",
     ];
@@ -33,6 +35,7 @@ export function getStages(mode: FlowMode, consistency: boolean): Stage[] {
   return (
     [
       "input",
+      ...(music ? ["music" as Stage] : []),
       "commentator",
       "comments",
       ...(consistency ? ["entities" as Stage] : []),

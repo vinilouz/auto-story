@@ -1,7 +1,7 @@
 import fs from "fs";
 import { NextResponse } from "next/server";
 import path from "path";
-import { transcribeWithElevenLabs } from "@/lib/ai/transcription/elevenlabs";
+import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/transcription");
@@ -46,16 +46,16 @@ export async function POST(req: Request) {
       }
 
       try {
-        log.info(`Transcribing ${filename} via ElevenLabs STT proxy...`);
-        const captions = await transcribeWithElevenLabs(inputPath);
-        fs.writeFileSync(outputPath, JSON.stringify(captions, null, 2));
-        log.success(`Transcribed ${filename}: ${captions.length} words`);
+        log.info(`Transcribing ${filename} via LouzLabs API...`);
+        const { words } = await execute("generateTranscription", { file: inputPath });
+        fs.writeFileSync(outputPath, JSON.stringify(words, null, 2));
+        log.success(`Transcribed ${filename}: ${words.length} words`);
 
         results.push({
           url,
           status: "completed",
           transcriptionUrl: `${url}${suffix}`,
-          data: captions,
+          data: words,
         });
       } catch (err: any) {
         log.error(`Transcription failed for ${filename}`, err.message);

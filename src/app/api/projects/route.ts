@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
 import { type ProjectData, StorageService } from "@/lib/storage";
+import { createProject, updateProject } from "@/lib/services/project-service";
 
 const log = createLogger("api/projects");
 
@@ -27,53 +28,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Merge with existing project if updating
-    let existing: ProjectData | null = null;
-    if (body.id) {
-      existing = await StorageService.getProject(body.id);
-    }
+    let project: ProjectData;
+    const existing = body.id ? await StorageService.getProject(body.id) : null;
 
     if (existing) {
-      const merged: ProjectData = {
-        ...existing,
-        ...body,
-        createdAt: existing.createdAt,
-        updatedAt: new Date().toISOString(),
-      };
-      await StorageService.saveProject(merged);
-      log.success(
-        `Updated project: ${merged.name} (${merged.id.substring(0, 8)})`,
-      );
-      return NextResponse.json(merged);
+      project = updateProject(existing, body);
+      log.success(`Updated project: ${project.name} (${project.id.substring(0, 8)})`);
+    } else {
+      project = createProject(body);
+      log.success(`Created project: ${project.name} (${project.id.substring(0, 8)})`);
     }
 
-    // New project
-    const project: ProjectData = {
-      id: body.id || crypto.randomUUID(),
-      name: body.name || `Project ${new Date().toLocaleString()}`,
-      createdAt: body.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      flowType: body.flowType || "simple",
-      scriptText: body.scriptText,
-      segmentSize: body.segmentSize,
-      language: body.language,
-      style: body.style,
-      voice: body.voice,
-      consistency: body.consistency,
-      segments: body.segments || [],
-      entities: body.entities,
-      audioUrls: body.audioUrls,
-      commentator: body.commentator,
-      audioSystemPrompt: body.audioSystemPrompt,
-      audioBatches: body.audioBatches,
-      transcriptionResults: body.transcriptionResults,
-      videoModel: body.videoModel,
-    };
-
     await StorageService.saveProject(project);
-    log.success(
-      `Created project: ${project.name} (${project.id.substring(0, 8)})`,
-    );
     return NextResponse.json(project);
   } catch (e) {
     log.error("Save project error", e);

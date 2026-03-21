@@ -18,7 +18,7 @@ import { CaptionsLayer } from "./CaptionsLayer";
  *
  * Each layer is self-contained and does NOT depend on the others.
  */
-const PRESENTATIONS: Record<string, ReturnType<typeof fade>> = {
+const PRESENTATIONS: Record<string, any> = {
   fade: fade(),
   wipe: wipe(),
   slide: slide(),

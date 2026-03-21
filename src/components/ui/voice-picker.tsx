@@ -1,6 +1,17 @@
 "use client";
 
-import type { ElevenLabs } from "@elevenlabs/elevenlabs-js";
+export interface Voice {
+  voiceId?: string;
+  name: string;
+  previewUrl?: string;
+  labels?: {
+    accent?: string;
+    gender?: string;
+    age?: string;
+    description?: string;
+    "use case"?: string;
+  };
+}
 import { Check, ChevronsUpDown, Pause, Play } from "lucide-react";
 import * as React from "react";
 import {
@@ -25,7 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface VoicePickerProps {
-  voices: ElevenLabs.Voice[];
+  voices: Voice[];
   value?: string;
   onValueChange?: (value: string) => void;
   placeholder?: string;
@@ -99,7 +110,7 @@ function VoicePicker({
 }
 
 interface VoicePickerItemProps {
-  voice: ElevenLabs.Voice;
+  voice: Voice;
   isSelected: boolean;
   onSelect: () => void;
 }

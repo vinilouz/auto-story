@@ -10,6 +10,16 @@ export type SceneEffect =
   | "pan-right"
   | "static";
 
+export interface SceneDebugInfo {
+  startSeconds: number;
+  endSeconds: number;
+  durationSeconds: number;
+  confidence?: number;
+  naturalDurationSeconds?: number;
+  playbackRate?: number;
+  transitionFrames?: number;
+}
+
 export interface VideoScene {
   id: string;
   imageUrl: string;
@@ -17,13 +27,10 @@ export interface VideoScene {
   startFrame: number;
   durationInFrames: number;
   effect: SceneEffect;
+  playbackRate?: number;
   transition?: VideoTransition;
   textFragment?: string;
-  debug?: {
-    startSeconds: number;
-    endSeconds: number;
-    durationSeconds: number;
-  };
+  debug?: SceneDebugInfo;
 }
 
 export interface AudioTrackConfig {
@@ -43,28 +50,22 @@ export interface Caption {
 export interface CaptionStyle {
   fontSize: number;
   fontFamily: string;
+  fontWeight: number;
   maxWordsPerLine: number;
   uppercase: boolean;
   highlightColor: string;
-  fontWeight?: number;
 }
 
-export interface VideoScene {
-  id: string;
-  imageUrl: string;
-  videoClipUrl?: string;
-  startFrame: number;
-  durationInFrames: number;
-  effect: SceneEffect;
-  playbackRate?: number;
-  transition?: VideoTransition;
-  textFragment?: string;
-  debug?: {
-    startSeconds: number;
-    endSeconds: number;
-    durationSeconds: number;
-  };
-}
+export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
+  fontSize: 60,
+  fontFamily: "TikTok Sans, sans-serif",
+  fontWeight: 800,
+  maxWordsPerLine: 3,
+  uppercase: true,
+  highlightColor: "#FFE81F",
+};
+
+
 
 export interface RemotionVideoProps {
   fps: number;

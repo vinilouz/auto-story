@@ -1,9 +1,9 @@
-import { splitTextIntoBatches } from "@/lib/ai/utils/text-splitter";
+import { splitIntoBatches } from "@/lib/utils/text";
 
 describe("Audio Segmentation", () => {
   it("should not split text shorter than max length", () => {
     const text = "Short text.";
-    const segments = splitTextIntoBatches(text, 100);
+    const segments = splitIntoBatches(text, 100);
     expect(segments).toHaveLength(1);
     expect(segments[0]).toBe(text);
   });
@@ -11,7 +11,7 @@ describe("Audio Segmentation", () => {
   it("should split text at sentence boundaries", () => {
     const text = "First sentence. Second sentence.";
     // Force split between sentences by setting max length small enough
-    const segments = splitTextIntoBatches(text, 20);
+    const segments = splitIntoBatches(text, 20);
     // "First sentence." is 15 chars. " Second sentence." is 16 chars.
     // If max is 20, it should take "First sentence."
 
@@ -22,7 +22,7 @@ describe("Audio Segmentation", () => {
 
   it("should split at commas if no sentence boundary found", () => {
     const text = "First part, second part.";
-    const segments = splitTextIntoBatches(text, 15);
+    const segments = splitIntoBatches(text, 15);
     // "First part," is 11 chars
 
     expect(segments).toHaveLength(2);
@@ -32,7 +32,7 @@ describe("Audio Segmentation", () => {
 
   it("should fallback to space split if no punctuation", () => {
     const text = "Word1 Word2 Word3";
-    const segments = splitTextIntoBatches(text, 10);
+    const segments = splitIntoBatches(text, 10);
 
     // Let's trace:
     // searchWindow = "Word1 Word" (10 chars)
@@ -49,7 +49,7 @@ describe("Audio Segmentation", () => {
   it("should handle long text with multiple splits", () => {
     const text =
       "A".repeat(40) + ". " + "B".repeat(40) + ". " + "C".repeat(40) + ".";
-    const segments = splitTextIntoBatches(text, 50);
+    const segments = splitIntoBatches(text, 50);
 
     expect(segments.length).toBeGreaterThan(2);
     segments.forEach((seg: string) => {

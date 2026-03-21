@@ -3,17 +3,11 @@ import path from "node:path";
 import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
 import { getProjectDirName } from "@/lib/utils";
-import { splitTextIntoBatches } from "../utils/text-splitter";
-
+import { splitIntoBatches } from "@/lib/utils/text";
+import type { AudioBatch } from "@/lib/flows/types";
 const log = createLogger("audio");
 
-export interface AudioBatch {
-  index: number;
-  text: string;
-  status: "pending" | "generating" | "completed" | "error";
-  url?: string;
-  error?: string;
-}
+
 
 async function generateAndSave(
   text: string,
@@ -48,7 +42,7 @@ export async function generateAudio(opts: {
     projectName,
   } = opts;
 
-  const segments = splitTextIntoBatches(text, 10000, systemPrompt);
+  const segments = splitIntoBatches(text, 10000, systemPrompt);
   const batches: AudioBatch[] = segments.map((t, i) => ({
     index: i,
     text: t,

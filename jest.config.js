@@ -16,6 +16,11 @@ const customJestConfig = {
   ],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^remotion$": "<rootDir>/__tests__/__mocks__/remotion.js",
+    "^@remotion/player$": "<rootDir>/__tests__/__mocks__/remotion-player.js",
+    "^@remotion/transitions$": "<rootDir>/__tests__/__mocks__/remotion-transitions.js",
+    "^@remotion/animation-utils$": "<rootDir>/__tests__/__mocks__/remotion-animation-utils.js",
+    "^@remotion/media$": "<rootDir>/__tests__/__mocks__/remotion-media.js",
   },
 };
 

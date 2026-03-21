@@ -2,6 +2,7 @@ import { COMMENTATOR_PROMPT } from "@/lib/ai/prompts/prompts";
 import { execute } from "@/lib/ai/providers";
 import type { Segment } from "@/lib/flows/types";
 import { createLogger } from "@/lib/logger";
+import { parseJsonArray } from "@/lib/ai/parsers/json-parser";
 
 const log = createLogger("commentator");
 
@@ -21,15 +22,8 @@ export async function generateCommentsWithCommentator(data: {
     prompt: COMMENTATOR_PROMPT(data.commentatorDescription, json),
   });
 
-  let clean = raw.trim();
-  const m =
-    clean.match(/```json\s*(\[[\s\S]*?\])\s*```/) ||
-    clean.match(/(\[[\s\S]*?\])/);
-  if (m) clean = m[1];
-
   try {
-    const parsed = JSON.parse(clean.trim());
-    if (!Array.isArray(parsed)) throw new Error("Not an array");
+    const parsed = parseJsonArray<any>(raw);
 
     const segments: Segment[] = parsed
       .map((item: any) =>

@@ -34,6 +34,8 @@ export function InputStage({ state }: InputStageProps) {
     setAudioVoice,
     consistency,
     setConsistency,
+    music,
+    setMusic,
     clipDuration,
   } = state;
 
@@ -135,6 +137,17 @@ export function InputStage({ state }: InputStageProps) {
               <label className="text-base font-medium">Character Consistency</label>
               <p className="text-sm text-muted-foreground">
                 Extract entities and generate reference images.
+              </p>
+            </div>
+          </div>
+        )}
+        {(mode === "simple" || mode === "video-story") && (
+          <div className="flex items-center space-x-2 pt-2 border-t">
+            <Switch checked={music} onCheckedChange={setMusic} />
+            <div>
+              <label className="text-base font-medium">Música</label>
+              <p className="text-sm text-muted-foreground">
+                Generate background music for the video.
               </p>
             </div>
           </div>

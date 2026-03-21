@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2, Sparkles, Upload } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,7 @@ interface CommentatorStageProps {
   actions: StoryFlowActions;
 }
 
-export function CommentatorStage({ state }: CommentatorStageProps) {
+export function CommentatorStage({ state, actions }: CommentatorStageProps) {
   const {
     commName,
     setCommName,
@@ -25,28 +24,9 @@ export function CommentatorStage({ state }: CommentatorStageProps) {
     commImage,
     setCommImage,
     loading,
-    setLoading,
   } = state;
 
-  const handleGenerateImage = async () => {
-    if (!commImagePrompt.trim()) return;
-    setLoading(true);
-    try {
-      const r = await fetch("/api/generate/images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imagePrompt: commImagePrompt,
-        }),
-      });
-      if (r.ok) {
-        const d = await r.json();
-        if (d.imageUrl) setCommImage(d.imageUrl);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { generateCommentatorImage } = actions;
 
   return (
     <Card>
@@ -74,7 +54,7 @@ export function CommentatorStage({ state }: CommentatorStageProps) {
               rows={2}
             />
             <Button
-              onClick={handleGenerateImage}
+              onClick={generateCommentatorImage}
               disabled={loading || !commImagePrompt.trim()}
               className="w-full"
             >

@@ -16,45 +16,7 @@ export interface SceneVisualizationRequest {
   commentatorPersonality?: string;
 }
 
-function parseDescriptions(
-  raw: string,
-  expectedCount: number,
-): Array<{ id: string; imagePrompt: string }> {
-  let clean = raw.trim();
-  const m =
-    clean.match(/```json\s*(\[[\s\S]*?\])\s*```/) ||
-    clean.match(/(\[[\s\S]*?\])/);
-  if (m) clean = m[1];
-
-  if (!clean.endsWith("]")) {
-    const lastBrace = clean.lastIndexOf("}");
-    if (lastBrace > 0) {
-      clean = clean.substring(0, lastBrace + 1) + "]";
-      log.warn(
-        `Truncated response — recovered (raw length: ${raw.length} chars)`,
-      );
-    }
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(clean.trim());
-  } catch (e) {
-    log.error(
-      `JSON parse failed (raw: ${raw.length} chars, cleaned: ${clean.length} chars)`,
-    );
-    throw new Error(`Invalid JSON from AI: ${(e as Error).message}`);
-  }
-
-  const arr = Array.isArray(parsed) ? parsed : parsed.visualDescriptions;
-  if (!Array.isArray(arr)) throw new Error("AI response is not an array");
-  if (arr.length !== expectedCount) {
-    log.warn(
-      `AI returned ${arr.length}/${expectedCount} descriptions (raw: ${raw.length} chars)`,
-    );
-  }
-  return arr;
-}
+import { parseJsonArray } from "@/lib/ai/parsers/json-parser";
 
 export async function generateSceneDescriptions(
   data: SceneVisualizationRequest,
@@ -91,7 +53,7 @@ export async function generateSceneDescriptions(
     while (true) {
       try {
         const { text: raw } = await execute("generateText", { prompt });
-        descriptions = parseDescriptions(raw, batchSegs.length);
+        descriptions = parseJsonArray(raw, batchSegs.length);
 
         if (descriptions.length < batchSegs.length && retries < 2) {
           retries++;
