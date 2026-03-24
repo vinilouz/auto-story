@@ -100,8 +100,8 @@ export interface StoryFlowState {
   transcription: {
     results: TranscriptionResult[];
     setResults: (results: TranscriptionResult[]) => void;
-    transcribe: (batches: AudioBatch[], language: string) => Promise<TranscriptionResult[] | undefined>;
-    retry: (url: string, language: string) => Promise<TranscriptionResult[] | undefined>;
+    transcribe: (projectId: string, projectName: string) => Promise<TranscriptionResult[] | undefined>;
+    retry: (projectId: string, projectName: string) => Promise<TranscriptionResult[] | undefined>;
     isLoading: boolean;
   };
   videoClips: {

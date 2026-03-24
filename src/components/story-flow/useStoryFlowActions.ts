@@ -662,10 +662,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
   }, [audio, audioOpts, setStage, save]);
 
   const transcribeAction = useCallback(async () => {
-    const newResults = await transcription.transcribe(audio.batches, language);
+    const newResults = await transcription.transcribe(project.projectId || state.projectId, title);
     setStage("transcription");
     if (newResults) await save({ transcriptionResults: newResults });
-  }, [transcription, audio.batches, language, setStage, save]);
+  }, [transcription, project.projectId, state.projectId, title, setStage, save]);
 
   const splitByDuration = useCallback(async () => {
     const completedBatches = audio.batches.filter((b) => b.status === "completed" && b.url);

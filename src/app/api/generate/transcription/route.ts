@@ -1,72 +1,54 @@
 import fs from "fs";
-import { NextResponse } from "next/server";
 import path from "path";
+import { NextResponse } from "next/server";
 import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
+import { concatenateAudio } from "@/lib/utils/audio";
 
 const log = createLogger("api/transcription");
 
 export async function POST(req: Request) {
   try {
-    const { audioUrls } = await req.json();
+    const { projectId, projectName } = await req.json();
 
-    if (!audioUrls || !Array.isArray(audioUrls)) {
-      return NextResponse.json({ error: "Invalid audioUrls" }, { status: 400 });
+    if (!projectId || !projectName) {
+      return NextResponse.json({ error: "Missing projectId or projectName" }, { status: 400 });
     }
 
-    log.info(`Transcription request: ${audioUrls.length} files`);
-    const results = [];
+    const dir = path.join(process.cwd(), "public", "projects", `${projectId}_${projectName}`, "audios");
 
-    for (const url of audioUrls) {
-      const filename = url.split("/").pop();
-      if (!filename) continue;
-
-      const inputPath = path.join(process.cwd(), "public", url);
-
-      if (!fs.existsSync(inputPath)) {
-        log.warn(`File not found: ${inputPath}`);
-        results.push({ url, status: "error", error: "File not found" });
-        continue;
-      }
-
-      const suffix = ".elevenlabs.json";
-      const outputPath = `${inputPath}${suffix}`;
-
-      // Return cached transcription if exists
-      if (fs.existsSync(outputPath)) {
-        const existingData = fs.readFileSync(outputPath, "utf-8");
-        log.info(`Using cached transcription for ${filename}`);
-        results.push({
-          url,
-          status: "completed",
-          transcriptionUrl: `${url}${suffix}`,
-          data: JSON.parse(existingData),
-        });
-        continue;
-      }
-
-      try {
-        log.info(`Transcribing ${filename} via LouzLabs API...`);
-        const { words } = await execute("generateTranscription", { file: inputPath });
-        fs.writeFileSync(outputPath, JSON.stringify(words, null, 2));
-        log.success(`Transcribed ${filename}: ${words.length} words`);
-
-        results.push({
-          url,
-          status: "completed",
-          transcriptionUrl: `${url}${suffix}`,
-          data: words,
-        });
-      } catch (err: any) {
-        log.error(`Transcription failed for ${filename}`, err.message);
-        results.push({ url, status: "error", error: err.message });
-      }
+    if (!fs.existsSync(dir)) {
+      return NextResponse.json({ error: "Audio directory not found" }, { status: 404 });
     }
 
-    const ok = results.filter((r) => r.status === "completed").length;
-    log.info(`Transcription batch done: ${ok}/${results.length} ok`);
+    const files = fs.readdirSync(dir)
+      .filter(f => f.startsWith("audio_") && f.endsWith(".mp3"))
+      .sort()
+      .map(f => path.join(dir, f));
 
-    return NextResponse.json({ results });
+    if (files.length === 0) {
+      return NextResponse.json({ error: "No audio files found" }, { status: 404 });
+    }
+
+    log.info(`Found ${files.length} audio files to concatenate`);
+
+    const outputPath = path.join(dir, "full_audio.mp3");
+    await concatenateAudio(files, outputPath);
+    log.success(`Concatenated audio saved to ${outputPath}`);
+
+    const cachePath = `${outputPath}.elevenlabs.json`;
+    if (fs.existsSync(cachePath)) {
+      const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
+      log.info("Using cached transcription");
+      return NextResponse.json({ words: cached, url: `/projects/${projectId}_${projectName}/audios/full_audio.mp3` });
+    }
+
+    log.info("Transcribing concatenated audio via LouzLabs API...");
+    const { words } = await execute("generateTranscription", { file: outputPath });
+    fs.writeFileSync(cachePath, JSON.stringify(words, null, 2));
+    log.success(`Transcription complete: ${words.length} words`);
+
+    return NextResponse.json({ words, url: `/projects/${projectId}_${projectName}/audios/full_audio.mp3` });
   } catch (e: any) {
     log.error("Transcription route error", e);
     return NextResponse.json({ error: e.message }, { status: 500 });

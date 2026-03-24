@@ -12,15 +12,17 @@ export interface ModelConfig {
   clipDuration?: number;
 }
 
+export const DEFAULT_CLIP_DURATION = 8;
+
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [{ provider: "louzlabs", model: "gpt-5.3-chat-latest" }],
   generateImage: [{ provider: "louzlabs" }],
   generateAudio: [{ provider: "louzlabs" }],
-  generateVideo: [{ provider: "louzlabs", clipDuration: 6 }],
+  generateVideo: [{ provider: "louzlabs", clipDuration: DEFAULT_CLIP_DURATION }],
   generateMusic: [{ provider: "louzlabs" }],
   generateTranscription: [{ provider: "louzlabs" }],
 };
 
 export function getVideoClipDuration(): number {
-  return ACTIONS.generateVideo[0]?.clipDuration ?? 6;
+  return ACTIONS.generateVideo[0]?.clipDuration ?? DEFAULT_CLIP_DURATION;
 }
