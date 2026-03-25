@@ -29,11 +29,15 @@ export function slugify(text: string): string {
  * Format: `{slug}-{shortId}`
  * Used by: storage, audio, video, render — NEVER compute this inline.
  */
-export function getProjectDirName(
-  projectId: string,
-  projectName: string,
-): string {
-  const slug = slugify(projectName) || "untitled";
-  const shortId = projectId.split("-")[0] || projectId.substring(0, 8);
-  return `${slug}-${shortId}`;
+function generateRandomHash(length: number): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => chars[b % chars.length]).join("");
+}
+
+export function generateProjectId(name?: string): { id: string; slug: string } {
+  const uid = crypto.randomUUID().split("-")[0];
+  const slug = name ? slugify(name) || "untitled" : generateRandomHash(8);
+  return { id: `${slug}-${uid}`, slug };
 }

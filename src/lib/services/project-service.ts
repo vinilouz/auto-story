@@ -1,4 +1,5 @@
 import type { ProjectData } from "@/lib/storage";
+import { generateProjectId } from "@/lib/utils";
 
 export interface CreateProjectInput {
   id?: string;
@@ -22,10 +23,19 @@ export interface CreateProjectInput {
   videoModel?: string;
 }
 
+function extractSlugFromId(id: string): string {
+  const parts = id.split("-");
+  return parts.length > 1 ? parts.slice(0, -1).join("-") : id;
+}
+
 export function createProject(input: CreateProjectInput): ProjectData {
+  const { id, slug } = input.id
+    ? { id: input.id, slug: extractSlugFromId(input.id) }
+    : generateProjectId(input.name);
+
   return {
-    id: input.id || crypto.randomUUID(),
-    name: input.name || `Project ${new Date().toLocaleString()}`,
+    id,
+    name: input.name || slug,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     flowType: input.flowType || "simple",

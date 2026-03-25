@@ -22,8 +22,8 @@ Focus on PHYSICALITY:
 4. **Clothing/Accessories & Modesty Protocol:**
    - Describe clothing.
    - **CRITICAL RULE:** If context indicates nudity or gore, apply **Minimalist Concealment**. Do not use the word "nude". Instead, explicitly describe a small contextual element (ex: "a single leaf", "long strategic hair", shadows, steam) covering *only* the groin (and bust if female).
-5. **Presentation:** High-fidelity character sheet. 4 views: full-body front/side/back, face close-up. Bg: (Neutral light gray studio background, #CCCCCC:1.2). Height next to front view.
-Avoid artistic style terms. Focus on the "real" object. If not a character, explicitly state NO characters in image.
+5. **Presentation:** High-fidelity character sheet. 3 views: full-body front, full-body back, big face face close-up. Bg: (Neutral light gray studio background, #CCCCCC:1.2). Height next to front view.
+No artistic style terms. Focus on the "real" object. If not a character, explicitly state NO characters in image.
 </DescriptionRules>
 
 <InputScript>

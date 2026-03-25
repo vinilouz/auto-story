@@ -6,8 +6,7 @@ const log = createLogger("api/video-clips");
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, referenceImage, duration, projectId, projectName } =
-      await request.json();
+    const { prompt, referenceImage, duration, projectId } = await request.json();
 
     if (!prompt) {
       return NextResponse.json({ error: "Missing prompt" }, { status: 400 });
@@ -20,7 +19,6 @@ export async function POST(request: NextRequest) {
     const videoUrl = await generateAndSaveVideoClip(
       { prompt, referenceImage, duration },
       projectId,
-      projectName,
     );
 
     log.success(`Video clip saved: ${videoUrl}`);

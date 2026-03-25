@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (Array.isArray(body.requests)) {
-      return handleBatch(body.requests, body.projectId, body.projectName);
+      return handleBatch(body.requests, body.projectId);
     }
 
     if (!body.imagePrompt) {
@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
         imageConfig: body.imageConfig,
         index: body.index,
         projectId: body.projectId,
-        projectName: body.projectName,
       },
       executeBatch,
     );
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
 async function handleBatch(
   requests: any[],
   projectId?: string,
-  projectName?: string,
 ) {
   const items: BatchImageItem[] = requests.map((r, i) => ({
     index: i,
@@ -61,7 +59,6 @@ async function handleBatch(
     imageConfig: r.imageConfig,
     entityName: r.entityName,
     projectId,
-    projectName,
   }));
 
   const encoder = new TextEncoder();

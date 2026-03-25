@@ -3,45 +3,24 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
-import { getProjectDirName } from "@/lib/utils";
 import { concatenateAudio } from "@/lib/utils/audio";
 
 const log = createLogger("api/transcription");
 
 const DATA_DIR = path.join(process.cwd(), "public", "projects");
 
-function findExistingDir(projectId: string): string | null {
-  if (!fs.existsSync(DATA_DIR)) return null;
-  const shortId = projectId.split("-")[0] || projectId.substring(0, 8);
-  const dirs = fs.readdirSync(DATA_DIR, { withFileTypes: true });
-  for (const d of dirs) {
-    if (d.isDirectory() && d.name.endsWith(`-${shortId}`)) return d.name;
-  }
-  for (const d of dirs) {
-    if (d.isDirectory() && d.name.includes(shortId)) return d.name;
-  }
-  return null;
-}
-
-function resolveDir(projectId: string, projectName: string): string {
-  return (
-    findExistingDir(projectId) || getProjectDirName(projectId, projectName)
-  );
-}
-
 export async function POST(req: Request) {
   try {
-    const { projectId, projectName } = await req.json();
+    const { projectId } = await req.json();
 
-    if (!projectId || !projectName) {
+    if (!projectId) {
       return NextResponse.json(
-        { error: "Missing projectId or projectName" },
+        { error: "Missing projectId" },
         { status: 400 },
       );
     }
 
-    const dirName = resolveDir(projectId, projectName);
-    const dir = path.join(DATA_DIR, dirName, "audios");
+    const dir = path.join(DATA_DIR, projectId, "audios");
 
     if (!fs.existsSync(dir)) {
       return NextResponse.json(
@@ -74,7 +53,7 @@ export async function POST(req: Request) {
       log.info("Using cached transcription");
       return NextResponse.json({
         words: cached,
-        url: `/projects/${dirName}/audios/${path.basename(audioPath)}`,
+        url: `/projects/${projectId}/audios/${path.basename(audioPath)}`,
       });
     }
 
@@ -87,7 +66,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       words,
-      url: `/projects/${dirName}/audios/${path.basename(audioPath)}`,
+      url: `/projects/${projectId}/audios/${path.basename(audioPath)}`,
     });
   } catch (e: unknown) {
     log.error("Transcription route error", e);

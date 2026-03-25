@@ -9,7 +9,7 @@ import type {
   TranscriptionResult,
 } from "@/lib/flows/types";
 import { createLogger } from "@/lib/logger";
-import { getProjectDirName, slugify } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
 
 const log = createLogger("storage");
 
@@ -56,44 +56,46 @@ export interface ProjectSummary {
 
 // ── Helpers ────────────────────────────────────────────────
 
-function findExistingDir(projectId: string): string | null {
-  if (!existsSync(DATA_DIR)) return null;
-  const shortId = projectId.split("-")[0] || projectId.substring(0, 8);
-  const dirs = readdirSync(DATA_DIR, { withFileTypes: true });
-  for (const d of dirs) {
-    if (d.isDirectory() && d.name.endsWith(`-${shortId}`)) return d.name;
-  }
-  for (const d of dirs) {
-    if (d.isDirectory() && d.name.includes(shortId)) return d.name;
-  }
-  return null;
-}
-
-function resolveDir(projectId: string, projectName: string): string {
-  return (
-    findExistingDir(projectId) || getProjectDirName(projectId, projectName)
-  );
+function resolveDir(projectId: string): string {
+  return projectId;
 }
 
 async function extractBase64(
   base64Url: string,
   imagesDir: string,
   dirName: string,
-  prefix: string,
-  index: number,
+  fileName: string,
 ): Promise<string | null> {
   const m = base64Url.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
   if (!m) return null;
   if (!existsSync(imagesDir)) mkdirSync(imagesDir, { recursive: true });
 
-  // img-1.jpg, img-2.jpg ... (1-indexed, sem timestamp para nome legível)
   const ext = m[1] === "jpeg" ? "jpg" : m[1];
-  const fileName = `${prefix}-${index + 1}.${ext}`;
+  const finalName = fileName.includes(".") ? fileName : `${fileName}.${ext}`;
   await fs.writeFile(
-    path.join(imagesDir, fileName),
+    path.join(imagesDir, finalName),
     Buffer.from(m[2], "base64"),
   );
-  return `/projects/${dirName}/images/${fileName}`;
+  return `/projects/${dirName}/images/${finalName}`;
+}
+
+async function extractSegmentImage(
+  base64Url: string,
+  imagesDir: string,
+  dirName: string,
+  index: number,
+): Promise<string | null> {
+  return extractBase64(base64Url, imagesDir, dirName, `img-${index + 1}`);
+}
+
+async function extractEntityImage(
+  base64Url: string,
+  imagesDir: string,
+  dirName: string,
+  entityName: string,
+): Promise<string | null> {
+  const tag = slugify(entityName).substring(0, 15);
+  return extractBase64(base64Url, imagesDir, dirName, `entity-${tag}`);
 }
 
 // ── Service ────────────────────────────────────────────────
@@ -102,7 +104,7 @@ export const StorageService = {
   async saveProject(project: ProjectData): Promise<string> {
     project.updatedAt = new Date().toISOString();
 
-    const dirName = resolveDir(project.id, project.name);
+    const dirName = resolveDir(project.id);
     const projectDir = path.join(DATA_DIR, dirName);
     const imagesDir = path.join(projectDir, "images");
 
@@ -112,11 +114,10 @@ export const StorageService = {
       for (let i = 0; i < project.segments.length; i++) {
         const seg = project.segments[i];
         if (seg.imagePath?.startsWith("data:image/")) {
-          const saved = await extractBase64(
+          const saved = await extractSegmentImage(
             seg.imagePath,
             imagesDir,
             dirName,
-            "img",
             i,
           );
           if (saved) seg.imagePath = saved;
@@ -125,16 +126,13 @@ export const StorageService = {
     }
 
     if (project.entities) {
-      for (let i = 0; i < project.entities.length; i++) {
-        const ent = project.entities[i];
+      for (const ent of project.entities) {
         if (ent.imageUrl?.startsWith("data:image/")) {
-          const tag = slugify(ent.name).substring(0, 15);
-          const saved = await extractBase64(
+          const saved = await extractEntityImage(
             ent.imageUrl,
             imagesDir,
             dirName,
-            `entity-${tag}`,
-            i,
+            ent.name,
           );
           if (saved) ent.imageUrl = saved;
         }
@@ -154,12 +152,11 @@ export const StorageService = {
    */
   async patchSegmentClip(
     projectId: string,
-    projectName: string,
     segmentIndex: number,
     videoClipUrl: string,
   ): Promise<void> {
     try {
-      const dirName = resolveDir(projectId, projectName);
+      const dirName = resolveDir(projectId);
       const configPath = path.join(DATA_DIR, dirName, "config.json");
       if (!existsSync(configPath)) {
         log.warn(
@@ -197,12 +194,11 @@ export const StorageService = {
    */
   async patchSegmentImage(
     projectId: string,
-    projectName: string,
     segmentIndex: number,
     imagePath: string,
   ): Promise<void> {
     try {
-      const dirName = resolveDir(projectId, projectName);
+      const dirName = resolveDir(projectId);
       const configPath = path.join(DATA_DIR, dirName, "config.json");
       if (!existsSync(configPath)) return;
 
@@ -233,12 +229,11 @@ export const StorageService = {
    */
   async patchEntityImage(
     projectId: string,
-    projectName: string,
     entityName: string,
     imagePath: string,
   ): Promise<void> {
     try {
-      const dirName = resolveDir(projectId, projectName);
+      const dirName = resolveDir(projectId);
       const configPath = path.join(DATA_DIR, dirName, "config.json");
       if (!existsSync(configPath)) return;
 
@@ -268,11 +263,10 @@ export const StorageService = {
 
   async patchMusic(
     projectId: string,
-    projectName: string,
     musicUrl: string,
   ): Promise<void> {
     try {
-      const dirName = resolveDir(projectId, projectName);
+      const dirName = resolveDir(projectId);
       const configPath = path.join(DATA_DIR, dirName, "config.json");
       if (!existsSync(configPath)) return;
 
@@ -295,10 +289,9 @@ export const StorageService = {
     projectId: string,
     fileName: string,
     base64Data: string,
-    projectName: string,
   ): Promise<string | null> {
     try {
-      const dirName = resolveDir(projectId, projectName);
+      const dirName = resolveDir(projectId);
       const imagesDir = path.join(DATA_DIR, dirName, "images");
       if (!existsSync(imagesDir)) mkdirSync(imagesDir, { recursive: true });
 
@@ -315,10 +308,7 @@ export const StorageService = {
 
   async getProject(id: string): Promise<ProjectData | null> {
     try {
-      const dirName = findExistingDir(id);
-      if (!dirName) return null;
-
-      const configPath = path.join(DATA_DIR, dirName, "config.json");
+      const configPath = path.join(DATA_DIR, id, "config.json");
       if (!existsSync(configPath)) return null;
 
       const project: ProjectData = JSON.parse(
@@ -367,10 +357,10 @@ export const StorageService = {
   },
 
   async deleteProject(id: string): Promise<boolean> {
-    const dirName = findExistingDir(id);
-    if (!dirName) return false;
-    await fs.rm(path.join(DATA_DIR, dirName), { recursive: true, force: true });
-    log.success(`Deleted project: ${dirName}`);
+    const projectDir = path.join(DATA_DIR, id);
+    if (!existsSync(projectDir)) return false;
+    await fs.rm(projectDir, { recursive: true, force: true });
+    log.success(`Deleted project: ${id}`);
     return true;
   },
 };

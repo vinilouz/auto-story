@@ -21,6 +21,7 @@ import { VideoStage } from "./stages/VideoStage";
 import { DownloadStage } from "./stages/DownloadStage";
 import { MusicStage } from "./stages/MusicStage";
 import { STAGE_LABELS } from "./config";
+import { splitWordsIntoSegments } from "@/lib/utils/text";
 import type { StoryFlowProps, Stage, ExecuteConfig } from "./types";
 
 export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
@@ -75,28 +76,17 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         };
 
       case "transcription":
-        // from-audio: split transcript into scenes by char size (no audio batches available)
+        // from-audio: split transcript into scenes preserving timing
         if (mode === "from-audio")
           return {
             fn: async () => {
-              // Split the full transcription text into segments
               const allWords = transcription.results.flatMap((r) => {
                 const data = r.data;
                 if (!data) return [];
                 return Array.isArray(data) ? data : (data as any).words ?? [];
               });
               if (allWords.length === 0) return;
-              const fullText = allWords.map((w: any) => w.text).join(" ");
-              const res = await fetch("/api/generate/split", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  text: fullText,
-                  segmentLength: state.segmentSize[0],
-                }),
-              });
-              if (!res.ok) return;
-              const newSegs = (await res.json()).segments.map((t: string) => ({ text: t }));
+              const newSegs = splitWordsIntoSegments(allWords, state.segmentSize[0]);
               state.setSegments(newSegs);
               state.setStage("split");
               await actions.save({ segments: newSegs });

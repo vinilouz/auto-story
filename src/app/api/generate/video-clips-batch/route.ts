@@ -8,10 +8,9 @@ import { createLogger } from "@/lib/logger";
 const log = createLogger("api/video-clips-batch");
 
 export async function POST(request: NextRequest) {
-  const { clips, projectId, projectName } = (await request.json()) as {
+  const { clips, projectId } = (await request.json()) as {
     clips: BatchClipRequest[];
     projectId: string;
-    projectName: string;
   };
 
   if (!clips?.length) {
@@ -38,7 +37,6 @@ export async function POST(request: NextRequest) {
         const results = await generateAndSaveVideoClipBatch(
           clips,
           projectId,
-          projectName,
           (result) => send({ type: "result", ...result }),
         );
 

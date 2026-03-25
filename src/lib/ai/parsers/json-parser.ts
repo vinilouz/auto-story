@@ -4,12 +4,31 @@ const log = createLogger("json-parser");
 
 export function extractJsonArray(raw: string): string {
   let clean = raw.trim();
-  const m =
-    clean.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/) ||
-    clean.match(/(\[[\s\S]*?\])/);
-  
-  if (m) {
-    clean = m[1];
+
+  // Try code block first
+  const codeBlockMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    clean = codeBlockMatch[1].trim();
+  }
+
+  // Find matching brackets for array
+  if (clean.includes("[")) {
+    const startIdx = clean.indexOf("[");
+    let depth = 0;
+    let endIdx = -1;
+
+    for (let i = startIdx; i < clean.length; i++) {
+      if (clean[i] === "[") depth++;
+      else if (clean[i] === "]") depth--;
+      if (depth === 0) {
+        endIdx = i;
+        break;
+      }
+    }
+
+    if (endIdx > startIdx) {
+      clean = clean.substring(startIdx, endIdx + 1);
+    }
   }
 
   // Auto-recover truncated JSON arrays

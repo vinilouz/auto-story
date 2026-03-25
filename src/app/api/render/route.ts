@@ -10,7 +10,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { ACTIVE_RENDERER, RENDERER } from "@/lib/video/config";
 import { renderWithMediabunny } from "@/lib/video/mediabunny";
 import { createLogger } from "@/lib/logger";
-import { getProjectDirName } from "@/lib/utils";
 import {
   REMOTION_CACHE_SIZE,
   REMOTION_CRF,
@@ -151,7 +150,7 @@ async function handleMediabunnyRender(
       try {
         sendEvent({ type: "progress", progress: 0, stage: "rendering" });
 
-        const { outputPath, videoUrl } = getOutputPath(projectId, projectName);
+        const { outputPath, videoUrl } = getOutputPath(projectId);
 
         await renderWithMediabunny(
           props as Parameters<typeof renderWithMediabunny>[0],
@@ -270,7 +269,7 @@ async function handleRemotionRender(
 
         sendEvent({ type: "progress", progress: 100, stage: "encoding" });
 
-        const { outputPath, videoUrl } = getOutputPath(projectId, projectName);
+        const { outputPath, videoUrl } = getOutputPath(projectId);
 
         await fs.promises.rename(tempOutput, outputPath);
         log.success(`Remotion render complete: ${videoUrl}`);
@@ -300,29 +299,27 @@ async function handleRemotionRender(
 
 function getOutputPath(
   projectId: string | undefined,
-  projectName: string | undefined,
 ): { outputPath: string; videoUrl: string } {
-  if (projectId && projectName) {
-    const dirName = getProjectDirName(projectId, projectName);
+  if (projectId) {
     const rendersDir = path.join(
       process.cwd(),
       "public",
       "projects",
-      dirName,
+      projectId,
       "videos",
     );
     if (!fs.existsSync(rendersDir))
       fs.mkdirSync(rendersDir, { recursive: true });
-    const fileName = `render-${Date.now()}.mp3`;
+    const fileName = `render-${Date.now()}.mp4`;
     const outputPath = path.join(rendersDir, fileName);
-    const videoUrl = `/projects/${dirName}/videos/${fileName}`;
+    const videoUrl = `/projects/${projectId}/videos/${fileName}`;
     return { outputPath, videoUrl };
   }
 
   const rendersDir = path.join(process.cwd(), "public", "renders");
   if (!fs.existsSync(rendersDir))
     fs.mkdirSync(rendersDir, { recursive: true });
-  const fileName = `render-${Date.now()}.mp3`;
+  const fileName = `render-${Date.now()}.mp4`;
   const outputPath = path.join(rendersDir, fileName);
   const videoUrl = `/renders/${fileName}`;
   return { outputPath, videoUrl };

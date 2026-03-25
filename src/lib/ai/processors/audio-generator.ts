@@ -2,27 +2,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
-import { getProjectDirName } from "@/lib/utils";
 import { splitIntoBatches } from "@/lib/utils/text";
 import type { AudioBatch } from "@/lib/flows/types";
 const log = createLogger("audio");
-
-
 
 async function generateAndSave(
   text: string,
   voice: string,
   projectId: string,
-  projectName: string,
 ): Promise<string> {
   const { audioBuffer } = await execute("generateAudio", { text, voice });
-  const dir = getProjectDirName(projectId, projectName);
-  const pubDir = path.join(process.cwd(), "public", "projects", dir, "audios");
+  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "audios");
   if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
 
   const name = `audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`;
   fs.writeFileSync(path.join(pubDir, name), Buffer.from(audioBuffer));
-  return `/projects/${dir}/audios/${name}`;
+  return `/projects/${projectId}/audios/${name}`;
 }
 
 export async function generateAudio(opts: {
@@ -31,7 +26,6 @@ export async function generateAudio(opts: {
   systemPrompt?: string;
   targetBatchIndices?: number[];
   projectId: string;
-  projectName: string;
 }): Promise<{ batches: AudioBatch[] }> {
   const {
     text,
@@ -39,7 +33,6 @@ export async function generateAudio(opts: {
     systemPrompt,
     targetBatchIndices,
     projectId,
-    projectName,
   } = opts;
 
   const segments = splitIntoBatches(text, 10000, systemPrompt);
@@ -63,7 +56,6 @@ export async function generateAudio(opts: {
           segments[idx],
           voice,
           projectId,
-          projectName,
         );
         batches[idx].status = "completed";
         log.success(`Batch #${idx + 1} completed`);

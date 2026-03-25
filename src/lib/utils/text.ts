@@ -268,3 +268,43 @@ export function splitTranscriptionByDuration(
 
   return segments;
 }
+
+export function splitWordsIntoSegments(
+  words: TranscriptionWord[],
+  maxLength: number,
+): Segment[] {
+  if (words.length === 0) return [];
+
+  const segments: Segment[] = [];
+  let currentWords: TranscriptionWord[] = [];
+
+  for (const word of words) {
+    const currentText = currentWords.map((w) => w.text).join(" ");
+    const potentialText = currentText ? `${currentText} ${word.text}` : word.text;
+
+    if (potentialText.length <= maxLength) {
+      currentWords.push(word);
+    } else {
+      if (currentWords.length > 0) {
+        segments.push({
+          id: crypto.randomUUID(),
+          text: currentWords.map((w) => w.text).join(" "),
+          startMs: currentWords[0].startMs,
+          endMs: currentWords[currentWords.length - 1].endMs,
+        } as Segment);
+      }
+      currentWords = [word];
+    }
+  }
+
+  if (currentWords.length > 0) {
+    segments.push({
+      id: crypto.randomUUID(),
+      text: currentWords.map((w) => w.text).join(" "),
+      startMs: currentWords[0].startMs,
+      endMs: currentWords[currentWords.length - 1].endMs,
+    } as Segment);
+  }
+
+  return segments;
+}

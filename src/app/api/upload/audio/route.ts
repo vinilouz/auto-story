@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { createLogger } from "@/lib/logger";
-import { getProjectDirName } from "@/lib/utils";
 
 const log = createLogger("api/upload/audio");
 
@@ -13,11 +12,10 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const projectId = formData.get("projectId") as string | null;
-    const projectName = formData.get("projectName") as string | null;
 
-    if (!file || !projectId || !projectName) {
+    if (!file || !projectId) {
       return NextResponse.json(
-        { error: "Missing file, projectId or projectName" },
+        { error: "Missing file or projectId" },
         { status: 400 },
       );
     }
@@ -29,15 +27,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dirName = getProjectDirName(projectId, projectName);
-    const audiosDir = path.join(DATA_DIR, dirName, "audios");
+    const audiosDir = path.join(DATA_DIR, projectId, "audios");
 
     if (!existsSync(audiosDir)) mkdirSync(audiosDir, { recursive: true });
 
     const ext = file.name.split(".").pop() ?? "mp3";
     const fileName = `audio_0001.${ext}`;
     const filePath = path.join(audiosDir, fileName);
-    const publicPath = `/projects/${dirName}/audios/${fileName}`;
+    const publicPath = `/projects/${projectId}/audios/${fileName}`;
 
     const bytes = await file.arrayBuffer();
     writeFileSync(filePath, Buffer.from(bytes));

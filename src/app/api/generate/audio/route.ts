@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
       systemPrompt,
       targetBatchIndices,
       projectId,
-      projectName,
     } = await request.json();
 
     if (!text) {
@@ -28,8 +27,7 @@ export async function POST(request: NextRequest) {
       voice,
       systemPrompt,
       targetBatchIndices,
-      projectId: projectId,
-      projectName: projectName,
+      projectId,
     });
 
     const completed = result.batches.filter(

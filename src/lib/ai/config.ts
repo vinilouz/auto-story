@@ -15,7 +15,7 @@ export interface ModelConfig {
 export const DEFAULT_CLIP_DURATION = 8;
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
-  generateText: [{ provider: "louzlabs", model: "gpt-5.3-chat-latest" }],
+  generateText: [{ provider: "louzlabs", model: "gemini-3-flash-preview" }],
   generateImage: [{ provider: "louzlabs" }],
   generateAudio: [{ provider: "louzlabs" }],
   generateVideo: [{ provider: "louzlabs", clipDuration: DEFAULT_CLIP_DURATION }],

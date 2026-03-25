@@ -13,7 +13,6 @@ export interface SingleImageInput {
   index?: number;
   entityName?: string;
   projectId?: string;
-  projectName?: string;
 }
 
 export interface BatchImageItem extends SingleImageInput {
@@ -39,11 +38,7 @@ async function saveAndPatchImage(
   imageUrl: string,
   input: SingleImageInput,
 ): Promise<string> {
-  if (
-    !input.projectId ||
-    !input.projectName ||
-    !imageUrl.startsWith("data:image/")
-  ) {
+  if (!input.projectId || !imageUrl.startsWith("data:image/")) {
     return imageUrl;
   }
 
@@ -57,27 +52,19 @@ async function saveAndPatchImage(
     input.projectId,
     fileName,
     m[2],
-    input.projectName,
   );
 
   if (!localUrl) return imageUrl;
 
-  // Atomic patch: write to config.json immediately so progress is never lost
   if (input.entityName) {
     await StorageService.patchEntityImage(
       input.projectId,
-      input.projectName,
       input.entityName,
       localUrl,
     );
     log.success(`Entity image saved: ${input.entityName} → ${localUrl}`);
   } else if (input.index !== undefined) {
-    await StorageService.patchSegmentImage(
-      input.projectId,
-      input.projectName,
-      input.index,
-      localUrl,
-    );
+    await StorageService.patchSegmentImage(input.projectId, input.index, localUrl);
   }
 
   return localUrl;
@@ -139,7 +126,7 @@ export function createBatchHandler(
       const imgRes = r.data as ImageResponse;
       let imageUrl = imgRes.imageUrl;
 
-      if (item?.projectId && item?.projectName) {
+      if (item?.projectId) {
         imageUrl = await saveAndPatchImage(imageUrl, item);
       }
 

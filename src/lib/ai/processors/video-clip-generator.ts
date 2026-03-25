@@ -6,7 +6,6 @@ import { type BatchResult, executeBatch } from "@/lib/ai/queue";
 import type { VideoResponse } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
 import { StorageService } from "@/lib/storage";
-import { getProjectDirName } from "@/lib/utils";
 
 const log = createLogger("video-clip");
 
@@ -51,7 +50,6 @@ async function saveClip(
 export async function generateAndSaveVideoClip(
   req: VideoClipRequest,
   projectId: string,
-  projectName: string,
   segmentIndex = 0,
 ): Promise<string> {
   const { videoUrl } = await execute("generateVideo", {
@@ -60,18 +58,11 @@ export async function generateAndSaveVideoClip(
     duration: req.duration,
   });
 
-  const dir = getProjectDirName(projectId, projectName);
-  const pubDir = path.join(process.cwd(), "public", "projects", dir, "clips");
+  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "clips");
   const filename = await saveClip(videoUrl, pubDir, segmentIndex);
-  const publicPath = `/projects/${dir}/clips/${filename}`;
+  const publicPath = `/projects/${projectId}/clips/${filename}`;
 
-  // Salva imediatamente no config.json — não espera o cliente
-  await StorageService.patchSegmentClip(
-    projectId,
-    projectName,
-    segmentIndex,
-    publicPath,
-  );
+  await StorageService.patchSegmentClip(projectId, segmentIndex, publicPath);
 
   log.success(`Saved clip: ${publicPath}`);
   return publicPath;
@@ -94,7 +85,6 @@ export interface BatchClipResult {
 export async function generateAndSaveVideoClipBatch(
   requests: BatchClipRequest[],
   projectId: string,
-  projectName: string,
   onResult?: (result: BatchClipResult) => void,
 ): Promise<BatchClipResult[]> {
   const resolved = requests.map((r) => ({
@@ -103,14 +93,13 @@ export async function generateAndSaveVideoClipBatch(
     duration: r.duration,
   }));
 
-  const dir = getProjectDirName(projectId, projectName);
-  const pubDir = path.join(process.cwd(), "public", "projects", dir, "clips");
+  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "clips");
 
   const clipResults: BatchClipResult[] = [];
   const savePromises: Promise<void>[] = [];
 
   const handleResult = async (br: BatchResult<VideoResponse>) => {
-    const segmentIndex = requests[br.id].index; // índice real do segmento
+    const segmentIndex = requests[br.id].index;
 
     if (br.status === "error" || !br.data?.videoUrl) {
       const r: BatchClipResult = {
@@ -124,18 +113,10 @@ export async function generateAndSaveVideoClipBatch(
     }
 
     try {
-      // Nome: clip-1.mp4, clip-2.mp4 ... (usa segmentIndex, não br.id)
       const filename = await saveClip(br.data.videoUrl, pubDir, segmentIndex);
-      const publicPath = `/projects/${dir}/clips/${filename}`;
+      const publicPath = `/projects/${projectId}/clips/${filename}`;
 
-      // ⚡ Salva no config.json IMEDIATAMENTE — antes de responder ao cliente
-      // Se a conexão SSE cair depois disso, o clip já está persistido
-      await StorageService.patchSegmentClip(
-        projectId,
-        projectName,
-        segmentIndex,
-        publicPath,
-      );
+      await StorageService.patchSegmentClip(projectId, segmentIndex, publicPath);
 
       log.success(`Saved clip #${segmentIndex + 1}: ${publicPath}`);
       const r: BatchClipResult = {

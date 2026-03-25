@@ -3,14 +3,13 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { execute } from "@/lib/ai/providers";
 import { StorageService } from "@/lib/storage";
-import { getProjectDirName } from "@/lib/utils";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/music");
 
 export async function POST(request: NextRequest) {
   try {
-    const { projectId, projectName, prompt } = await request.json();
+    const { projectId, prompt } = await request.json();
 
     if (!projectId) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
@@ -23,14 +22,13 @@ export async function POST(request: NextRequest) {
       instrumental: true,
     });
 
-    const dir = getProjectDirName(projectId, projectName || "untitled");
-    const musicDir = path.join(process.cwd(), "public", "projects", dir, "music");
+    const musicDir = path.join(process.cwd(), "public", "projects", projectId, "music");
 
     if (!existsSync(musicDir)) mkdirSync(musicDir, { recursive: true });
 
     const filename = "background.mp4";
     const filepath = path.join(musicDir, filename);
-    const publicPath = `/projects/${dir}/music/${filename}`;
+    const publicPath = `/projects/${projectId}/music/${filename}`;
 
     if (musicUrl.startsWith("data:")) {
       const [, base64Data] = musicUrl.split(",");
@@ -43,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     log.success(`Music saved: ${publicPath}`);
 
-    await StorageService.patchMusic(projectId, projectName || "untitled", publicPath);
+    await StorageService.patchMusic(projectId, publicPath);
 
     return NextResponse.json({ musicUrl: publicPath });
   } catch (e: any) {

@@ -112,9 +112,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
       voice: audioVoice,
       systemPrompt: audioSystemPrompt,
       projectId: project.projectId || state.projectId,
-      projectName: title || "untitled",
     }),
-    [mode, segments, scriptText, audioVoice, audioSystemPrompt, project.projectId, state.projectId, title],
+    [mode, segments, scriptText, audioVoice, audioSystemPrompt, project.projectId, state.projectId],
   );
 
   const splitScenes = useCallback(async () => {
@@ -151,13 +150,11 @@ export function useStoryFlowActions(state: StoryFlowState) {
       // 1. Save project metadata so the directory is created
       const saved = await save({ flowType: "from-audio", scriptText: " " });
       const pid = saved?.id ?? state.projectId;
-      const pname = title || "untitled";
 
       // 2. Upload the audio file to the server
       const form = new FormData();
       form.append("file", uploadedAudioFile);
       form.append("projectId", pid);
-      form.append("projectName", pname);
 
       const uploadRes = await fetch("/api/upload/audio", {
         method: "POST",
@@ -169,7 +166,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       }
 
       // 3. Transcribe the uploaded audio
-      const tResults = await transcription.transcribe(pid, pname);
+      const tResults = await transcription.transcribe(pid);
       if (tResults) await save({ transcriptionResults: tResults });
 
       toast.success("Audio uploaded & transcribed!");
@@ -179,7 +176,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [uploadedAudioFile, title, state.projectId, save, transcription, setStage, setLoading]);
+  }, [uploadedAudioFile, state.projectId, save, transcription, setStage, setLoading]);
 
   const saveCommentator = useCallback(async () => {
     const config = {
@@ -398,7 +395,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         const r = await fetch("/api/generate/images", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ requests, projectId: pid, projectName: title }),
+          body: JSON.stringify({ requests, projectId: pid }),
         });
         if (!r.ok) throw new Error();
 
@@ -440,12 +437,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
                   ? { ...e, imageUrl: event.data.imageUrl, status: "completed" as const }
                   : e,
               );
+              setEntities([...latestEnts]);
+              await save({ entities: latestEnts });
             } else {
               latestEnts = latestEnts.map((e, j) =>
                 j === targetIdx ? { ...e, status: "error" as const } : e,
               );
+              setEntities([...latestEnts]);
             }
-            setEntities([...latestEnts]);
           }
         }
 
@@ -480,7 +479,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
           imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
           imageConfig: { aspect_ratio: "16:9" },
           projectId: pid,
-          projectName: title,
           entityName: e.name,
         };
 
@@ -527,7 +525,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
           imageConfig: { aspect_ratio: "16:9" },
           systemPrompt: imagePromptStyle,
           projectId: project.projectId || state.projectId,
-          projectName: title,
           index: segIndex,
         };
         const matches = prompt.match(/<<([^>]+)>>/g);
@@ -651,7 +648,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       const r = await fetch("/api/generate/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requests, projectId: pid, projectName: title }),
+        body: JSON.stringify({ requests, projectId: pid }),
       });
       if (!r.ok) throw new Error();
 
@@ -686,6 +683,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
               n.delete(segIndex);
               return n;
             });
+            await save({ segments: latestSegs });
           } else {
             setImageStatuses((p) => new Map(p).set(segIndex, "error"));
           }
@@ -720,10 +718,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
   }, [audio, audioOpts, setStage, save]);
 
   const transcribeAction = useCallback(async () => {
-    const newResults = await transcription.transcribe(project.projectId || state.projectId, title);
+    const newResults = await transcription.transcribe(project.projectId || state.projectId);
     setStage("transcription");
     if (newResults) await save({ transcriptionResults: newResults });
-  }, [transcription, project.projectId, state.projectId, title, setStage, save]);
+  }, [transcription, project.projectId, state.projectId, setStage, save]);
 
   const splitByDuration = useCallback(async () => {
     const completedBatches = audio.batches.filter((b) => b.status === "completed" && b.url);
@@ -734,11 +732,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
     const audioDurationsMs = await Promise.all(
       completedBatches.map(
         (b) =>
-          new Promise<number>((resolve, reject) => {
-            const el = new Audio(b.url!);
-            el.onloadedmetadata = () => resolve(el.duration * 1000);
-            el.onerror = () => reject(new Error(`Audio load error: ${b.url}`));
-          }),
+          Promise.race([
+            new Promise<number>((resolve, reject) => {
+              const el = new Audio(b.url!);
+              el.onloadedmetadata = () => resolve(el.duration * 1000);
+              el.onerror = () => reject(new Error(`Audio load error: ${b.url}`));
+            }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Audio load timeout")), 10000),
+            ),
+          ]),
       ),
     );
     const newSegs = splitTranscriptionByDuration(
@@ -764,7 +767,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
     }
     await videoClips.generateAll(segments, setSegments, {
       projectId: pid || state.projectId,
-      projectName: title,
       clipDuration,
       onClipCompleted: async (newSegments) => {
         await save({ segments: newSegments });
@@ -842,7 +844,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: pid || state.projectId,
-          projectName: title || "untitled",
         }),
       });
 
@@ -868,7 +869,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
         body: JSON.stringify({
           imagePrompt: commImagePrompt,
           projectId: project.projectId || state.projectId,
-          projectName: title || "untitled",
         }),
       });
       if (res.ok) {

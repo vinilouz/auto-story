@@ -12,7 +12,6 @@ export function useVideoClips() {
     setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
     opts: {
       projectId?: string | null;
-      projectName?: string;
       clipDuration?: number;
       onClipCompleted?: (newSegments: Segment[]) => Promise<void>;
     },
@@ -45,7 +44,6 @@ export function useVideoClips() {
         body: JSON.stringify({
           clips,
           projectId: opts.projectId,
-          projectName: opts.projectName,
         }),
       });
       if (!res.ok) throw new Error("Batch clip generation failed");
@@ -113,7 +111,6 @@ export function useVideoClips() {
     setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
     opts: {
       projectId?: string | null;
-      projectName?: string;
       clipDuration?: number;
       onClipCompleted?: (newSegments: Segment[]) => Promise<void>;
     },
@@ -132,7 +129,6 @@ export function useVideoClips() {
           referenceImage: seg.imagePath,
           duration: opts.clipDuration,
           projectId: opts.projectId,
-          projectName: opts.projectName,
           index: index,
         }),
       });

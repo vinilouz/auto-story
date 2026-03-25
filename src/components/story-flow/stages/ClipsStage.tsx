@@ -13,7 +13,7 @@ interface ClipsStageProps {
 }
 
 export function ClipsStage({ state, actions }: ClipsStageProps) {
-  const { segments, videoClips, clipDuration, project, projectId, title } = state;
+  const { segments, videoClips, clipDuration, project, projectId } = state;
 
   return (
     <div className="space-y-4">
@@ -48,7 +48,6 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                         onClick={() =>
                           videoClips.regenerateClip(i, segments, state.setSegments, {
                             projectId: project.projectId || projectId,
-                            projectName: title,
                             clipDuration,
                             onClipCompleted: async (newSegments) => {
                               await actions.save({ segments: newSegments });
@@ -77,7 +76,6 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                         onClick={() =>
                           videoClips.regenerateClip(i, segments, state.setSegments, {
                             projectId: project.projectId || projectId,
-                            projectName: title,
                             clipDuration,
                             onClipCompleted: async (newSegments) => {
                               await actions.save({ segments: newSegments });
