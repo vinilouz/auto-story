@@ -1,4 +1,3 @@
-import type React from "react";
 import type { CaptionStyle, CommentatorConfig, EntityAsset, Segment } from "@/lib/flows/types";
 import type { AudioBatch, TranscriptionResult } from "@/lib/flows/types";
 
@@ -17,7 +16,7 @@ export type Stage =
   | "download"
   | "music";
 
-export type FlowMode = "simple" | "commentator" | "video-story";
+export type FlowMode = "simple" | "commentator" | "video-story" | "from-audio";
 
 export interface StoryFlowProps {
   mode: FlowMode;
@@ -55,6 +54,9 @@ export interface StoryFlowState {
   setMusic: (music: boolean) => void;
   musicUrl: string | null;
   setMusicUrl: (url: string | null) => void;
+  /** Audio file chosen by the user – only used in the from-audio flow */
+  uploadedAudioFile: File | null;
+  setUploadedAudioFile: (file: File | null) => void;
   commentator: CommentatorConfig | null;
   setCommentator: (commentator: CommentatorConfig | null) => void;
   commName: string;
@@ -72,7 +74,11 @@ export interface StoryFlowState {
   entities: EntityAsset[];
   setEntities: (entities: EntityAsset[] | ((prev: EntityAsset[]) => EntityAsset[])) => void;
   imageStatuses: Map<number, "generating" | "error">;
-  setImageStatuses: (statuses: Map<number, "generating" | "error"> | ((prev: Map<number, "generating" | "error">) => Map<number, "generating" | "error">)) => void;
+  setImageStatuses: (
+    statuses:
+      | Map<number, "generating" | "error">
+      | ((prev: Map<number, "generating" | "error">) => Map<number, "generating" | "error">),
+  ) => void;
   captionStyle: CaptionStyle;
   setCaptionStyle: (style: CaptionStyle | ((prev: CaptionStyle) => CaptionStyle)) => void;
   videoVolume: number;
@@ -90,63 +96,10 @@ export interface StoryFlowState {
   hasAudio: boolean;
   hasTranscription: boolean;
   clipDuration: number;
-  audio: {
-    batches: AudioBatch[];
-    setBatches: (batches: AudioBatch[]) => void;
-    generate: (opts: { text: string; voice: string; systemPrompt: string; projectId: string; projectName: string }) => Promise<AudioBatch[]>;
-    regenerateBatch: (index: number, opts: { text: string; voice: string; systemPrompt: string; projectId: string; projectName: string }) => Promise<void>;
-    isLoading: boolean;
-  };
-  transcription: {
-    results: TranscriptionResult[];
-    setResults: (results: TranscriptionResult[]) => void;
-    transcribe: (projectId: string, projectName: string) => Promise<TranscriptionResult[] | undefined>;
-    retry: (projectId: string, projectName: string) => Promise<TranscriptionResult[] | undefined>;
-    isLoading: boolean;
-  };
-  videoClips: {
-    clipStatuses: Map<number, "generating" | "error" | "completed">;
-    generateAll: (
-      segments: Segment[],
-      setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
-      opts: {
-        projectId?: string | null;
-        projectName?: string;
-        clipDuration?: number;
-        onClipCompleted?: (segments: Segment[]) => Promise<void>;
-      }
-    ) => Promise<void>;
-    regenerateClip: (
-      index: number,
-      segments: Segment[],
-      setSegments: React.Dispatch<React.SetStateAction<Segment[]>>,
-      opts: {
-        projectId?: string | null;
-        projectName?: string;
-        clipDuration?: number;
-        onClipCompleted?: (segments: Segment[]) => Promise<void>;
-      }
-    ) => Promise<void>;
-    isLoading: boolean;
-  };
-  video: {
-    videoProps: any;
-    setVideoProps: (props: any) => void;
-    generate: (segments: any[], batches: AudioBatch[], results: TranscriptionResult[], mode: "image" | "video", videoVolume?: number) => Promise<any>;
-    render: (props: any, captionStyle: CaptionStyle, projectId?: string, title?: string) => Promise<void>;
-    isGenerating: boolean;
-    isRendering: boolean;
-    renderProgress: any;
-  };
-  project: {
-    projectId: string | null;
-    setProjectId: (id: string | null) => void;
-    load: (id: string) => Promise<any>;
-    save: (data: any) => Promise<any>;
-    isSaving: boolean;
-  };
-  dl: {
-    downloadZip: (opts: { segments: Segment[]; audioUrls: string[]; transcriptionResults: TranscriptionResult[]; filename: string }) => Promise<void>;
-    isDownloading: boolean;
-  };
+  audio: ReturnType<typeof import("@/lib/flows/hooks").useAudio>;
+  transcription: ReturnType<typeof import("@/lib/flows/hooks").useTranscription>;
+  videoClips: ReturnType<typeof import("@/lib/flows/hooks").useVideoClips>;
+  video: ReturnType<typeof import("@/lib/flows/hooks").useVideo>;
+  project: ReturnType<typeof import("@/lib/flows/hooks").useProject>;
+  dl: ReturnType<typeof import("@/lib/flows/hooks").useDownload>;
 }

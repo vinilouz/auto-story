@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, MessageSquare, Trash2, Video } from "lucide-react";
+import { BookOpen, Headphones, MessageSquare, Trash2, Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import StoryFlow from "@/components/StoryFlow";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-type FlowType = "simple" | "commentator" | "video-story";
+type FlowType = "simple" | "commentator" | "video-story" | "from-audio";
 
 interface Project {
   id: string;
@@ -50,7 +50,7 @@ export default function Home() {
               +new Date(b.updatedAt) - +new Date(a.updatedAt),
           ),
         );
-    } catch {}
+    } catch { }
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -62,8 +62,8 @@ export default function Home() {
 
   const detectFlowType = (p: Project): FlowType => {
     if (p.flowType === "video-story") return "video-story";
-    if (p.flowType === "with-commentator" || p.commentator)
-      return "commentator";
+    if (p.flowType === "from-audio") return "from-audio";
+    if (p.flowType === "with-commentator" || p.commentator) return "commentator";
     return "simple";
   };
 
@@ -92,6 +92,8 @@ export default function Home() {
   const flowIcon = (type: string) => {
     if (type === "video-story")
       return <Video className="w-4 h-4 text-purple-500" />;
+    if (type === "from-audio")
+      return <Headphones className="w-4 h-4 text-orange-500" />;
     if (type === "with-commentator")
       return <MessageSquare className="w-4 h-4 text-green-500" />;
     return <BookOpen className="w-4 h-4 text-blue-500" />;
@@ -99,6 +101,7 @@ export default function Home() {
 
   const flowLabel = (type: string) => {
     if (type === "video-story") return "Video Story";
+    if (type === "from-audio") return "From Audio";
     if (type === "with-commentator") return "Commentator";
     return "Simple";
   };
@@ -125,36 +128,32 @@ export default function Home() {
                     <div className="flex justify-between">
                       <div className="flex items-center gap-2">
                         {flowIcon(p.flowType)}
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                        <span className="text-xs text-muted-foreground">
                           {flowLabel(p.flowType)}
                         </span>
                       </div>
                       <Button
-                        variant="ghost"
                         size="icon"
-                        className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
                         onClick={(e) => handleDelete(e, p.id)}
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                    <CardTitle className="text-lg line-clamp-2">
-                      {p.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>
-                      {new Date(p.updatedAt).toLocaleDateString()}
+                    <CardTitle className="text-base">{p.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      {new Date(p.updatedAt).toLocaleString()}
                     </CardDescription>
-                  </CardContent>
+                  </CardHeader>
                 </Card>
               ))}
             </div>
           </div>
         )}
 
-        <h2 className="text-2xl font-semibold mb-6">New Story</h2>
-        <div className="grid md:grid-cols-3 gap-6">
+        <h2 className="text-2xl font-semibold mb-6">Start New Project</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card
             className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all"
             onClick={() => startFlow("simple")}
@@ -196,6 +195,24 @@ export default function Home() {
               <CardTitle className="text-2xl">Video Story</CardTitle>
               <CardDescription>
                 AI video clips (Grok/Veo) from audio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" size="lg">
+                Start
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all"
+            onClick={() => startFlow("from-audio")}
+          >
+            <CardHeader>
+              <div className="text-4xl mb-4">🎧</div>
+              <CardTitle className="text-2xl">From Audio</CardTitle>
+              <CardDescription>
+                Upload audio → transcribe → images → video
               </CardDescription>
             </CardHeader>
             <CardContent>

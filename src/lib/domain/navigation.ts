@@ -24,6 +24,19 @@ export function calculateMaxStep(
     return i === -1 ? 0 : i;
   };
 
+  // ── from-audio ────────────────────────────────────────────────────────────
+  if (mode === "from-audio") {
+    if (state.hasVideoProps) return idx("download");
+    if (state.hasImages) return idx("video");
+    if (state.hasPrompts) return idx("images");
+    if (state.consistency && state.hasEntities) return idx("descriptions");
+    if (state.hasSegments) return idx(state.consistency ? "entities" : "descriptions");
+    if (state.hasTranscription) return idx("split");
+    // transcription stage is always reachable from input (user just needs to upload)
+    return idx("transcription");
+  }
+
+  // ── video-story ───────────────────────────────────────────────────────────
   if (mode === "video-story") {
     if (state.hasVideoProps) return idx("download");
     if (state.hasClips) return idx("video");
@@ -36,13 +49,15 @@ export function calculateMaxStep(
     return 0;
   }
 
+  // ── simple / commentator ──────────────────────────────────────────────────
   if (state.hasVideoProps) return idx("download");
   if (state.hasTranscription) return idx("video");
   if (state.hasAudio) return idx("transcription");
   if (state.hasImages) return idx("audio");
   if (state.hasPrompts) return idx("images");
   if (state.consistency && state.hasEntities) return idx("descriptions");
-  if (state.hasComments && mode === "commentator") return idx(state.consistency ? "entities" : "descriptions");
+  if (state.hasComments && mode === "commentator")
+    return idx(state.consistency ? "entities" : "descriptions");
   if (state.hasCommentator && mode === "commentator") return idx("comments");
   if (state.hasSegments) {
     return idx(
@@ -61,12 +76,28 @@ export function calculateMaxStep(
 export function determineInitialStage(
   mode: FlowMode,
   project: {
-    segments?: Array<{ imagePrompt?: string; imagePath?: string; videoClipUrl?: string; type?: string }>;
+    segments?: Array<{
+      imagePrompt?: string;
+      imagePath?: string;
+      videoClipUrl?: string;
+      type?: string;
+    }>;
     audioBatches?: Array<{ status: string }>;
     transcriptionResults?: unknown[];
     commentator?: unknown;
+    entities?: unknown[];
   },
 ): Stage {
+  // ── from-audio ────────────────────────────────────────────────────────────
+  if (mode === "from-audio") {
+    if (project.segments?.some((s) => s.imagePath)) return "images";
+    if (project.segments?.some((s) => s.imagePrompt)) return "descriptions";
+    if (project.segments?.length) return "split";
+    if (project.transcriptionResults?.length) return "transcription";
+    return "input";
+  }
+
+  // ── video-story ───────────────────────────────────────────────────────────
   if (mode === "video-story") {
     if (project.segments?.some((s) => s.videoClipUrl)) return "clips";
     if (project.segments?.some((s) => s.imagePath)) return "images";
@@ -77,6 +108,7 @@ export function determineInitialStage(
     return "input";
   }
 
+  // ── simple / commentator ──────────────────────────────────────────────────
   if (project.transcriptionResults?.length) return "video";
   if (project.audioBatches?.some((b) => b.status === "completed")) return "audio";
   if (project.segments?.some((s) => s.imagePath)) return "images";

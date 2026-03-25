@@ -7,6 +7,7 @@ import { useStoryFlowActions } from "./useStoryFlowActions";
 import { Header } from "./Header";
 import { NavigationBar } from "./NavigationBar";
 import { InputStage } from "./stages/InputStage";
+import { InputAudioStage } from "./stages/InputAudioStage";
 import { CommentatorStage } from "./stages/CommentatorStage";
 import { CommentsStage } from "./stages/CommentsStage";
 import { DescriptionsStage } from "./stages/DescriptionsStage";
@@ -26,13 +27,39 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
   const state = useStoryFlowState(mode, projectId);
   const actions = useStoryFlowActions(state);
 
-  const { stage, stages, maxStep, stageIdx, hasPrompts, hasImages, hasClips, hasMusic, hasComments, hasAudio, hasTranscription, loading, imageStatuses, videoClips, audio, transcription, video } = state;
+  const {
+    stage,
+    stages,
+    maxStep,
+    stageIdx,
+    hasPrompts,
+    hasImages,
+    hasClips,
+    hasMusic,
+    hasComments,
+    hasAudio,
+    hasTranscription,
+    loading,
+    imageStatuses,
+    videoClips,
+    audio,
+    transcription,
+    video,
+  } = state;
 
   const canNext = stageIdx < maxStep;
 
   const exec = useMemo((): ExecuteConfig => {
     switch (stage) {
       case "input":
+        // from-audio: upload file + transcribe in one step
+        if (mode === "from-audio")
+          return {
+            fn: actions.uploadAudioAndTranscribe,
+            ok: !!state.uploadedAudioFile,
+            label: "Upload & Transcribe",
+            busy: loading || transcription.isLoading,
+          };
         if (mode === "video-story")
           return {
             fn: actions.generateAudioAction,
@@ -46,6 +73,60 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: "Split Scenes",
           busy: loading,
         };
+
+      case "transcription":
+        // from-audio: split transcript into scenes by char size (no audio batches available)
+        if (mode === "from-audio")
+          return {
+            fn: async () => {
+              // Split the full transcription text into segments
+              const allWords = transcription.results.flatMap((r) => {
+                const data = r.data;
+                if (!data) return [];
+                return Array.isArray(data) ? data : (data as any).words ?? [];
+              });
+              if (allWords.length === 0) return;
+              const fullText = allWords.map((w: any) => w.text).join(" ");
+              const res = await fetch("/api/generate/split", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: fullText,
+                  segmentLength: state.segmentSize[0],
+                }),
+              });
+              if (!res.ok) return;
+              const newSegs = (await res.json()).segments.map((t: string) => ({ text: t }));
+              state.setSegments(newSegs);
+              state.setStage("split");
+              await actions.save({ segments: newSegs });
+            },
+            ok: hasTranscription,
+            label: "Split into Scenes",
+            busy: loading,
+          };
+        return {
+          fn: actions.transcribeAction,
+          ok: hasAudio,
+          label: hasTranscription ? "Re-transcribe" : "Transcribe",
+          busy: transcription.isLoading,
+        };
+
+      case "split":
+        if (mode === "from-audio")
+          return {
+            fn: async () => state.setStage(state.consistency ? "entities" : "descriptions"),
+            ok: state.segments.length > 0,
+            label: "Continue",
+            busy: false,
+          };
+        return {
+          fn: actions.splitByDuration,
+          ok: hasTranscription,
+          label: state.segments.length > 0 ? "Re-split" : "Split by Duration",
+          busy: loading,
+        };
+
       case "music":
         return {
           fn: actions.generateMusic,
@@ -53,6 +134,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: hasMusic ? "Regenerate" : "Generate Music",
           busy: loading,
         };
+
       case "commentator":
         return {
           fn: actions.saveCommentator,
@@ -60,6 +142,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: "Save Commentator",
           busy: false,
         };
+
       case "comments":
         return {
           fn: actions.generateComments,
@@ -67,6 +150,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: hasComments ? "Regenerate" : "Generate Comments",
           busy: loading,
         };
+
       case "descriptions":
         return {
           fn: actions.generateDescriptions,
@@ -74,53 +158,31 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: hasPrompts ? "Regenerate" : "Generate Descriptions",
           busy: loading,
         };
+
       case "entities":
         return {
           fn: actions.extractAndGenerateEntities,
           ok: state.segments.length > 0,
-          label:
-            state.entities.length > 0
-              ? state.entities.some((e) => e.imageUrl)
-                ? "Regenerate"
-                : "Generate Images"
-              : "Extract & Generate Entities",
+          label: state.entities.length > 0 ? "Re-extract" : "Extract & Generate",
           busy: loading,
         };
+
       case "images":
         return {
           fn: actions.generateAllImages,
           ok: hasPrompts,
-          label: hasImages ? "Regenerate" : "Generate Images",
+          label: hasImages ? "Regenerate All" : "Generate Images",
           busy: imageStatuses.size > 0,
         };
+
       case "audio":
-        if (mode === "video-story")
-          return {
-            fn: actions.generateAudioAction,
-            ok: !!state.scriptText.trim(),
-            label: hasAudio ? "Regenerate Audio" : "Generate Audio",
-            busy: audio.isLoading,
-          };
         return {
           fn: actions.generateAudioAction,
           ok: state.segments.length > 0,
           label: hasAudio ? "Regenerate" : "Generate Audio",
           busy: audio.isLoading,
         };
-      case "transcription":
-        return {
-          fn: actions.transcribeAction,
-          ok: hasAudio,
-          label: "Transcribe",
-          busy: transcription.isLoading,
-        };
-      case "split":
-        return {
-          fn: actions.splitByDuration,
-          ok: hasTranscription,
-          label: `Split by ${state.clipDuration}s clips`,
-          busy: false,
-        };
+
       case "clips":
         return {
           fn: actions.generateAllClips,
@@ -128,6 +190,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: hasClips ? "Regenerate Clips" : "Generate Video Clips",
           busy: videoClips.isLoading,
         };
+
       case "video":
         return {
           fn: actions.generateVideoPreview,
@@ -135,6 +198,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           label: video.videoProps ? "Regenerate" : "Generate Preview",
           busy: video.isGenerating,
         };
+
       case "download":
         return {
           fn: actions.downloadZipAction,
@@ -147,11 +211,14 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     stage,
     mode,
     state.scriptText,
+    state.uploadedAudioFile,
     state.commName,
     state.commImage,
     state.commentator,
     state.segments,
     state.entities,
+    state.segmentSize,
+    state.consistency,
     state.clipDuration,
     hasPrompts,
     hasImages,
@@ -164,6 +231,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     imageStatuses.size,
     audio.isLoading,
     transcription.isLoading,
+    transcription.results,
     videoClips.isLoading,
     video.isGenerating,
     video.videoProps,
@@ -183,6 +251,8 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     const props = { state, actions };
     switch (stage) {
       case "input":
+        // from-audio uses a dedicated input stage with file upload
+        if (mode === "from-audio") return <InputAudioStage state={state} />;
         return <InputStage {...props} />;
       case "commentator":
         return <CommentatorStage {...props} />;
@@ -246,7 +316,14 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         {renderStage()}
       </div>
 
-      <NavigationBar exec={exec} canNext={canNext} onBack={goBack} onNext={goNext} stageIdx={stageIdx} />
+      <NavigationBar
+        stageIdx={stageIdx}
+        maxStep={maxStep}
+        canNext={canNext}
+        exec={exec}
+        onNext={goNext}
+        onBack={goBack}
+      />
     </div>
   );
 }

@@ -60,7 +60,18 @@ async function saveAndPatchImage(
     input.projectName,
   );
 
-  if (localUrl && input.index !== undefined) {
+  if (!localUrl) return imageUrl;
+
+  // Atomic patch: write to config.json immediately so progress is never lost
+  if (input.entityName) {
+    await StorageService.patchEntityImage(
+      input.projectId,
+      input.projectName,
+      input.entityName,
+      localUrl,
+    );
+    log.success(`Entity image saved: ${input.entityName} → ${localUrl}`);
+  } else if (input.index !== undefined) {
     await StorageService.patchSegmentImage(
       input.projectId,
       input.projectName,
@@ -69,7 +80,7 @@ async function saveAndPatchImage(
     );
   }
 
-  return localUrl || imageUrl;
+  return localUrl;
 }
 
 export async function processSingleImage(
@@ -128,7 +139,7 @@ export function createBatchHandler(
       const imgRes = r.data as ImageResponse;
       let imageUrl = imgRes.imageUrl;
 
-      if (item.projectId && item.projectName) {
+      if (item?.projectId && item?.projectName) {
         imageUrl = await saveAndPatchImage(imageUrl, item);
       }
 

@@ -25,7 +25,7 @@ export interface ProjectData {
   name: string;
   createdAt: string;
   updatedAt: string;
-  flowType: "simple" | "with-commentator" | "video-story";
+  flowType: "simple" | "with-commentator" | "video-story" | "from-audio";
   scriptText: string;
   segmentSize?: number;
   language?: string;
@@ -112,7 +112,6 @@ export const StorageService = {
       for (let i = 0; i < project.segments.length; i++) {
         const seg = project.segments[i];
         if (seg.imagePath?.startsWith("data:image/")) {
-          // img-1.jpg, img-2.jpg ...
           const saved = await extractBase64(
             seg.imagePath,
             imagesDir,
@@ -185,7 +184,6 @@ export const StorageService = {
         `Patched config: segment[${segmentIndex}].videoClipUrl = ${videoClipUrl}`,
       );
     } catch (e: any) {
-      // Não lança — patch é best-effort, o clip já está no disco
       log.error(
         `patchSegmentClip falhou para segmento ${segmentIndex}`,
         e.message,
@@ -223,6 +221,46 @@ export const StorageService = {
     } catch (e: any) {
       log.error(
         `patchSegmentImage falhou para segmento ${segmentIndex}`,
+        e.message,
+      );
+    }
+  },
+
+  /**
+   * Patch cirúrgico: atualiza o imageUrl de uma entidade específica no config.json.
+   * Chamado imediatamente após salvar a imagem no disco — garante que a entidade
+   * nunca perde seu progresso mesmo que a conexão SSE caia no meio do batch.
+   */
+  async patchEntityImage(
+    projectId: string,
+    projectName: string,
+    entityName: string,
+    imagePath: string,
+  ): Promise<void> {
+    try {
+      const dirName = resolveDir(projectId, projectName);
+      const configPath = path.join(DATA_DIR, dirName, "config.json");
+      if (!existsSync(configPath)) return;
+
+      const project: ProjectData = JSON.parse(
+        await fs.readFile(configPath, "utf-8"),
+      );
+      if (!project.entities) return;
+
+      const idx = project.entities.findIndex((e) => e.name === entityName);
+      if (idx === -1) return;
+
+      project.entities[idx].imageUrl = imagePath;
+      project.entities[idx].status = "completed";
+      project.updatedAt = new Date().toISOString();
+
+      await fs.writeFile(configPath, JSON.stringify(project, null, 2));
+      log.success(
+        `Patched config: entities["${entityName}"].imageUrl = ${imagePath}`,
+      );
+    } catch (e: any) {
+      log.error(
+        `patchEntityImage falhou para entidade "${entityName}"`,
         e.message,
       );
     }
@@ -290,7 +328,7 @@ export const StorageService = {
         if (typeof r.data === "string") {
           try {
             r.data = JSON.parse(r.data);
-          } catch {}
+          } catch { }
         }
       });
       return project;
@@ -322,7 +360,7 @@ export const StorageService = {
           commentator: p.commentator,
           dirName: d.name,
         });
-      } catch {}
+      } catch { }
     }
 
     return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

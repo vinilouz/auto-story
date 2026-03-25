@@ -43,6 +43,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     music,
     musicUrl,
     setMusicUrl,
+    uploadedAudioFile,
     audio,
     transcription,
     videoClips,
@@ -139,6 +140,47 @@ export function useStoryFlowActions(state: StoryFlowState) {
     }
   }, [scriptText, segmentSize, mode, setSegments, setStage, save, setLoading]);
 
+  // ── from-audio: upload audio file then transcribe ────────────────────────
+  const uploadAudioAndTranscribe = useCallback(async () => {
+    if (!uploadedAudioFile) {
+      toast.error("No audio file selected");
+      return;
+    }
+    setLoading(true);
+    try {
+      // 1. Save project metadata so the directory is created
+      const saved = await save({ flowType: "from-audio", scriptText: " " });
+      const pid = saved?.id ?? state.projectId;
+      const pname = title || "untitled";
+
+      // 2. Upload the audio file to the server
+      const form = new FormData();
+      form.append("file", uploadedAudioFile);
+      form.append("projectId", pid);
+      form.append("projectName", pname);
+
+      const uploadRes = await fetch("/api/upload/audio", {
+        method: "POST",
+        body: form,
+      });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error ?? "Audio upload failed");
+      }
+
+      // 3. Transcribe the uploaded audio
+      const tResults = await transcription.transcribe(pid, pname);
+      if (tResults) await save({ transcriptionResults: tResults });
+
+      toast.success("Audio uploaded & transcribed!");
+      setStage("transcription");
+    } catch (e: any) {
+      toast.error(e.message ?? "Upload or transcription failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [uploadedAudioFile, title, state.projectId, save, transcription, setStage, setLoading]);
+
   const saveCommentator = useCallback(async () => {
     const config = {
       id: commentator?.id || Date.now().toString(),
@@ -169,14 +211,19 @@ export function useStoryFlowActions(state: StoryFlowState) {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setSegments(data.segments);
-      await save({ segments: data.segments });
+      const newSegs = data.segments.map((s: any) => ({
+        text: s.text,
+        type: s.type as "scene_text" | "comment",
+      }));
+      setSegments(newSegs);
+      setStage(consistency ? "entities" : "descriptions");
+      await save({ segments: newSegs });
     } catch {
-      toast.error("Failed");
+      toast.error("Failed to generate comments");
     } finally {
       setLoading(false);
     }
-  }, [commentator, segments, setSegments, save, setLoading]);
+  }, [commentator, segments, consistency, setSegments, setStage, save, setLoading]);
 
   const generateDescriptions = useCallback(async () => {
     setLoading(true);
@@ -189,17 +236,17 @@ export function useStoryFlowActions(state: StoryFlowState) {
               : s,
           )
           : segments;
-      const entitiesForApi = entities.map((e) => ({
-        type: e.name,
-        description: e.description || "",
-        segment: e.segment || [],
-      }));
+
       const res = await fetch("/api/generate/descriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           segments: segsForApi,
-          entities: entitiesForApi,
+          entities: entities.map((e) => ({
+            type: e.name,
+            description: e.description || "",
+            segment: e.segment || [],
+          })),
           language,
           style: imagePromptStyle,
           commentatorName: commentator?.name,
@@ -208,14 +255,19 @@ export function useStoryFlowActions(state: StoryFlowState) {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setSegments(data.segments || segments);
-      await save({ segments: data.segments });
+      const updatedSegs = segments.map((s, i) => ({
+        ...s,
+        imagePrompt: data.segments[i]?.imagePrompt || s.imagePrompt,
+      }));
+      setSegments(updatedSegs);
+      setStage("images");
+      await save({ segments: updatedSegs });
     } catch {
-      toast.error("Failed");
+      toast.error("Failed to generate descriptions");
     } finally {
       setLoading(false);
     }
-  }, [mode, segments, entities, language, imagePromptStyle, commentator, setSegments, save, setLoading]);
+  }, [segments, mode, commentator, entities, language, imagePromptStyle, setSegments, setStage, save, setLoading]);
 
   const generateMissingDescriptions = useCallback(async () => {
     const missingIndices = segments
@@ -384,7 +436,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
 
             if (event.status === "success" && event.data?.imageUrl) {
               latestEnts = latestEnts.map((e, j) =>
-                j === targetIdx ? { ...e, imageUrl: event.data.imageUrl, status: "completed" as const } : e,
+                j === targetIdx
+                  ? { ...e, imageUrl: event.data.imageUrl, status: "completed" as const }
+                  : e,
               );
             } else {
               latestEnts = latestEnts.map((e, j) =>
@@ -417,7 +471,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         pid = s?.id;
       }
 
-      setEntities((prev) => prev.map((ent, i) => (i === entityIndex ? { ...ent, status: "generating" } : ent)));
+      setEntities((prev) =>
+        prev.map((ent, i) => (i === entityIndex ? { ...ent, status: "generating" } : ent)),
+      );
 
       try {
         const payload: any = {
@@ -602,7 +658,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       const reader = r.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let latestSegs = [...segments];
+      let latestSegs = [...currentSegments];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -618,6 +674,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
           if (event.done) break;
 
           const segIndex = indices[event.id];
+          if (segIndex === undefined) continue;
+
           if (event.status === "success" && event.data?.imageUrl) {
             latestSegs = latestSegs.map((s, j) =>
               j === segIndex ? { ...s, imagePath: event.data.imageUrl } : s,
@@ -683,7 +741,12 @@ export function useStoryFlowActions(state: StoryFlowState) {
           }),
       ),
     );
-    const newSegs = splitTranscriptionByDuration(transcription.results, audio.batches, clipDuration, audioDurationsMs);
+    const newSegs = splitTranscriptionByDuration(
+      transcription.results,
+      audio.batches,
+      clipDuration,
+      audioDurationsMs,
+    );
     if (newSegs.length === 0) {
       toast.error("No words found in transcription");
       return;
@@ -732,7 +795,12 @@ export function useStoryFlowActions(state: StoryFlowState) {
   const renderVideoAction = useCallback(async () => {
     if (!video.videoProps) return;
     try {
-      await video.render({ ...video.videoProps, videoVolume }, captionStyle, project.projectId || undefined, title);
+      await video.render(
+        { ...video.videoProps, videoVolume },
+        captionStyle,
+        project.projectId || undefined,
+        title,
+      );
     } catch (e: any) {
       toast.error(`Render failed: ${e.message}`);
     }
@@ -742,7 +810,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
     try {
       await dl.downloadZip({
         segments,
-        audioUrls: audio.batches.filter((b) => b.status === "completed" && b.url).map((b) => b.url!),
+        audioUrls: audio.batches
+          .filter((b) => b.status === "completed" && b.url)
+          .map((b) => b.url!),
         transcriptionResults: transcription.results,
         filename: `${mode}-story-${Date.now()}.zip`,
       });
@@ -818,6 +888,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     save,
     audioOpts,
     splitScenes,
+    uploadAudioAndTranscribe,
     saveCommentator,
     generateComments,
     generateDescriptions,

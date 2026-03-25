@@ -28,6 +28,9 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
   const [music, setMusic] = useState(false);
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
 
+  // from-audio flow: local File object chosen by the user in InputAudioStage
+  const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
+
   const [commentator, setCommentator] = useState<StoryFlowState["commentator"]>(null);
   const [commName, setCommName] = useState("");
   const [commPersonality, setCommPersonality] = useState("");
@@ -149,6 +152,8 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
     setMusic,
     musicUrl,
     setMusicUrl,
+    uploadedAudioFile,
+    setUploadedAudioFile,
     commentator,
     setCommentator,
     commName,

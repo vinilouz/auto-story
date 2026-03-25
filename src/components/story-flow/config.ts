@@ -17,28 +17,43 @@ export const STAGE_LABELS: Record<Stage, string> = {
 };
 
 export function getStages(mode: FlowMode, consistency: boolean, music: boolean): Stage[] {
+  if (mode === "from-audio") {
+    return [
+      "input",
+      "transcription",
+      "split",
+      ...(consistency ? (["entities"] as Stage[]) : []),
+      "descriptions",
+      "images",
+      ...(music ? (["music"] as Stage[]) : []),
+      "video",
+      "download",
+    ];
+  }
+
   if (mode === "video-story") {
     return [
       "input",
       "audio",
       "transcription",
       "split",
-      ...(consistency ? ["entities" as Stage] : []),
+      ...(consistency ? (["entities"] as Stage[]) : []),
       "descriptions",
       "images",
       "clips",
-      ...(music ? ["music" as Stage] : []),
+      ...(music ? (["music"] as Stage[]) : []),
       "video",
       "download",
     ];
   }
+
   return (
     [
       "input",
-      ...(music ? ["music" as Stage] : []),
+      ...(music ? (["music"] as Stage[]) : []),
       "commentator",
       "comments",
-      ...(consistency ? ["entities" as Stage] : []),
+      ...(consistency ? (["entities"] as Stage[]) : []),
       "descriptions",
       "images",
       "audio",
