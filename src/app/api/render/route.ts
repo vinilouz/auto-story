@@ -1,12 +1,14 @@
 import { bundle } from "@remotion/bundler";
 import { type OnStartData, renderMedia } from "@remotion/renderer";
 import ffmpeg from "ffmpeg-static";
+import fs from "node:fs";
+import path from "node:path";
 // @ts-expect-error
 import ffprobe from "ffprobe-static";
-import fs from "fs";
+import os from "node:os";
 import { type NextRequest, NextResponse } from "next/server";
-import os from "os";
-import path from "path";
+import { ACTIVE_RENDERER, RENDERER } from "@/lib/video/config";
+import { renderWithMediabunny } from "@/lib/video/mediabunny";
 import { createLogger } from "@/lib/logger";
 import { getProjectDirName } from "@/lib/utils";
 import {
@@ -60,23 +62,22 @@ const toAbsoluteUrl = (url: string, origin: string): string => {
   return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
 };
 
-const normalizeProps = (props: any, origin: string): any => ({
+const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
   ...props,
   scenes:
-    props.scenes?.map((s: any) => ({
+    (props.scenes as Array<Record<string, unknown>>)?.map((s) => ({
       ...s,
-      imageUrl: toAbsoluteUrl(s.imageUrl, origin),
+      imageUrl: toAbsoluteUrl(s.imageUrl as string, origin),
       videoClipUrl: s.videoClipUrl
-        ? toAbsoluteUrl(s.videoClipUrl, origin)
+        ? toAbsoluteUrl(s.videoClipUrl as string, origin)
         : undefined,
     })) ?? [],
   audioTracks:
-    props.audioTracks?.map((t: any) => ({
+    (props.audioTracks as Array<Record<string, unknown>>)?.map((t) => ({
       ...t,
-      src: toAbsoluteUrl(t.src, origin),
+      src: toAbsoluteUrl(t.src as string, origin),
     })) ?? [],
 });
-
 
 const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
 
@@ -100,134 +101,229 @@ export async function POST(req: NextRequest) {
 
     const origin = req.nextUrl.origin;
     const normalizedProps = normalizeProps(videoProps, origin);
-    const bundleLocation = await ensureBundle();
 
-    log.info(
-      `Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`,
+    log.info(`Using renderer: ${ACTIVE_RENDERER}`);
+
+    if (ACTIVE_RENDERER === RENDERER.MEDIABUNNY) {
+      return handleMediabunnyRender(
+        normalizedProps,
+        projectId,
+        projectName,
+        origin,
+      );
+    }
+
+    return handleRemotionRender(
+      normalizedProps,
+      projectId,
+      projectName,
+      compositionId,
     );
-    tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const sendEvent = (data: Record<string, unknown>) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
-          );
-        };
-
-        try {
-          sendEvent({ type: "progress", progress: 0, stage: "bundling" });
-          let totalFrames = normalizedProps.durationInFrames || 1;
-
-          await renderMedia({
-            composition: {
-              id: compositionId,
-              props: normalizedProps,
-              durationInFrames: normalizedProps.durationInFrames,
-              fps: normalizedProps.fps,
-              width: normalizedProps.width,
-              height: normalizedProps.height,
-            } as any,
-            serveUrl: bundleLocation,
-            codec: "h264",
-            outputLocation: tempOutput,
-            inputProps: normalizedProps,
-            timeoutInMilliseconds: 3600000,
-            concurrency: RENDER_CONCURRENCY,
-            crf: REMOTION_CRF,
-            x264Preset: REMOTION_X264_PRESET,
-            imageFormat: "jpeg",
-            disallowParallelEncoding: false,
-            offthreadVideoThreads: RENDER_CONCURRENCY,
-            offthreadVideoCacheSizeInBytes: REMOTION_CACHE_SIZE,
-            mediaCacheSizeInBytes: REMOTION_CACHE_SIZE,
-            logLevel: "info",
-            chromiumOptions: {
-              ignoreCertificateErrors: true,
-              enableMultiProcessOnLinux: true,
-              disableWebSecurity: true,
-              gl: "angle-egl",
-            },
-            onStart: (data: OnStartData) => {
-              totalFrames = data.frameCount;
-              sendEvent({
-                type: "progress",
-                progress: 0,
-                stage: "rendering",
-                totalFrames,
-              });
-            },
-            onProgress: (progress) => {
-              const pct = Math.round(
-                (progress.renderedFrames / totalFrames) * 100,
-              );
-              sendEvent({
-                type: "progress",
-                progress: pct,
-                stage: "rendering",
-                renderedFrames: progress.renderedFrames,
-                totalFrames,
-              });
-            },
-          });
-
-          sendEvent({ type: "progress", progress: 100, stage: "encoding" });
-
-          // Move to project directory
-          let publicOutput: string;
-          let videoUrl: string;
-
-          if (projectId && projectName) {
-            const dirName = getProjectDirName(projectId, projectName);
-            const rendersDir = path.join(
-              process.cwd(),
-              "public",
-              "projects",
-              dirName,
-              "videos",
-            );
-            if (!fs.existsSync(rendersDir))
-              await fs.promises.mkdir(rendersDir, { recursive: true });
-            const fileName = `render-${Date.now()}.mp4`;
-            publicOutput = path.join(rendersDir, fileName);
-            videoUrl = `/projects/${dirName}/videos/${fileName}`;
-          } else {
-            const rendersDir = path.join(process.cwd(), "public", "renders");
-            if (!fs.existsSync(rendersDir))
-              await fs.promises.mkdir(rendersDir, { recursive: true });
-            const fileName = `render-${Date.now()}.mp4`;
-            publicOutput = path.join(rendersDir, fileName);
-            videoUrl = `/renders/${fileName}`;
-          }
-
-          await fs.promises.rename(tempOutput, publicOutput);
-          log.success(`Render complete: ${videoUrl}`);
-          sendEvent({ type: "complete", videoUrl });
-          controller.close();
-        } catch (error: any) {
-          log.error("Render failed", error);
-          if (tempOutput && fs.existsSync(tempOutput))
-            fs.promises.unlink(tempOutput).catch(() => { });
-          sendEvent({ type: "error", error: error.message || "Render failed" });
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error("Render route error", error);
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { });
+    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
     return NextResponse.json(
-      { error: error.message || "Failed to render" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to render",
+      },
       { status: 500 },
     );
   }
+}
+
+async function handleMediabunnyRender(
+  props: Record<string, unknown>,
+  projectId: string | undefined,
+  projectName: string | undefined,
+  origin: string,
+): Promise<Response> {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendEvent = (data: Record<string, unknown>) => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
+        );
+      };
+
+      try {
+        sendEvent({ type: "progress", progress: 0, stage: "rendering" });
+
+        const { outputPath, videoUrl } = getOutputPath(projectId, projectName);
+
+        await renderWithMediabunny(
+          props as Parameters<typeof renderWithMediabunny>[0],
+          outputPath,
+          (progress) => {
+            sendEvent({
+              type: "progress",
+              progress: Math.round(progress * 100),
+              stage: "rendering",
+            });
+          },
+        );
+
+        log.success(`Mediabunny render complete: ${videoUrl}`);
+        sendEvent({ type: "progress", progress: 100, stage: "complete" });
+        sendEvent({ type: "complete", videoUrl });
+        controller.close();
+      } catch (error: unknown) {
+        log.error("Mediabunny render failed", error);
+        sendEvent({
+          type: "error",
+          error: error instanceof Error ? error.message : "Render failed",
+        });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+async function handleRemotionRender(
+  props: Record<string, unknown>,
+  projectId: string | undefined,
+  projectName: string | undefined,
+  compositionId: string,
+): Promise<Response> {
+  const bundleLocation = await ensureBundle();
+  const tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
+
+  log.info(
+    `Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`,
+  );
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendEvent = (data: Record<string, unknown>) => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
+        );
+      };
+
+      try {
+        sendEvent({ type: "progress", progress: 0, stage: "bundling" });
+        let totalFrames = (props.durationInFrames as number) || 1;
+
+        await renderMedia({
+          composition: {
+            id: compositionId,
+            props,
+            durationInFrames: props.durationInFrames as number,
+            fps: props.fps as number,
+            width: props.width as number,
+            height: props.height as number,
+          },
+          serveUrl: bundleLocation,
+          codec: "h264",
+          outputLocation: tempOutput,
+          inputProps: props,
+          timeoutInMilliseconds: 3600000,
+          concurrency: RENDER_CONCURRENCY,
+          crf: REMOTION_CRF,
+          x264Preset: REMOTION_X264_PRESET,
+          imageFormat: "jpeg",
+          disallowParallelEncoding: false,
+          offthreadVideoThreads: RENDER_CONCURRENCY,
+          offthreadVideoCacheSizeInBytes: REMOTION_CACHE_SIZE,
+          mediaCacheSizeInBytes: REMOTION_CACHE_SIZE,
+          logLevel: "info",
+          chromiumOptions: {
+            ignoreCertificateErrors: true,
+            enableMultiProcessOnLinux: true,
+            disableWebSecurity: true,
+            gl: "angle-egl",
+          },
+          onStart: (data: OnStartData) => {
+            totalFrames = data.frameCount;
+            sendEvent({
+              type: "progress",
+              progress: 0,
+              stage: "rendering",
+              totalFrames,
+            });
+          },
+          onProgress: (progress) => {
+            const pct = Math.round(
+              (progress.renderedFrames / totalFrames) * 100,
+            );
+            sendEvent({
+              type: "progress",
+              progress: pct,
+              stage: "rendering",
+              renderedFrames: progress.renderedFrames,
+              totalFrames,
+            });
+          },
+        });
+
+        sendEvent({ type: "progress", progress: 100, stage: "encoding" });
+
+        const { outputPath, videoUrl } = getOutputPath(projectId, projectName);
+
+        await fs.promises.rename(tempOutput, outputPath);
+        log.success(`Remotion render complete: ${videoUrl}`);
+        sendEvent({ type: "complete", videoUrl });
+        controller.close();
+      } catch (error: unknown) {
+        log.error("Remotion render failed", error);
+        if (tempOutput && fs.existsSync(tempOutput))
+          fs.promises.unlink(tempOutput).catch(() => {});
+        sendEvent({
+          type: "error",
+          error: error instanceof Error ? error.message : "Render failed",
+        });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+function getOutputPath(
+  projectId: string | undefined,
+  projectName: string | undefined,
+): { outputPath: string; videoUrl: string } {
+  if (projectId && projectName) {
+    const dirName = getProjectDirName(projectId, projectName);
+    const rendersDir = path.join(
+      process.cwd(),
+      "public",
+      "projects",
+      dirName,
+      "videos",
+    );
+    if (!fs.existsSync(rendersDir))
+      fs.mkdirSync(rendersDir, { recursive: true });
+    const fileName = `render-${Date.now()}.mp3`;
+    const outputPath = path.join(rendersDir, fileName);
+    const videoUrl = `/projects/${dirName}/videos/${fileName}`;
+    return { outputPath, videoUrl };
+  }
+
+  const rendersDir = path.join(process.cwd(), "public", "renders");
+  if (!fs.existsSync(rendersDir))
+    fs.mkdirSync(rendersDir, { recursive: true });
+  const fileName = `render-${Date.now()}.mp3`;
+  const outputPath = path.join(rendersDir, fileName);
+  const videoUrl = `/renders/${fileName}`;
+  return { outputPath, videoUrl };
 }

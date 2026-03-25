@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("http-client");
@@ -42,7 +42,10 @@ export function saveDebugLog(
   if (error) data.error = error;
 
   try {
-    fs.writeFileSync(path.join(LOGS_DIR, filename), JSON.stringify(data, null, 2));
+    fs.writeFileSync(
+      path.join(LOGS_DIR, filename),
+      JSON.stringify(data, null, 2),
+    );
   } catch {}
 }
 
@@ -52,7 +55,11 @@ export interface RequestOptions {
   providerAndModel?: string;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: number) {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs?: number,
+) {
   if (!timeoutMs) return fetch(url, init);
 
   const controller = new AbortController();
@@ -101,17 +108,33 @@ export async function apiRequest<T>(
       // Create a simplified response log to avoid storing giant base64 strings
       let logRes: unknown = data;
       if (data && typeof data === "object") {
-         if ("b64_json" in data) logRes = { has_b64: true, url: data.url };
-         else if ("words" in data) logRes = { words_count: Array.isArray(data.words) ? data.words.length : 0 };
+        if ("b64_json" in data) logRes = { has_b64: true, url: data.url };
+        else if ("words" in data)
+          logRes = {
+            words_count: Array.isArray(data.words) ? data.words.length : 0,
+          };
       }
-      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, logRes);
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        body,
+        logRes,
+      );
     }
 
     return data as T;
   } catch (err: any) {
     const duration = Date.now() - start;
     if (opts?.actionName && opts?.providerAndModel) {
-      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, null, err.message);
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        body,
+        null,
+        err.message,
+      );
     }
     throw err;
   }
@@ -143,14 +166,23 @@ export async function apiRequestRaw(
     const duration = Date.now() - start;
 
     if (opts?.actionName && opts?.providerAndModel) {
-      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, { byteLength: buffer.byteLength });
+      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, {
+        byteLength: buffer.byteLength,
+      });
     }
 
     return buffer;
   } catch (err: any) {
     const duration = Date.now() - start;
     if (opts?.actionName && opts?.providerAndModel) {
-      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, null, err.message);
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        body,
+        null,
+        err.message,
+      );
     }
     throw err;
   }
@@ -180,16 +212,87 @@ export async function apiRequestSSE(
     );
 
     await handleResponse(res);
-    
+
     if (opts?.actionName && opts?.providerAndModel) {
-      saveDebugLog(opts.actionName, opts.providerAndModel, Date.now() - start, body, { stream: true });
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        Date.now() - start,
+        body,
+        { stream: true },
+      );
     }
 
     return res;
-  } catch (err: any) {
+  } catch (err: unknown) {
     const duration = Date.now() - start;
     if (opts?.actionName && opts?.providerAndModel) {
-      saveDebugLog(opts.actionName, opts.providerAndModel, duration, body, null, err.message);
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        body,
+        null,
+        err instanceof Error ? err.message : "Unknown error",
+      );
+    }
+    throw err;
+  }
+}
+
+export async function apiRequestMultipart<T>(
+  url: string,
+  apiKey: string,
+  filePath: string,
+  opts?: RequestOptions,
+): Promise<T> {
+  const start = Date.now();
+  const formData = new FormData();
+  const fileBuffer = fs.readFileSync(filePath);
+  const fileName = path.basename(filePath);
+  const mimeType = fileName.endsWith(".mp3") ? "audio/mpeg" : "audio/wav";
+
+  formData.append("file", new Blob([fileBuffer], { type: mimeType }), fileName);
+
+  try {
+    const res = await fetchWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: formData,
+      },
+      opts?.timeoutMs,
+    );
+
+    await handleResponse(res);
+    const data = await res.json();
+    const duration = Date.now() - start;
+
+    if (opts?.actionName && opts?.providerAndModel) {
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        { file: fileName },
+        data,
+      );
+    }
+
+    return data as T;
+  } catch (err: unknown) {
+    const duration = Date.now() - start;
+    if (opts?.actionName && opts?.providerAndModel) {
+      saveDebugLog(
+        opts.actionName,
+        opts.providerAndModel,
+        duration,
+        { file: fileName },
+        null,
+        err instanceof Error ? err.message : "Unknown error",
+      );
     }
     throw err;
   }

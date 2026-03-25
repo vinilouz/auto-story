@@ -1,19 +1,24 @@
 import {
-  type TextRequest,
-  type TextResponse,
-  type ImageRequest,
-  type ImageResponse,
+  apiRequest,
+  apiRequestMultipart,
+  apiRequestRaw,
+  apiRequestSSE,
+} from "@/lib/ai/http-client";
+import {
   type AudioRequest,
   type AudioResponse,
-  type VideoRequest,
-  type VideoResponse,
+  type ImageRequest,
+  type ImageResponse,
   type MusicRequest,
   type MusicResponse,
+  registerProvider,
+  type TextRequest,
+  type TextResponse,
   type TranscriptionRequest,
   type TranscriptionResponse,
-  registerProvider,
+  type VideoRequest,
+  type VideoResponse,
 } from "@/lib/ai/registry";
-import { apiRequest, apiRequestRaw, apiRequestSSE } from "@/lib/ai/http-client";
 
 const TIMEOUT_VIDEO = 120_000;
 const TIMEOUT_MUSIC = 240_000;
@@ -26,7 +31,10 @@ async function parseMusicSSE(response: Response): Promise<string> {
   let buffer = "";
 
   const timer = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`Music timeout after ${TIMEOUT_MUSIC / 1000}s`)), TIMEOUT_MUSIC)
+    setTimeout(
+      () => reject(new Error(`Music timeout after ${TIMEOUT_MUSIC / 1000}s`)),
+      TIMEOUT_MUSIC,
+    ),
   );
 
   const read = async () => {
@@ -68,7 +76,7 @@ registerProvider({
       `${creds.baseUrl}/v1/chat/completions`,
       creds.apiKey,
       { prompt: req.prompt, model },
-      { actionName: "generateText", providerAndModel: `louzlabs/${model}` }
+      { actionName: "generateText", providerAndModel: `louzlabs/${model}` },
     );
     if (!data.text) throw new Error("Empty text response");
     return { text: data.text };
@@ -89,7 +97,7 @@ registerProvider({
       `${creds.baseUrl}/v1/images/generations`,
       creds.apiKey,
       payload,
-      { actionName: "generateImage", providerAndModel: `louzlabs/${model}` }
+      { actionName: "generateImage", providerAndModel: `louzlabs/${model}` },
     );
 
     const imageUrl = data.b64_json
@@ -105,7 +113,7 @@ registerProvider({
       `${creds.baseUrl}/v1/audio/speech`,
       creds.apiKey,
       { prompt: req.text, voice: req.voice },
-      { actionName: "generateAudio", providerAndModel: `louzlabs/${model}` }
+      { actionName: "generateAudio", providerAndModel: `louzlabs/${model}` },
     );
 
     if (!audioBuffer.byteLength) throw new Error("Empty audio response");
@@ -125,7 +133,11 @@ registerProvider({
       `${creds.baseUrl}/v1/video/generations`,
       creds.apiKey,
       payload,
-      { timeoutMs: TIMEOUT_VIDEO, actionName: "generateVideo", providerAndModel: `louzlabs/${model}` }
+      {
+        timeoutMs: TIMEOUT_VIDEO,
+        actionName: "generateVideo",
+        providerAndModel: `louzlabs/${model}`,
+      },
     );
 
     if (!data.url) throw new Error("No video URL in response");
@@ -137,29 +149,40 @@ registerProvider({
       `${creds.baseUrl}/v1/music/generations`,
       creds.apiKey,
       {
-        prompt: req.prompt || "Soft spiritual instrumental, gentle piano, warm strings",
+        prompt:
+          req.prompt ||
+          "Soft spiritual instrumental, gentle piano, warm strings",
         instrumental: req.instrumental,
       },
-      { timeoutMs: TIMEOUT_MUSIC, actionName: "generateMusic", providerAndModel: `louzlabs/${model}` }
+      {
+        timeoutMs: TIMEOUT_MUSIC,
+        actionName: "generateMusic",
+        providerAndModel: `louzlabs/${model}`,
+      },
     );
 
     const musicUrl = await parseMusicSSE(res);
     return { musicUrl };
   },
 
-  async generateTranscription(model, req: TranscriptionRequest, creds): Promise<TranscriptionResponse> {
-    const data = await apiRequest<TranscriptionResponse>(
+  async generateTranscription(
+    model,
+    req: TranscriptionRequest,
+    creds,
+  ): Promise<TranscriptionResponse> {
+    const data = await apiRequestMultipart<TranscriptionResponse>(
       `${creds.baseUrl}/v1/audio/transcriptions`,
       creds.apiKey,
-      { file: req.file },
-      { actionName: "generateTranscription", providerAndModel: `louzlabs/${model}` }
+      req.file,
+      {
+        actionName: "generateTranscription",
+        providerAndModel: `louzlabs/${model}`,
+      },
     );
-    
-    // The OpenAPI spec says `{ words: [...] }` but also `data` in OpenAPI usually returns the array directly under some cases. 
-    // We expect the type TranscriptionResponse: `{ words: { text, startMs, endMs }[] }`
+
     if (!data || !Array.isArray(data.words)) {
-       throw new Error("Invalid transcription response format");
+      throw new Error("Invalid transcription response format");
     }
     return data;
-  }
+  },
 });
