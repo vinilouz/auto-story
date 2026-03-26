@@ -1,16 +1,6 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
-import {
-  ALL_FORMATS,
-  AudioBufferSource,
-  AudioSampleSink,
-  FilePathSource,
-  FilePathTarget,
-  Input,
-  Mp3OutputFormat,
-  Output,
-  QUALITY_HIGH,
-} from "mediabunny";
+import { ALL_FORMATS, FilePathSource, Input } from "mediabunny";
 
 export async function getAudioDuration(filePath: string): Promise<number> {
   const input = new Input({
@@ -22,47 +12,15 @@ export async function getAudioDuration(filePath: string): Promise<number> {
   return Math.round(duration * 1000);
 }
 
+import fs from "node:fs/promises";
+
 export async function concatenateAudio(
   files: string[],
   outputPath: string,
 ): Promise<string> {
-  const output = new Output({
-    format: new Mp3OutputFormat(),
-    target: new FilePathTarget(outputPath),
-  });
-
-  const audioSource = new AudioBufferSource({
-    codec: "mp3",
-    bitrate: QUALITY_HIGH,
-  });
-
-  output.addAudioTrack(audioSource);
-  await output.start();
-
-  for (const file of files) {
-    const input = new Input({
-      source: new FilePathSource(file),
-      formats: ALL_FORMATS,
-    });
-
-    const audioTrack = await input.getPrimaryAudioTrack();
-    if (!audioTrack) {
-      input.dispose();
-      continue;
-    }
-
-    const sink = new AudioSampleSink(audioTrack);
-    for await (const sample of sink.samples()) {
-      const audioBuffer = sample.toAudioBuffer();
-      await audioSource.add(audioBuffer);
-      sample.close();
-    }
-
-    sink.close();
-    input.dispose();
-  }
-
-  await output.finalize();
+  if (files.length === 0) return outputPath;
+  const buffers = await Promise.all(files.map((f) => fs.readFile(f)));
+  await fs.writeFile(outputPath, Buffer.concat(buffers));
   return outputPath;
 }
 

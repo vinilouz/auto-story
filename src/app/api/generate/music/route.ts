@@ -18,11 +18,19 @@ export async function POST(request: NextRequest) {
     log.info(`Music generation request for project: ${projectId}`);
 
     const { musicUrl } = await execute("generateMusic", {
-      prompt: prompt || "Soft spiritual instrumental, gentle piano, warm strings and ambient choir, peaceful and sacred mood, reflective atmosphere inspired by biblical themes, perfect background music for narrating stories from the Bible, no vocals.",
+      prompt:
+        prompt ||
+        "Soft spiritual instrumental, gentle piano, warm strings and ambient choir, peaceful and sacred mood, reflective atmosphere inspired by biblical themes, perfect background music for narrating stories from the Bible, no vocals.",
       instrumental: true,
     });
 
-    const musicDir = path.join(process.cwd(), "public", "projects", projectId, "music");
+    const musicDir = path.join(
+      process.cwd(),
+      "public",
+      "projects",
+      projectId,
+      "music",
+    );
 
     if (!existsSync(musicDir)) mkdirSync(musicDir, { recursive: true });
 

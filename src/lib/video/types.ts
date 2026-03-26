@@ -65,8 +65,6 @@ export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
   highlightColor: "#FFE81F",
 };
 
-
-
 export interface RemotionVideoProps {
   fps: number;
   durationInFrames: number;

@@ -7,7 +7,7 @@ export function useDownload() {
   const downloadZip = async (payload: {
     segments: Segment[];
     audioUrls: string[];
-    transcriptionResults: TranscriptionResult[];
+    transcriptionResult: TranscriptionResult | null;
     filename?: string;
   }) => {
     setIsDownloading(true);

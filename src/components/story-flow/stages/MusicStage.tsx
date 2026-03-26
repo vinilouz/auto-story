@@ -26,11 +26,7 @@ export function MusicStage({ state, actions }: MusicStageProps) {
       <CardContent className="space-y-4">
         {musicUrl ? (
           <div className="space-y-4">
-            <audio
-              controls
-              className="w-full"
-              src={musicUrl}
-            />
+            <audio controls className="w-full" src={musicUrl} />
             <Button
               onClick={() => actions.generateMusic()}
               disabled={loading}
@@ -65,7 +61,10 @@ export function MusicStage({ state, actions }: MusicStageProps) {
                 <p className="text-muted-foreground text-sm">
                   No music generated yet
                 </p>
-                <Button onClick={() => actions.generateMusic()} disabled={loading}>
+                <Button
+                  onClick={() => actions.generateMusic()}
+                  disabled={loading}
+                >
                   Generate Music
                 </Button>
               </>

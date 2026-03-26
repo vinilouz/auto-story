@@ -1,4 +1,3 @@
-
 // Mock NextResponse
 jest.mock("next/server", () => ({
   NextRequest: class MockNextRequest {
@@ -23,7 +22,12 @@ jest.mock("next/server", () => ({
 // Mock Remotion
 jest.mock("remotion", () => ({
   useCurrentFrame: () => 0,
-  useVideoConfig: () => ({ fps: 30, durationInFrames: 100, width: 1920, height: 1080 }),
+  useVideoConfig: () => ({
+    fps: 30,
+    durationInFrames: 100,
+    width: 1920,
+    height: 1080,
+  }),
   AbsoluteFill: ({ children }) => <div>{children}</div>,
   Sequence: ({ children }) => <div>{children}</div>,
   Audio: () => <div />,
@@ -51,12 +55,15 @@ jest.mock("@remotion/player", () => ({
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => {
-  const icons = new Proxy({}, {
-    get: (_, prop) => {
-      const Icon = () => <span data-icon={prop.toString()} />;
-      Icon.displayName = prop.toString();
-      return Icon;
+  const icons = new Proxy(
+    {},
+    {
+      get: (_, prop) => {
+        const Icon = () => <span data-icon={prop.toString()} />;
+        Icon.displayName = prop.toString();
+        return Icon;
+      },
     },
-  });
+  );
   return icons;
 });

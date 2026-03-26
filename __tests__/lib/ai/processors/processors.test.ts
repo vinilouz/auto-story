@@ -3,8 +3,14 @@ import { generateAndSaveVideoClip } from "@/lib/ai/processors/video-clip-generat
 import { execute } from "@/lib/ai/providers";
 
 jest.mock("@/lib/ai/providers", () => ({ execute: jest.fn() }));
-jest.mock("@/lib/storage", () => ({ StorageService: { patchSegmentClip: jest.fn() } }));
-jest.mock("fs", () => ({ existsSync: jest.fn(), mkdirSync: jest.fn(), writeFileSync: jest.fn() }));
+jest.mock("@/lib/storage", () => ({
+  StorageService: { patchSegmentClip: jest.fn() },
+}));
+jest.mock("fs", () => ({
+  existsSync: jest.fn(),
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+}));
 
 describe("processors", () => {
   beforeEach(() => {
@@ -28,11 +34,15 @@ describe("processors", () => {
   });
 
   it("video-clip-generator should pass duration and referenceImage", async () => {
-    (execute as jest.Mock).mockResolvedValue({ videoUrl: "data:video/mp4;base64,VklERU8=" });
+    (execute as jest.Mock).mockResolvedValue({
+      videoUrl: "data:video/mp4;base64,VklERU8=",
+    });
 
     await generateAndSaveVideoClip(
       { prompt: "Zoom in", referenceImage: "img.png", duration: 6 },
-      "p1", "proj1", 0
+      "p1",
+      "proj1",
+      0,
     );
 
     expect(execute).toHaveBeenCalledWith("generateVideo", {

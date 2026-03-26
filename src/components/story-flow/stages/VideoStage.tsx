@@ -15,7 +15,8 @@ interface VideoStageProps {
 }
 
 export function VideoStage({ state, actions }: VideoStageProps) {
-  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume } = state;
+  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume } =
+    state;
 
   return (
     <Card>
@@ -25,29 +26,38 @@ export function VideoStage({ state, actions }: VideoStageProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Font Size ({captionStyle.fontSize}px)</label>
+            <label className="text-sm font-medium">
+              Font Size ({captionStyle.fontSize}px)
+            </label>
             <Slider
               min={40}
               max={150}
               step={5}
               value={[captionStyle.fontSize]}
-              onValueChange={(v) => setCaptionStyle((p) => ({ ...p, fontSize: v[0] }))}
+              onValueChange={(v) =>
+                setCaptionStyle((p) => ({ ...p, fontSize: v[0] }))
+              }
             />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Highlight Color</label>
             <div className="flex gap-2">
-              {["#FFE81F", "#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF"].map((c) => (
-                <button
-                  key={c}
-                  className={cn(
-                    "w-6 h-6 rounded-full border",
-                    captionStyle.highlightColor === c && "ring-2 ring-primary ring-offset-2",
-                  )}
-                  style={{ backgroundColor: c }}
-                  onClick={() => setCaptionStyle((p) => ({ ...p, highlightColor: c }))}
-                />
-              ))}
+              {["#FFE81F", "#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF"].map(
+                (c) => (
+                  <button
+                    key={c}
+                    className={cn(
+                      "w-6 h-6 rounded-full border",
+                      captionStyle.highlightColor === c &&
+                        "ring-2 ring-primary ring-offset-2",
+                    )}
+                    style={{ backgroundColor: c }}
+                    onClick={() =>
+                      setCaptionStyle((p) => ({ ...p, highlightColor: c }))
+                    }
+                  />
+                ),
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -56,10 +66,14 @@ export function VideoStage({ state, actions }: VideoStageProps) {
               {[1, 2, 3, 4, 5].map((n) => (
                 <Button
                   key={n}
-                  variant={captionStyle.maxWordsPerLine === n ? "default" : "outline"}
+                  variant={
+                    captionStyle.maxWordsPerLine === n ? "default" : "outline"
+                  }
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={() => setCaptionStyle((p) => ({ ...p, maxWordsPerLine: n }))}
+                  onClick={() =>
+                    setCaptionStyle((p) => ({ ...p, maxWordsPerLine: n }))
+                  }
                 >
                   {n}
                 </Button>
@@ -67,7 +81,9 @@ export function VideoStage({ state, actions }: VideoStageProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Clip Audio ({Math.round(videoVolume * 100)}%)</label>
+            <label className="text-sm font-medium">
+              Clip Audio ({Math.round(videoVolume * 100)}%)
+            </label>
             <Slider
               min={0}
               max={100}
@@ -117,19 +133,33 @@ export function VideoStage({ state, actions }: VideoStageProps) {
           </div>
         )}
         {video.videoProps ? (
-          <VideoPlayer props={{ ...video.videoProps, captionStyle, videoVolume }} />
+          <VideoPlayer
+            props={{ ...video.videoProps, captionStyle, videoVolume }}
+          />
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-            <p className="text-muted-foreground">Click "Generate Preview" below</p>
+            <p className="text-muted-foreground">
+              Click "Generate Preview" below
+            </p>
           </div>
         )}
-        {video.videoProps && <VideoDebugInfo videoProps={video.videoProps} captionStyle={captionStyle} />}
+        {video.videoProps && (
+          <VideoDebugInfo
+            videoProps={video.videoProps}
+            captionStyle={captionStyle}
+          />
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function VideoDebugInfo({ videoProps }: { videoProps: any; captionStyle: any }) {
+function VideoDebugInfo({
+  videoProps,
+}: {
+  videoProps: any;
+  captionStyle: any;
+}) {
   const { scenes, audioTracks, captions, fps, durationInFrames } = videoProps;
 
   let cursor = 0;
@@ -142,7 +172,10 @@ function VideoDebugInfo({ videoProps }: { videoProps: any; captionStyle: any }) 
   });
 
   const totalVideoDurationSec = (cursor / fps).toFixed(2);
-  const audioDurationSec = (audioTracks.reduce((acc: number, t: any) => acc + t.durationInFrames, 0) / fps).toFixed(2);
+  const audioDurationSec = (
+    audioTracks.reduce((acc: number, t: any) => acc + t.durationInFrames, 0) /
+    fps
+  ).toFixed(2);
   const withClips = scenes.filter((s: any) => s.videoClipUrl).length;
   const compositionSec = (durationInFrames / fps).toFixed(1);
 
@@ -154,21 +187,30 @@ function VideoDebugInfo({ videoProps }: { videoProps: any; captionStyle: any }) 
       <div className="mt-2 space-y-3">
         <div className="text-xs font-mono bg-muted p-3 rounded grid grid-cols-2 gap-x-6 gap-y-1">
           <span>Composition</span>
-          <span>{durationInFrames}f ({compositionSec}s) @ {fps}fps</span>
+          <span>
+            {durationInFrames}f ({compositionSec}s) @ {fps}fps
+          </span>
           <span>Video total (sum of scenes)</span>
-          <span>{cursor}f ({totalVideoDurationSec}s)</span>
+          <span>
+            {cursor}f ({totalVideoDurationSec}s)
+          </span>
           <span>Audio total</span>
-          <span>{audioDurationSec}s · {audioTracks.length} track(s)</span>
+          <span>
+            {audioDurationSec}s · {audioTracks.length} track(s)
+          </span>
           <span>Scenes</span>
-          <span>{scenes.length} ({withClips} with clip, {scenes.length - withClips} image-only)</span>
+          <span>
+            {scenes.length} ({withClips} with clip, {scenes.length - withClips}{" "}
+            image-only)
+          </span>
           <span>Captions</span>
           <span>{captions.length} words</span>
           {cursor !== durationInFrames && (
             <>
               <span className="text-yellow-500 font-semibold">⚠ drift</span>
               <span className="text-yellow-500">
-                scenes sum {cursor}f ≠ composition {durationInFrames}f
-                ({((durationInFrames - cursor) / fps).toFixed(2)}s gap)
+                scenes sum {cursor}f ≠ composition {durationInFrames}f (
+                {((durationInFrames - cursor) / fps).toFixed(2)}s gap)
               </span>
             </>
           )}
@@ -191,7 +233,8 @@ function VideoDebugInfo({ videoProps }: { videoProps: any; captionStyle: any }) 
               <span className="text-muted-foreground/50">{i + 1}</span>
               <span className="truncate" title={s.textFragment ?? s.id}>
                 {s.textFragment
-                  ? s.textFragment.slice(0, 40) + (s.textFragment.length > 40 ? "…" : "")
+                  ? s.textFragment.slice(0, 40) +
+                    (s.textFragment.length > 40 ? "…" : "")
                   : s.id}
               </span>
               <span>{startSec}s</span>

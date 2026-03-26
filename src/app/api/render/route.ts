@@ -123,8 +123,7 @@ export async function POST(req: NextRequest) {
     if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to render",
+        error: error instanceof Error ? error.message : "Failed to render",
       },
       { status: 500 },
     );
@@ -142,9 +141,7 @@ async function handleMediabunnyRender(
   const stream = new ReadableStream({
     async start(controller) {
       const sendEvent = (data: Record<string, unknown>) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
       try {
@@ -206,9 +203,7 @@ async function handleRemotionRender(
   const stream = new ReadableStream({
     async start(controller) {
       const sendEvent = (data: Record<string, unknown>) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
       try {
@@ -297,9 +292,10 @@ async function handleRemotionRender(
   });
 }
 
-function getOutputPath(
-  projectId: string | undefined,
-): { outputPath: string; videoUrl: string } {
+function getOutputPath(projectId: string | undefined): {
+  outputPath: string;
+  videoUrl: string;
+} {
   if (projectId) {
     const rendersDir = path.join(
       process.cwd(),
@@ -317,8 +313,7 @@ function getOutputPath(
   }
 
   const rendersDir = path.join(process.cwd(), "public", "renders");
-  if (!fs.existsSync(rendersDir))
-    fs.mkdirSync(rendersDir, { recursive: true });
+  if (!fs.existsSync(rendersDir)) fs.mkdirSync(rendersDir, { recursive: true });
   const fileName = `render-${Date.now()}.mp4`;
   const outputPath = path.join(rendersDir, fileName);
   const videoUrl = `/renders/${fileName}`;

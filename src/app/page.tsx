@@ -1,6 +1,12 @@
 "use client";
 
-import { BookOpen, Headphones, MessageSquare, Trash2, Video } from "lucide-react";
+import {
+  BookOpen,
+  Headphones,
+  MessageSquare,
+  Trash2,
+  Video,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import StoryFlow from "@/components/StoryFlow";
 import { Button } from "@/components/ui/button";
@@ -50,7 +56,7 @@ export default function Home() {
               +new Date(b.updatedAt) - +new Date(a.updatedAt),
           ),
         );
-    } catch { }
+    } catch {}
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -63,7 +69,8 @@ export default function Home() {
   const detectFlowType = (p: Project): FlowType => {
     if (p.flowType === "video-story") return "video-story";
     if (p.flowType === "from-audio") return "from-audio";
-    if (p.flowType === "with-commentator" || p.commentator) return "commentator";
+    if (p.flowType === "with-commentator" || p.commentator)
+      return "commentator";
     return "simple";
   };
 

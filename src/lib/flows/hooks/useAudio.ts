@@ -10,7 +10,6 @@ export function useAudio() {
     voice?: string;
     systemPrompt?: string;
     projectId: string;
-    projectName: string;
     targetBatchIndices?: number[];
   }) => {
     setIsLoading(true);
@@ -35,8 +34,8 @@ export function useAudio() {
         const exists = prev.find((b) => b.index === index);
         return exists
           ? prev.map((b) =>
-            b.index === index ? { ...b, status: "generating" as const } : b,
-          )
+              b.index === index ? { ...b, status: "generating" as const } : b,
+            )
           : [...prev, { index, text: "", status: "generating" as const }];
       });
       try {

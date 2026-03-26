@@ -9,13 +9,31 @@ import { StorageService } from "@/lib/storage";
 
 const log = createLogger("video-clip");
 
+async function resolveImage(url?: string): Promise<string | undefined> {
+  if (!url) return undefined;
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:")
+  )
+    return url;
+  if (url.startsWith("/")) {
+    try {
+      const buf = await fsp.readFile(path.join(process.cwd(), "public", url));
+      const ext = path.extname(url).replace(".", "");
+      return `data:image/${ext === "jpg" ? "jpeg" : ext};base64,${buf.toString("base64")}`;
+    } catch {
+      return undefined;
+    }
+  }
+  return url;
+}
+
 export interface VideoClipRequest {
   prompt: string;
   referenceImage?: string;
   duration?: number;
 }
-
-
 
 /**
  * Salva o vídeo no disco com nome baseado no índice do segmento.
@@ -38,7 +56,10 @@ async function saveClip(
     const res = await fetch(videoUrl);
     if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
     const ct = res.headers.get("content-type") || "";
-    if (!ct.startsWith("video/") && !ct.startsWith("application/octet-stream")) {
+    if (
+      !ct.startsWith("video/") &&
+      !ct.startsWith("application/octet-stream")
+    ) {
       throw new Error(`Invalid content-type: ${ct} (expected video)`);
     }
     fs.writeFileSync(filepath, Buffer.from(await res.arrayBuffer()));
@@ -52,13 +73,20 @@ export async function generateAndSaveVideoClip(
   projectId: string,
   segmentIndex = 0,
 ): Promise<string> {
+  const resolvedRef = await resolveImage(req.referenceImage);
   const { videoUrl } = await execute("generateVideo", {
     prompt: req.prompt,
-    referenceImage: req.referenceImage,
+    referenceImage: resolvedRef,
     duration: req.duration,
   });
 
-  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "clips");
+  const pubDir = path.join(
+    process.cwd(),
+    "public",
+    "projects",
+    projectId,
+    "clips",
+  );
   const filename = await saveClip(videoUrl, pubDir, segmentIndex);
   const publicPath = `/projects/${projectId}/clips/${filename}`;
 
@@ -87,13 +115,21 @@ export async function generateAndSaveVideoClipBatch(
   projectId: string,
   onResult?: (result: BatchClipResult) => void,
 ): Promise<BatchClipResult[]> {
-  const resolved = requests.map((r) => ({
-    prompt: r.prompt,
-    referenceImage: r.referenceImage,
-    duration: r.duration,
-  }));
+  const resolved = await Promise.all(
+    requests.map(async (r) => ({
+      prompt: r.prompt,
+      referenceImage: await resolveImage(r.referenceImage),
+      duration: r.duration,
+    })),
+  );
 
-  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "clips");
+  const pubDir = path.join(
+    process.cwd(),
+    "public",
+    "projects",
+    projectId,
+    "clips",
+  );
 
   const clipResults: BatchClipResult[] = [];
   const savePromises: Promise<void>[] = [];
@@ -116,7 +152,11 @@ export async function generateAndSaveVideoClipBatch(
       const filename = await saveClip(br.data.videoUrl, pubDir, segmentIndex);
       const publicPath = `/projects/${projectId}/clips/${filename}`;
 
-      await StorageService.patchSegmentClip(projectId, segmentIndex, publicPath);
+      await StorageService.patchSegmentClip(
+        projectId,
+        segmentIndex,
+        publicPath,
+      );
 
       log.success(`Saved clip #${segmentIndex + 1}: ${publicPath}`);
       const r: BatchClipResult = {

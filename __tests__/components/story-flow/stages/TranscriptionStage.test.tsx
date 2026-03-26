@@ -3,9 +3,12 @@ import { TranscriptionStage } from "@/components/story-flow/stages/Transcription
 import type { StoryFlowState } from "@/components/story-flow/types";
 import type { AudioBatch, TranscriptionResult } from "@/lib/flows/types";
 
-type PartialState = Partial<StoryFlowState> & Pick<StoryFlowState, "transcription" | "audio" | "language">;
+type PartialState = Partial<StoryFlowState> &
+  Pick<StoryFlowState, "transcription" | "audio" | "language">;
 
-const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState => {
+const createMockState = (
+  overrides: Partial<PartialState> = {},
+): StoryFlowState => {
   const transcriptionResults: TranscriptionResult[] = [];
   const audioBatches: AudioBatch[] = [];
 
@@ -50,7 +53,14 @@ const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState 
     setEntities: jest.fn(),
     imageStatuses: new Map(),
     setImageStatuses: jest.fn(),
-    captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+    captionStyle: {
+      fontSize: 60,
+      fontFamily: "TikTok Sans",
+      fontWeight: 800,
+      maxWordsPerLine: 3,
+      uppercase: true,
+      highlightColor: "#FFE81F",
+    },
     setCaptionStyle: jest.fn(),
     videoVolume: 1,
     setVideoVolume: jest.fn(),
@@ -155,7 +165,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText(/click.*transcribe/i)).toBeInTheDocument();
     });
 
@@ -176,7 +188,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText(/finding proxies/i)).toBeInTheDocument();
     });
   });
@@ -186,7 +200,11 @@ describe("TranscriptionStage", () => {
       const state = createMockState({
         transcription: {
           results: [
-            { url: "http://audio1.mp3", status: "completed", data: { words: [] } },
+            {
+              url: "http://audio1.mp3",
+              status: "completed",
+              data: { words: [] },
+            },
             { url: "http://audio2.mp3", status: "error", error: "Failed" },
           ],
           setResults: jest.fn(),
@@ -196,8 +214,18 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "First batch of text here", status: "completed", url: "http://audio1.mp3" },
-            { index: 1, text: "Second batch of text here", status: "completed", url: "http://audio2.mp3" },
+            {
+              index: 0,
+              text: "First batch of text here",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
+            {
+              index: 1,
+              text: "Second batch of text here",
+              status: "completed",
+              url: "http://audio2.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -205,7 +233,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
 
       expect(screen.getByText("Done")).toBeInTheDocument();
       expect(screen.getByText("Error")).toBeInTheDocument();
@@ -216,7 +246,11 @@ describe("TranscriptionStage", () => {
       const state = createMockState({
         transcription: {
           results: [
-            { url: "http://audio1.mp3", status: "completed", data: { words: [] } },
+            {
+              url: "http://audio1.mp3",
+              status: "completed",
+              data: { words: [] },
+            },
           ],
           setResults: jest.fn(),
           transcribe: jest.fn(),
@@ -225,9 +259,19 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "Completed batch", status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: "Completed batch",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
             { index: 1, text: "Pending batch", status: "pending" },
-            { index: 2, text: "Error batch", status: "error", url: "http://audio3.mp3" },
+            {
+              index: 2,
+              text: "Error batch",
+              status: "error",
+              url: "http://audio3.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -235,7 +279,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
 
       expect(screen.getByText(/completed batch/i)).toBeInTheDocument();
       expect(screen.queryByText(/pending batch/i)).not.toBeInTheDocument();
@@ -248,7 +294,11 @@ describe("TranscriptionStage", () => {
       const state = createMockState({
         transcription: {
           results: [
-            { url: "http://audio1.mp3", status: "completed", data: { words: [] } },
+            {
+              url: "http://audio1.mp3",
+              status: "completed",
+              data: { words: [] },
+            },
           ],
           setResults: jest.fn(),
           transcribe: jest.fn(),
@@ -257,7 +307,12 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "Test text", status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: "Test text",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -265,7 +320,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText("Done")).toBeInTheDocument();
     });
 
@@ -283,7 +340,12 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "Test text", status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: "Test text",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -292,7 +354,9 @@ describe("TranscriptionStage", () => {
         },
         language: "english",
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText("Error")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "" })).toBeInTheDocument();
     });
@@ -300,9 +364,7 @@ describe("TranscriptionStage", () => {
     it("shows 'Pending' when no result exists and not loading", () => {
       const state = createMockState({
         transcription: {
-          results: [
-            { url: "http://audio1.mp3", status: "pending" },
-          ],
+          results: [{ url: "http://audio1.mp3", status: "pending" }],
           setResults: jest.fn(),
           transcribe: jest.fn(),
           retry: jest.fn(),
@@ -310,7 +372,12 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "Test text", status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: "Test text",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -318,16 +385,16 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText(/test text/i)).toBeInTheDocument();
     });
 
     it("shows spinner when loading and result pending", () => {
       const state = createMockState({
         transcription: {
-          results: [
-            { url: "http://audio1.mp3", status: "pending" },
-          ],
+          results: [{ url: "http://audio1.mp3", status: "pending" }],
           setResults: jest.fn(),
           transcribe: jest.fn(),
           retry: jest.fn(),
@@ -335,7 +402,12 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "Test text", status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: "Test text",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -343,17 +415,26 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText(/test text/i)).toBeInTheDocument();
     });
   });
 
   describe("batch display", () => {
     it("truncates long batch text", () => {
-      const longText = "This is a very long text that should be truncated at fifty characters";
+      const longText =
+        "This is a very long text that should be truncated at fifty characters";
       const state = createMockState({
         transcription: {
-          results: [{ url: "http://audio1.mp3", status: "completed", data: { words: [] } }],
+          results: [
+            {
+              url: "http://audio1.mp3",
+              status: "completed",
+              data: { words: [] },
+            },
+          ],
           setResults: jest.fn(),
           transcribe: jest.fn(),
           retry: jest.fn(),
@@ -361,7 +442,12 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: longText, status: "completed", url: "http://audio1.mp3" },
+            {
+              index: 0,
+              text: longText,
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -369,14 +455,24 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
-      expect(screen.getByText(/this is a very long text that should be trun/i)).toBeInTheDocument();
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
+      expect(
+        screen.getByText(/this is a very long text that should be trun/i),
+      ).toBeInTheDocument();
     });
 
     it("shows batch index number", () => {
       const state = createMockState({
         transcription: {
-          results: [{ url: "http://audio1.mp3", status: "completed", data: { words: [] } }],
+          results: [
+            {
+              url: "http://audio1.mp3",
+              status: "completed",
+              data: { words: [] },
+            },
+          ],
           setResults: jest.fn(),
           transcribe: jest.fn(),
           retry: jest.fn(),
@@ -384,8 +480,18 @@ describe("TranscriptionStage", () => {
         },
         audio: {
           batches: [
-            { index: 0, text: "First", status: "completed", url: "http://audio1.mp3" },
-            { index: 1, text: "Second", status: "completed", url: "http://audio2.mp3" },
+            {
+              index: 0,
+              text: "First",
+              status: "completed",
+              url: "http://audio1.mp3",
+            },
+            {
+              index: 1,
+              text: "Second",
+              status: "completed",
+              url: "http://audio2.mp3",
+            },
           ],
           setBatches: jest.fn(),
           generate: jest.fn(),
@@ -393,7 +499,9 @@ describe("TranscriptionStage", () => {
           isLoading: false,
         },
       });
-      render(<TranscriptionStage state={state} actions={createMockActions()} />);
+      render(
+        <TranscriptionStage state={state} actions={createMockActions()} />,
+      );
       expect(screen.getByText("1")).toBeInTheDocument();
       expect(screen.getByText("2")).toBeInTheDocument();
     });

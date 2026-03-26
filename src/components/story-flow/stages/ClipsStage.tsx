@@ -32,27 +32,39 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
               <Card key={i}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex justify-between mb-1">
-                    <span className="font-mono text-xs font-bold">Clip #{i + 1}</span>
-                    <span className="text-xs text-muted-foreground">{clipDuration}s</span>
+                    <span className="font-mono text-xs font-bold">
+                      Clip #{i + 1}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {clipDuration}s
+                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground italic line-clamp-2">
                     {seg.imagePrompt}
                   </p>
                   {seg.videoClipUrl && st !== "generating" ? (
                     <div className="relative group">
-                      <LazyVideo src={seg.videoClipUrl} className="w-full rounded" />
+                      <LazyVideo
+                        src={seg.videoClipUrl}
+                        className="w-full rounded"
+                      />
                       <Button
                         size="icon"
                         variant="secondary"
                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
                         onClick={() =>
-                          videoClips.regenerateClip(i, segments, state.setSegments, {
-                            projectId: project.projectId || projectId,
-                            clipDuration,
-                            onClipCompleted: async (newSegments) => {
-                              await actions.save({ segments: newSegments });
+                          videoClips.regenerateClip(
+                            i,
+                            segments,
+                            state.setSegments,
+                            {
+                              projectId: project.projectId || projectId,
+                              clipDuration,
+                              onClipCompleted: async (newSegments) => {
+                                await actions.save({ segments: newSegments });
+                              },
                             },
-                          })
+                          )
                         }
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -69,18 +81,25 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                     </div>
                   ) : st === "error" ? (
                     <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
-                      <span className="text-sm text-muted-foreground">Error</span>
+                      <span className="text-sm text-muted-foreground">
+                        Error
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          videoClips.regenerateClip(i, segments, state.setSegments, {
-                            projectId: project.projectId || projectId,
-                            clipDuration,
-                            onClipCompleted: async (newSegments) => {
-                              await actions.save({ segments: newSegments });
+                          videoClips.regenerateClip(
+                            i,
+                            segments,
+                            state.setSegments,
+                            {
+                              projectId: project.projectId || projectId,
+                              clipDuration,
+                              onClipCompleted: async (newSegments) => {
+                                await actions.save({ segments: newSegments });
+                              },
                             },
-                          })
+                          )
                         }
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />

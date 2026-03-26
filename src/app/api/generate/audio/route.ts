@@ -6,13 +6,8 @@ const log = createLogger("api/audio");
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      text,
-      voice,
-      systemPrompt,
-      targetBatchIndices,
-      projectId,
-    } = await request.json();
+    const { text, voice, systemPrompt, targetBatchIndices, projectId } =
+      await request.json();
 
     if (!text) {
       return NextResponse.json({ error: "Missing text" }, { status: 400 });

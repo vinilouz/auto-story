@@ -1,5 +1,10 @@
 import { createLogger } from "../logger";
-import type { AudioBatch, Segment, TranscriptionResult, TranscriptionWord } from "../flows/types";
+import type {
+  AudioBatch,
+  Segment,
+  TranscriptionResult,
+  TranscriptionWord,
+} from "../flows/types";
 
 const log = createLogger("utils/text");
 
@@ -280,7 +285,9 @@ export function splitWordsIntoSegments(
 
   for (const word of words) {
     const currentText = currentWords.map((w) => w.text).join(" ");
-    const potentialText = currentText ? `${currentText} ${word.text}` : word.text;
+    const potentialText = currentText
+      ? `${currentText} ${word.text}`
+      : word.text;
 
     if (potentialText.length <= maxLength) {
       currentWords.push(word);

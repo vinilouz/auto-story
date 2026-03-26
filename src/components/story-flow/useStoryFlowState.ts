@@ -12,11 +12,17 @@ import {
   useVideoClips,
 } from "@/lib/flows/hooks";
 import { getVideoClipDuration } from "@/lib/ai/config";
-import { calculateMaxStep, determineInitialStage } from "@/lib/domain/navigation";
+import {
+  calculateMaxStep,
+  determineInitialStage,
+} from "@/lib/domain/navigation";
 import { getStages } from "./config";
 import type { StoryFlowState, Stage, FlowMode } from "./types";
 
-export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowState {
+export function useStoryFlowState(
+  mode: FlowMode,
+  projectId: string,
+): StoryFlowState {
   const [stage, setStage] = useState<Stage>("input");
   const [title, setTitle] = useState("");
   const [scriptText, setScriptText] = useState("");
@@ -31,7 +37,8 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
   // from-audio flow: local File object chosen by the user in InputAudioStage
   const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
 
-  const [commentator, setCommentator] = useState<StoryFlowState["commentator"]>(null);
+  const [commentator, setCommentator] =
+    useState<StoryFlowState["commentator"]>(null);
   const [commName, setCommName] = useState("");
   const [commPersonality, setCommPersonality] = useState("");
   const [commImagePrompt, setCommImagePrompt] = useState("");
@@ -40,8 +47,12 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
 
   const [segments, setSegments] = useState<StoryFlowState["segments"]>([]);
   const [entities, setEntities] = useState<StoryFlowState["entities"]>([]);
-  const [imageStatuses, setImageStatuses] = useState<StoryFlowState["imageStatuses"]>(new Map());
-  const [captionStyle, setCaptionStyle] = useState<StoryFlowState["captionStyle"]>(DEFAULT_CAPTION_STYLE);
+  const [imageStatuses, setImageStatuses] = useState<
+    StoryFlowState["imageStatuses"]
+  >(new Map());
+  const [captionStyle, setCaptionStyle] = useState<
+    StoryFlowState["captionStyle"]
+  >(DEFAULT_CAPTION_STYLE);
   const [videoVolume, setVideoVolume] = useState(0.1);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +65,10 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
 
   const clipDuration = getVideoClipDuration();
 
-  const stages = useMemo(() => getStages(mode, consistency, music), [mode, consistency, music]);
+  const stages = useMemo(
+    () => getStages(mode, consistency, music),
+    [mode, consistency, music],
+  );
   const stageIdx = stages.indexOf(stage);
 
   const hasPrompts = segments.some((s) => s.imagePrompt);
@@ -63,7 +77,7 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
   const hasMusic = !!musicUrl;
   const hasComments = segments.some((s) => s.type === "comment");
   const hasAudio = audio.batches.some((b) => b.status === "completed" && b.url);
-  const hasTranscription = transcription.results.length > 0;
+  const hasTranscription = !!transcription.result;
 
   const maxStep = useMemo(
     () =>
@@ -117,16 +131,18 @@ export function useStoryFlowState(mode: FlowMode, projectId: string): StoryFlowS
           setCommentator(p.commentator);
           setCommName(p.commentator.name);
           setCommPersonality(p.commentator.personality);
-          if (p.commentator.appearance?.imageUrl) setCommImage(p.commentator.appearance.imageUrl);
+          if (p.commentator.appearance?.imageUrl)
+            setCommImage(p.commentator.appearance.imageUrl);
         }
         if (p.audioBatches) audio.setBatches(p.audioBatches);
         if (p.audioSystemPrompt) setAudioSystemPrompt(p.audioSystemPrompt);
-        if (p.transcriptionResults) transcription.setResults(p.transcriptionResults);
+        if (p.transcriptionResult)
+          transcription.setResult(p.transcriptionResult);
         if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
 
         setStage(determineInitialStage(mode, p));
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [projectId]);
 
   return {

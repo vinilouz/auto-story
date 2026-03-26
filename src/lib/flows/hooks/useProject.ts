@@ -41,7 +41,7 @@ export function useProject() {
         throw e;
       });
 
-    saveQueue.current = task.catch(() => { });
+    saveQueue.current = task.catch(() => {});
     return task;
   };
 

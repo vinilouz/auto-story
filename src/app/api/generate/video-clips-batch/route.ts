@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       const send = (data: Record<string, unknown>) => {
         try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
+          );
         } catch (e) {
           // ignore closed streams
         }

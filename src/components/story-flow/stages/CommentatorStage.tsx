@@ -68,7 +68,11 @@ export function CommentatorStage({ state, actions }: CommentatorStageProps) {
           </div>
           <div className="w-32 h-32 bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
             {commImage ? (
-              <img src={commImage} alt="" className="w-full h-full object-cover" />
+              <img
+                src={commImage}
+                alt=""
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="text-center p-2">
                 <input
@@ -85,7 +89,10 @@ export function CommentatorStage({ state, actions }: CommentatorStageProps) {
                     }
                   }}
                 />
-                <label htmlFor="comm-upload" className="cursor-pointer text-xs text-muted-foreground">
+                <label
+                  htmlFor="comm-upload"
+                  className="cursor-pointer text-xs text-muted-foreground"
+                >
                   <Upload className="w-6 h-6 mx-auto mb-1" />
                   Upload
                 </label>

@@ -22,7 +22,7 @@ export function LazyVideo({ src, className }: LazyVideoProps) {
           observer.disconnect();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "200px" },
     );
 
     observer.observe(el);

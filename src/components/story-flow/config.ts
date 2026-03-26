@@ -16,7 +16,11 @@ export const STAGE_LABELS: Record<Stage, string> = {
   music: "Música",
 };
 
-export function getStages(mode: FlowMode, consistency: boolean, music: boolean): Stage[] {
+export function getStages(
+  mode: FlowMode,
+  consistency: boolean,
+  music: boolean,
+): Stage[] {
   if (mode === "from-audio") {
     return [
       "input",

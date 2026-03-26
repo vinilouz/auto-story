@@ -39,7 +39,7 @@ export interface ProjectData {
   commentator?: CommentatorConfig;
   audioSystemPrompt?: string;
   audioBatches?: AudioBatch[];
-  transcriptionResults?: TranscriptionResult[];
+  transcriptionResult?: TranscriptionResult;
   videoModel?: string;
   music?: string;
 }
@@ -261,10 +261,7 @@ export const StorageService = {
     }
   },
 
-  async patchMusic(
-    projectId: string,
-    musicUrl: string,
-  ): Promise<void> {
+  async patchMusic(projectId: string, musicUrl: string): Promise<void> {
     try {
       const dirName = resolveDir(projectId);
       const configPath = path.join(DATA_DIR, dirName, "config.json");
@@ -314,13 +311,15 @@ export const StorageService = {
       const project: ProjectData = JSON.parse(
         await fs.readFile(configPath, "utf-8"),
       );
-      project.transcriptionResults?.forEach((r) => {
-        if (typeof r.data === "string") {
+      if (project.transcriptionResult) {
+        if (typeof project.transcriptionResult.data === "string") {
           try {
-            r.data = JSON.parse(r.data);
-          } catch { }
+            project.transcriptionResult.data = JSON.parse(
+              project.transcriptionResult.data,
+            );
+          } catch {}
         }
-      });
+      }
       return project;
     } catch (e) {
       log.error("Failed to load project", e);
@@ -350,7 +349,7 @@ export const StorageService = {
           commentator: p.commentator,
           dirName: d.name,
         });
-      } catch { }
+      } catch {}
     }
 
     return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

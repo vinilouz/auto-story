@@ -14,10 +14,7 @@ export async function POST(req: Request) {
     const { projectId } = await req.json();
 
     if (!projectId) {
-      return NextResponse.json(
-        { error: "Missing projectId" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
 
     const dir = path.join(DATA_DIR, projectId, "audios");

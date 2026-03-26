@@ -51,7 +51,9 @@ export function InputAudioStage({ state }: InputAudioStageProps) {
       <CardContent className="space-y-6">
         {/* Title */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Project Title (optional)</label>
+          <label className="text-sm font-medium">
+            Project Title (optional)
+          </label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -104,7 +106,9 @@ export function InputAudioStage({ state }: InputAudioStageProps) {
 
         {/* Image style */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Image Style (System Prompt)</label>
+          <label className="text-sm font-medium">
+            Image Style (System Prompt)
+          </label>
           <Textarea
             value={imagePromptStyle}
             onChange={(e) => setImagePromptStyle(e.target.value)}
@@ -138,7 +142,10 @@ export function InputAudioStage({ state }: InputAudioStageProps) {
             onCheckedChange={setConsistency}
           />
           <div>
-            <label htmlFor="consistency-toggle" className="text-base font-medium cursor-pointer">
+            <label
+              htmlFor="consistency-toggle"
+              className="text-base font-medium cursor-pointer"
+            >
               Character Consistency
             </label>
             <p className="text-sm text-muted-foreground">
@@ -155,7 +162,10 @@ export function InputAudioStage({ state }: InputAudioStageProps) {
             onCheckedChange={setMusic}
           />
           <div>
-            <label htmlFor="music-toggle" className="text-base font-medium cursor-pointer">
+            <label
+              htmlFor="music-toggle"
+              className="text-base font-medium cursor-pointer"
+            >
               Background Music
             </label>
             <p className="text-sm text-muted-foreground">

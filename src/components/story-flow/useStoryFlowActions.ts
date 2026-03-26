@@ -68,7 +68,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         commentator: commentator || undefined,
         audioBatches: audio.batches,
         audioSystemPrompt,
-        transcriptionResults: transcription.results,
+        transcriptionResult: transcription.result,
         videoVolume,
         musicEnabled: music,
         music: musicUrl,
@@ -91,7 +91,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       commentator,
       audio.batches,
       audioSystemPrompt,
-      transcription.results,
+      transcription.result,
       videoVolume,
       music,
       musicUrl,
@@ -105,15 +105,26 @@ export function useStoryFlowActions(state: StoryFlowState) {
       text:
         mode === "commentator"
           ? segments
-            .filter((s) => s.type)
-            .map((s) => `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`)
-            .join("\n")
+              .filter((s) => s.type)
+              .map(
+                (s) =>
+                  `${s.type === "comment" ? "commentator" : "narrator"}: ${s.text}`,
+              )
+              .join("\n")
           : scriptText,
       voice: audioVoice,
       systemPrompt: audioSystemPrompt,
       projectId: project.projectId || state.projectId,
     }),
-    [mode, segments, scriptText, audioVoice, audioSystemPrompt, project.projectId, state.projectId],
+    [
+      mode,
+      segments,
+      scriptText,
+      audioVoice,
+      audioSystemPrompt,
+      project.projectId,
+      state.projectId,
+    ],
   );
 
   const splitScenes = useCallback(async () => {
@@ -128,7 +139,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         }),
       });
       if (!res.ok) throw new Error();
-      const newSegs = (await res.json()).segments.map((t: string) => ({ text: t }));
+      const newSegs = (await res.json()).segments.map((t: string) => ({
+        text: t,
+      }));
       setSegments(newSegs);
       setStage(mode === "commentator" ? "commentator" : "descriptions");
       await save({ segments: newSegs });
@@ -176,7 +189,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [uploadedAudioFile, state.projectId, save, transcription, setStage, setLoading]);
+  }, [
+    uploadedAudioFile,
+    state.projectId,
+    save,
+    transcription,
+    setStage,
+    setLoading,
+  ]);
 
   const saveCommentator = useCallback(async () => {
     const config = {
@@ -184,7 +204,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
       name: commName,
       personality: commPersonality,
       appearance: {
-        type: (commImage?.startsWith("data:") ? "upload" : "generated") as "upload" | "generated",
+        type: (commImage?.startsWith("data:") ? "upload" : "generated") as
+          | "upload"
+          | "generated",
         imageUrl: commImage || undefined,
         imagePrompt: commImagePrompt || undefined,
       },
@@ -192,7 +214,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
     setCommentator(config);
     setStage("comments");
     await save({ commentator: config });
-  }, [commentator?.id, commName, commPersonality, commImage, commImagePrompt, setCommentator, setStage, save]);
+  }, [
+    commentator?.id,
+    commName,
+    commPersonality,
+    commImage,
+    commImagePrompt,
+    setCommentator,
+    setStage,
+    save,
+  ]);
 
   const generateComments = useCallback(async () => {
     if (!commentator) return;
@@ -220,7 +251,15 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [commentator, segments, consistency, setSegments, setStage, save, setLoading]);
+  }, [
+    commentator,
+    segments,
+    consistency,
+    setSegments,
+    setStage,
+    save,
+    setLoading,
+  ]);
 
   const generateDescriptions = useCallback(async () => {
     setLoading(true);
@@ -228,10 +267,13 @@ export function useStoryFlowActions(state: StoryFlowState) {
       const segsForApi =
         mode === "commentator"
           ? segments.map((s) =>
-            s.type === "comment"
-              ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
-              : s,
-          )
+              s.type === "comment"
+                ? {
+                    ...s,
+                    text: `[Commentary by ${commentator?.name}]: ${s.text}`,
+                  }
+                : s,
+            )
           : segments;
 
       const res = await fetch("/api/generate/descriptions", {
@@ -264,7 +306,18 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [segments, mode, commentator, entities, language, imagePromptStyle, setSegments, setStage, save, setLoading]);
+  }, [
+    segments,
+    mode,
+    commentator,
+    entities,
+    language,
+    imagePromptStyle,
+    setSegments,
+    setStage,
+    save,
+    setLoading,
+  ]);
 
   const generateMissingDescriptions = useCallback(async () => {
     const missingIndices = segments
@@ -279,10 +332,13 @@ export function useStoryFlowActions(state: StoryFlowState) {
       const segsForApi =
         mode === "commentator"
           ? missingSegments.map((s) =>
-            s.type === "comment"
-              ? { ...s, text: `[Commentary by ${commentator?.name}]: ${s.text}` }
-              : s,
-          )
+              s.type === "comment"
+                ? {
+                    ...s,
+                    text: `[Commentary by ${commentator?.name}]: ${s.text}`,
+                  }
+                : s,
+            )
           : missingSegments;
 
       const res = await fetch("/api/generate/descriptions", {
@@ -319,7 +375,17 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [segments, mode, commentator, entities, language, imagePromptStyle, setSegments, save, setLoading]);
+  }, [
+    segments,
+    mode,
+    commentator,
+    entities,
+    language,
+    imagePromptStyle,
+    setSegments,
+    save,
+    setLoading,
+  ]);
 
   const extractAndGenerateEntities = useCallback(async () => {
     setLoading(true);
@@ -379,10 +445,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
           .map((e) =>
             targets.some((t) => t.name === e.name) && e.description
               ? {
-                imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
-                imageConfig: { aspect_ratio: "16:9" },
-                entityName: e.name,
-              }
+                  imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(
+                    e.description,
+                    undefined,
+                    imagePromptStyle,
+                  ),
+                  imageConfig: { aspect_ratio: "16:9" },
+                  entityName: e.name,
+                }
               : null,
           )
           .filter(Boolean);
@@ -421,7 +491,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
             let targetIdx = -1;
             let count = 0;
             for (let j = 0; j < latestEnts.length; j++) {
-              if (targetNames.includes(latestEnts[j].name) && latestEnts[j].description) {
+              if (
+                targetNames.includes(latestEnts[j].name) &&
+                latestEnts[j].description
+              ) {
                 if (count === event.id) {
                   targetIdx = j;
                   break;
@@ -434,7 +507,11 @@ export function useStoryFlowActions(state: StoryFlowState) {
             if (event.status === "success" && event.data?.imageUrl) {
               latestEnts = latestEnts.map((e, j) =>
                 j === targetIdx
-                  ? { ...e, imageUrl: event.data.imageUrl, status: "completed" as const }
+                  ? {
+                      ...e,
+                      imageUrl: event.data.imageUrl,
+                      status: "completed" as const,
+                    }
                   : e,
               );
               setEntities([...latestEnts]);
@@ -456,7 +533,15 @@ export function useStoryFlowActions(state: StoryFlowState) {
         if (!skipLoading) setLoading(false);
       }
     },
-    [entities, imagePromptStyle, project.projectId, title, setEntities, save, setLoading],
+    [
+      entities,
+      imagePromptStyle,
+      project.projectId,
+      title,
+      setEntities,
+      save,
+      setLoading,
+    ],
   );
 
   const generateSingleEntity = useCallback(
@@ -471,12 +556,18 @@ export function useStoryFlowActions(state: StoryFlowState) {
       }
 
       setEntities((prev) =>
-        prev.map((ent, i) => (i === entityIndex ? { ...ent, status: "generating" } : ent)),
+        prev.map((ent, i) =>
+          i === entityIndex ? { ...ent, status: "generating" } : ent,
+        ),
       );
 
       try {
         const payload: any = {
-          imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(e.description, undefined, imagePromptStyle),
+          imagePrompt: GENERATE_ENTITY_IMAGE_PROMPT(
+            e.description,
+            undefined,
+            imagePromptStyle,
+          ),
           imageConfig: { aspect_ratio: "16:9" },
           projectId: pid,
           entityName: e.name,
@@ -494,7 +585,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         let updatedEnts: typeof entities = [];
         setEntities((prev) => {
           updatedEnts = prev.map((ent, i) =>
-            i === entityIndex ? { ...ent, imageUrl: data.imageUrl, status: "completed" } : ent,
+            i === entityIndex
+              ? { ...ent, imageUrl: data.imageUrl, status: "completed" }
+              : ent,
           );
           return updatedEnts;
         });
@@ -502,7 +595,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         toast.success(`Generated image for ${e.name}`);
       } catch {
         setEntities((prev) =>
-          prev.map((ent, i) => (i === entityIndex ? { ...ent, status: "error" } : ent)),
+          prev.map((ent, i) =>
+            i === entityIndex ? { ...ent, status: "error" } : ent,
+          ),
         );
         toast.error(`Failed to generate ${e.name}`);
       }
@@ -542,7 +637,10 @@ export function useStoryFlowActions(state: StoryFlowState) {
 
         if (refs.length > 0) {
           payload.referenceImages = refs;
-        } else if (mode === "commentator" && commentator?.appearance?.imageUrl) {
+        } else if (
+          mode === "commentator" &&
+          commentator?.appearance?.imageUrl
+        ) {
           payload.referenceImage = commentator.appearance.imageUrl;
         }
         const res = await fetch("/api/generate/images", {
@@ -554,7 +652,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         const data = await res.json();
         let updatedSegs: typeof segments = [];
         setSegments((prev) => {
-          updatedSegs = prev.map((s, j) => (j === segIndex ? { ...s, imagePath: data.imageUrl } : s));
+          updatedSegs = prev.map((s, j) =>
+            j === segIndex ? { ...s, imagePath: data.imageUrl } : s,
+          );
           return updatedSegs;
         });
         setImageStatuses((p) => {
@@ -589,7 +689,11 @@ export function useStoryFlowActions(state: StoryFlowState) {
       pid = s?.id;
     }
 
-    if (consistency && entities.length > 0 && entities.some((e) => !e.imageUrl)) {
+    if (
+      consistency &&
+      entities.length > 0 &&
+      entities.some((e) => !e.imageUrl)
+    ) {
       await generateEntitiesInternal();
     }
 
@@ -603,12 +707,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
     }
 
     const indices = currentSegments
-      .map((seg, i) => (!seg.imagePrompt || (!isRegen && seg.imagePath) ? -1 : i))
+      .map((seg, i) =>
+        !seg.imagePrompt || (!isRegen && seg.imagePath) ? -1 : i,
+      )
       .filter((i) => i >= 0);
 
     if (indices.length === 0) return;
 
-    const statusMap = new Map<number, "error" | "generating">(indices.map((i) => [i, "generating"]));
+    const statusMap = new Map<number, "error" | "generating">(
+      indices.map((i) => [i, "generating"]),
+    );
     setImageStatuses(statusMap);
 
     const requests = indices.map((segIndex) => {
@@ -693,7 +801,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
       setSegments(latestSegs);
       await save({ segments: latestSegs });
     } catch {
-      const errorMap = new Map<number, "error" | "generating">(indices.map((i) => [i, "error"]));
+      const errorMap = new Map<number, "error" | "generating">(
+        indices.map((i) => [i, "error"]),
+      );
       setImageStatuses(errorMap);
     }
   }, [
@@ -718,34 +828,37 @@ export function useStoryFlowActions(state: StoryFlowState) {
   }, [audio, audioOpts, setStage, save]);
 
   const transcribeAction = useCallback(async () => {
-    const newResults = await transcription.transcribe(project.projectId || state.projectId);
+    const newResults = await transcription.transcribe(
+      project.projectId || state.projectId,
+    );
     setStage("transcription");
     if (newResults) await save({ transcriptionResults: newResults });
   }, [transcription, project.projectId, state.projectId, setStage, save]);
 
   const splitByDuration = useCallback(async () => {
-    const completedBatches = audio.batches.filter((b) => b.status === "completed" && b.url);
+    const completedBatches = audio.batches.filter(
+      (b) => b.status === "completed" && b.url,
+    );
     if (completedBatches.length === 0) {
       toast.error("No completed audio batches");
       return;
     }
     const audioDurationsMs = await Promise.all(
-      completedBatches.map(
-        (b) =>
-          Promise.race([
-            new Promise<number>((resolve, reject) => {
-              const el = new Audio(b.url!);
-              el.onloadedmetadata = () => resolve(el.duration * 1000);
-              el.onerror = () => reject(new Error(`Audio load error: ${b.url}`));
-            }),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Audio load timeout")), 10000),
-            ),
-          ]),
+      completedBatches.map((b) =>
+        Promise.race([
+          new Promise<number>((resolve, reject) => {
+            const el = new Audio(b.url!);
+            el.onloadedmetadata = () => resolve(el.duration * 1000);
+            el.onerror = () => reject(new Error(`Audio load error: ${b.url}`));
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Audio load timeout")), 10000),
+          ),
+        ]),
       ),
     );
     const newSegs = splitTranscriptionByDuration(
-      transcription.results,
+      transcription.result ? [transcription.result] : [],
       audio.batches,
       clipDuration,
       audioDurationsMs,
@@ -757,7 +870,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
     setSegments(newSegs);
     setStage("split");
     await save({ segments: newSegs });
-  }, [transcription.results, audio.batches, clipDuration, setSegments, setStage, save]);
+  }, [
+    transcription.result,
+    audio.batches,
+    clipDuration,
+    setSegments,
+    setStage,
+    save,
+  ]);
 
   const generateAllClips = useCallback(async () => {
     let pid = project.projectId;
@@ -772,7 +892,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
         await save({ segments: newSegments });
       },
     });
-  }, [segments, project.projectId, state.projectId, title, clipDuration, videoClips, setSegments, save]);
+  }, [
+    segments,
+    project.projectId,
+    state.projectId,
+    title,
+    clipDuration,
+    videoClips,
+    setSegments,
+    save,
+  ]);
 
   const generateVideoPreview = useCallback(async () => {
     try {
@@ -786,13 +915,28 @@ export function useStoryFlowActions(state: StoryFlowState) {
         imageUrl: s.imagePath || "",
         videoClipUrl: s.videoClipUrl || undefined,
       }));
-      const alignmentMode = mode === "video-story" ? ("video" as const) : ("image" as const);
-      await video.generate(segs, audio.batches, transcription.results, alignmentMode, videoVolume);
+      const alignmentMode =
+        mode === "video-story" ? ("video" as const) : ("image" as const);
+      await video.generate(
+        segs,
+        audio.batches,
+        transcription.result,
+        alignmentMode,
+        videoVolume,
+      );
       setStage("video");
     } catch (e: any) {
       toast.error(`Video generation failed: ${e.message}`);
     }
-  }, [segments, mode, audio.batches, transcription.results, video, videoVolume, setStage]);
+  }, [
+    segments,
+    mode,
+    audio.batches,
+    transcription.result,
+    video,
+    videoVolume,
+    setStage,
+  ]);
 
   const renderVideoAction = useCallback(async () => {
     if (!video.videoProps) return;
@@ -801,12 +945,11 @@ export function useStoryFlowActions(state: StoryFlowState) {
         { ...video.videoProps, videoVolume },
         captionStyle,
         project.projectId || undefined,
-        title,
       );
     } catch (e: any) {
       toast.error(`Render failed: ${e.message}`);
     }
-  }, [video, captionStyle, videoVolume, project.projectId, title]);
+  }, [video, captionStyle, videoVolume, project.projectId]);
 
   const downloadZipAction = useCallback(async () => {
     try {
@@ -815,17 +958,19 @@ export function useStoryFlowActions(state: StoryFlowState) {
         audioUrls: audio.batches
           .filter((b) => b.status === "completed" && b.url)
           .map((b) => b.url!),
-        transcriptionResults: transcription.results,
+        transcriptionResult: transcription.result,
         filename: `${mode}-story-${Date.now()}.zip`,
       });
     } catch {
       toast.error("Download failed");
     }
-  }, [segments, audio.batches, transcription.results, mode, dl]);
+  }, [segments, audio.batches, transcription.result, mode, dl]);
 
   const updateSegmentImagePrompt = useCallback(
     (index: number, imagePrompt: string) => {
-      setSegments((prev) => prev.map((s, i) => (i === index ? { ...s, imagePrompt } : s)));
+      setSegments((prev) =>
+        prev.map((s, i) => (i === index ? { ...s, imagePrompt } : s)),
+      );
     },
     [setSegments],
   );
@@ -857,7 +1002,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [project.projectId, state.projectId, title, setMusicUrl, save, setLoading]);
+  }, [
+    project.projectId,
+    state.projectId,
+    title,
+    setMusicUrl,
+    save,
+    setLoading,
+  ]);
 
   const generateCommentatorImage = useCallback(async () => {
     if (!commImagePrompt.trim()) return;
@@ -882,7 +1034,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
     } finally {
       setLoading(false);
     }
-  }, [commImagePrompt, project.projectId, state.projectId, title, state, setLoading]);
+  }, [
+    commImagePrompt,
+    project.projectId,
+    state.projectId,
+    title,
+    state,
+    setLoading,
+  ]);
 
   return {
     save,

@@ -3,9 +3,20 @@ import { ClipsStage } from "@/components/story-flow/stages/ClipsStage";
 import type { StoryFlowState } from "@/components/story-flow/types";
 import type { Segment } from "@/lib/flows/types";
 
-type PartialState = Partial<StoryFlowState> & Pick<StoryFlowState, "segments" | "videoClips" | "clipDuration" | "project" | "projectId" | "title">;
+type PartialState = Partial<StoryFlowState> &
+  Pick<
+    StoryFlowState,
+    | "segments"
+    | "videoClips"
+    | "clipDuration"
+    | "project"
+    | "projectId"
+    | "title"
+  >;
 
-const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState => {
+const createMockState = (
+  overrides: Partial<PartialState> = {},
+): StoryFlowState => {
   const clipStatuses = new Map<number, "generating" | "error" | "completed">();
 
   return {
@@ -49,7 +60,14 @@ const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState 
     setEntities: jest.fn(),
     imageStatuses: new Map(),
     setImageStatuses: jest.fn(),
-    captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+    captionStyle: {
+      fontSize: 60,
+      fontFamily: "TikTok Sans",
+      fontWeight: 800,
+      maxWordsPerLine: 3,
+      uppercase: true,
+      highlightColor: "#FFE81F",
+    },
     setCaptionStyle: jest.fn(),
     videoVolume: 1,
     setVideoVolume: jest.fn(),
@@ -139,9 +157,17 @@ describe("ClipsStage", () => {
   describe("counter display", () => {
     it("shows correct count of clips with videoClipUrl", () => {
       const segments: Segment[] = [
-        { text: "First", imagePrompt: "Prompt 1", videoClipUrl: "http://clip1.mp4" },
+        {
+          text: "First",
+          imagePrompt: "Prompt 1",
+          videoClipUrl: "http://clip1.mp4",
+        },
         { text: "Second", imagePrompt: "Prompt 2" },
-        { text: "Third", imagePrompt: "Prompt 3", videoClipUrl: "http://clip3.mp4" },
+        {
+          text: "Third",
+          imagePrompt: "Prompt 3",
+          videoClipUrl: "http://clip3.mp4",
+        },
       ];
       const state = createMockState({ segments });
       render(<ClipsStage state={state} actions={createMockActions()} />);
@@ -164,9 +190,7 @@ describe("ClipsStage", () => {
 
   describe("clip duration display", () => {
     it("shows clip duration in seconds", () => {
-      const segments: Segment[] = [
-        { text: "Scene", imagePrompt: "Prompt" },
-      ];
+      const segments: Segment[] = [{ text: "Scene", imagePrompt: "Prompt" }];
       const state = createMockState({ segments, clipDuration: 6 });
       render(<ClipsStage state={state} actions={createMockActions()} />);
       expect(screen.getByText("6s")).toBeInTheDocument();
@@ -176,7 +200,11 @@ describe("ClipsStage", () => {
   describe("clip status rendering", () => {
     it("shows video player when videoClipUrl exists and not generating", () => {
       const segments: Segment[] = [
-        { text: "Scene", imagePrompt: "Prompt", videoClipUrl: "http://clip.mp4" },
+        {
+          text: "Scene",
+          imagePrompt: "Prompt",
+          videoClipUrl: "http://clip.mp4",
+        },
       ];
       const state = createMockState({ segments });
       render(<ClipsStage state={state} actions={createMockActions()} />);
@@ -184,10 +212,11 @@ describe("ClipsStage", () => {
     });
 
     it("shows generating state when status is generating", () => {
-      const segments: Segment[] = [
-        { text: "Scene", imagePrompt: "Prompt" },
-      ];
-      const clipStatuses = new Map<number, "generating" | "error" | "completed">();
+      const segments: Segment[] = [{ text: "Scene", imagePrompt: "Prompt" }];
+      const clipStatuses = new Map<
+        number,
+        "generating" | "error" | "completed"
+      >();
       clipStatuses.set(0, "generating");
       const state = createMockState({
         segments,
@@ -203,10 +232,11 @@ describe("ClipsStage", () => {
     });
 
     it("shows error state with retry button when status is error", () => {
-      const segments: Segment[] = [
-        { text: "Scene", imagePrompt: "Prompt" },
-      ];
-      const clipStatuses = new Map<number, "generating" | "error" | "completed">();
+      const segments: Segment[] = [{ text: "Scene", imagePrompt: "Prompt" }];
+      const clipStatuses = new Map<
+        number,
+        "generating" | "error" | "completed"
+      >();
       clipStatuses.set(0, "error");
       const state = createMockState({
         segments,
@@ -223,9 +253,7 @@ describe("ClipsStage", () => {
     });
 
     it("shows 'Waiting...' when no clip and no status", () => {
-      const segments: Segment[] = [
-        { text: "Scene", imagePrompt: "Prompt" },
-      ];
+      const segments: Segment[] = [{ text: "Scene", imagePrompt: "Prompt" }];
       const state = createMockState({ segments });
       render(<ClipsStage state={state} actions={createMockActions()} />);
       expect(screen.getByText("Waiting...")).toBeInTheDocument();
@@ -252,7 +280,9 @@ describe("ClipsStage", () => {
       ];
       const state = createMockState({ segments });
       render(<ClipsStage state={state} actions={createMockActions()} />);
-      expect(screen.getByText("A beautiful sunset over the ocean")).toBeInTheDocument();
+      expect(
+        screen.getByText("A beautiful sunset over the ocean"),
+      ).toBeInTheDocument();
     });
   });
 });

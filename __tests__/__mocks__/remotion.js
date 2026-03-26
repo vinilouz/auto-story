@@ -2,7 +2,12 @@ const React = require("react");
 
 module.exports = {
   useCurrentFrame: () => 0,
-  useVideoConfig: () => ({ fps: 30, durationInFrames: 100, width: 1920, height: 1080 }),
+  useVideoConfig: () => ({
+    fps: 30,
+    durationInFrames: 100,
+    width: 1920,
+    height: 1080,
+  }),
   AbsoluteFill: ({ children }) => React.createElement("div", null, children),
   Sequence: ({ children }) => React.createElement("div", null, children),
   Audio: () => React.createElement("div"),

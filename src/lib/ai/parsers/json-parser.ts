@@ -36,13 +36,15 @@ export function extractJsonArray(raw: string): string {
     const lastBrace = clean.lastIndexOf("}");
     if (lastBrace > 0) {
       clean = clean.substring(0, lastBrace + 1) + "]";
-      log.warn(`Truncated response — recovered (raw length: ${raw.length} chars)`);
+      log.warn(
+        `Truncated response — recovered (raw length: ${raw.length} chars)`,
+      );
     }
   }
 
   // Handle single object response when array was expected
   if (!clean.startsWith("[") && clean.startsWith("{")) {
-       clean = `[${clean}]`;
+    clean = `[${clean}]`;
   }
 
   if (!clean.startsWith("[")) {
@@ -59,19 +61,28 @@ export function parseJsonArray<T>(raw: string, expectedCount?: number): T[] {
   try {
     parsed = JSON.parse(clean.trim());
   } catch (e) {
-    log.error(`JSON parse failed (raw: ${raw.length} chars, cleaned: ${clean.length} chars)`);
+    log.error(
+      `JSON parse failed (raw: ${raw.length} chars, cleaned: ${clean.length} chars)`,
+    );
     throw new Error(`Invalid JSON from AI: ${(e as Error).message}`);
   }
 
   // Some models nest the array under a property like `visualDescriptions` (from scene-visualizer)
-  const arr = Array.isArray(parsed) ? parsed : (parsed.visualDescriptions || parsed.entities || parsed.comments || parsed.segments);
-  
+  const arr = Array.isArray(parsed)
+    ? parsed
+    : parsed.visualDescriptions ||
+      parsed.entities ||
+      parsed.comments ||
+      parsed.segments;
+
   if (!Array.isArray(arr)) {
     throw new Error("AI response is not an array");
   }
 
   if (expectedCount !== undefined && arr.length !== expectedCount) {
-    log.warn(`AI returned ${arr.length}/${expectedCount} items (raw: ${raw.length} chars)`);
+    log.warn(
+      `AI returned ${arr.length}/${expectedCount} items (raw: ${raw.length} chars)`,
+    );
   }
 
   return arr as T[];

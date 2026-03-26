@@ -34,12 +34,13 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-
       {/* ── Layer 1: Video visuals with transitions ────────────────────────── */}
       <TransitionSeries>
         {scenes.map((scene) => (
           <React.Fragment key={scene.id}>
-            <TransitionSeries.Sequence durationInFrames={scene.durationInFrames}>
+            <TransitionSeries.Sequence
+              durationInFrames={scene.durationInFrames}
+            >
               <AbsoluteFill style={{ overflow: "hidden" }}>
                 {/* OffthreadVideo: canvas-based, consumes NO audio tag */}
                 <OffthreadVideo
@@ -64,10 +65,12 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
             {/* Transition to next clip — present only when scene defines one */}
             {scene.transition &&
               scene.transition.type !== "none" &&
-              transitionOverride !== "none" && (() => {
-                const type = transitionOverride === "random" || !transitionOverride
-                  ? scene.transition.type
-                  : transitionOverride;
+              transitionOverride !== "none" &&
+              (() => {
+                const type =
+                  transitionOverride === "random" || !transitionOverride
+                    ? scene.transition.type
+                    : transitionOverride;
                 const presentation = PRESENTATIONS[type];
                 if (!presentation) return null;
                 return (
@@ -99,7 +102,6 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
           <Audio src={track.src} volume={track.volume ?? 1} />
         </Sequence>
       ))}
-
     </AbsoluteFill>
   );
 };

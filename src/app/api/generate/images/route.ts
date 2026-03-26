@@ -47,10 +47,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleBatch(
-  requests: any[],
-  projectId?: string,
-) {
+async function handleBatch(requests: any[], projectId?: string) {
   const items: BatchImageItem[] = requests.map((r, i) => ({
     index: i,
     imagePrompt: r.imagePrompt,
@@ -62,7 +59,7 @@ async function handleBatch(
   }));
 
   const encoder = new TextEncoder();
-  const { requests: batchRequests, processResult } = createBatchHandler(
+  const { requests: batchRequests, processResult } = await createBatchHandler(
     items,
     executeBatch,
     encoder,

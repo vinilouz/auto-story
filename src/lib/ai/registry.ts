@@ -7,31 +7,53 @@ const log = createLogger("AI");
 
 // Debug logs are now handled by http-client.ts
 
-export interface TextRequest { prompt: string }
-export interface TextResponse { text: string }
+export interface TextRequest {
+  prompt: string;
+}
+export interface TextResponse {
+  text: string;
+}
 
 export interface ImageRequest {
   prompt: string;
   referenceImages?: string[];
   config?: { aspect_ratio?: string; image_size?: string };
 }
-export interface ImageResponse { imageUrl: string }
+export interface ImageResponse {
+  imageUrl: string;
+}
 
-export interface AudioRequest { text: string; voice: string }
-export interface AudioResponse { audioBuffer: ArrayBuffer }
+export interface AudioRequest {
+  text: string;
+  voice: string;
+}
+export interface AudioResponse {
+  audioBuffer: ArrayBuffer;
+}
 
 export interface VideoRequest {
   prompt: string;
   referenceImage?: string;
   duration?: number;
 }
-export interface VideoResponse { videoUrl: string }
+export interface VideoResponse {
+  videoUrl: string;
+}
 
-export interface MusicRequest { prompt?: string; instrumental: boolean }
-export interface MusicResponse { musicUrl: string }
+export interface MusicRequest {
+  prompt?: string;
+  instrumental: boolean;
+}
+export interface MusicResponse {
+  musicUrl: string;
+}
 
-export interface TranscriptionRequest { file: string }
-export interface TranscriptionResponse { words: { text: string; startMs: number; endMs: number }[] }
+export interface TranscriptionRequest {
+  file: string;
+}
+export interface TranscriptionResponse {
+  words: { text: string; startMs: number; endMs: number }[];
+}
 
 export interface ActionMap {
   generateText: { req: TextRequest; res: TextResponse };
@@ -39,7 +61,10 @@ export interface ActionMap {
   generateAudio: { req: AudioRequest; res: AudioResponse };
   generateVideo: { req: VideoRequest; res: VideoResponse };
   generateMusic: { req: MusicRequest; res: MusicResponse };
-  generateTranscription: { req: TranscriptionRequest; res: TranscriptionResponse };
+  generateTranscription: {
+    req: TranscriptionRequest;
+    res: TranscriptionResponse;
+  };
 }
 
 export type Handler<Req, Res> = (
@@ -98,11 +123,15 @@ export async function execute<A extends ActionType>(
     log.info(`${action} → ${config.provider}/${config.model || "default"}`);
     const result = await handler(config.model || "default", request, creds);
     const ms = Date.now() - start;
-    log.success(`${action} ← ${config.provider}/${config.model || "default"} (${ms}ms)`);
+    log.success(
+      `${action} ← ${config.provider}/${config.model || "default"} (${ms}ms)`,
+    );
     return result as ActionMap[A]["res"];
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    log.warn(`${action} ✗ ${config.provider}/${config.model || "default"}: ${msg}`);
+    log.warn(
+      `${action} ✗ ${config.provider}/${config.model || "default"}: ${msg}`,
+    );
     throw e;
   }
 }

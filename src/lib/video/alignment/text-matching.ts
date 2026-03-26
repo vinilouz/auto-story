@@ -113,7 +113,7 @@ export function findSegmentStartWithConfidence(
           matchCount++;
         } else {
           misses++;
-          if (misses > 2) break; 
+          if (misses > 2) break;
         }
       }
 

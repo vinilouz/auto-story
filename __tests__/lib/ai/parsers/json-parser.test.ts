@@ -25,17 +25,19 @@ describe("JSON Parser", () => {
 
   describe("parseJsonArray", () => {
     it("should parse an array correctly", () => {
-      const result = parseJsonArray<{id: number}>('[{"id": 1}, {"id": 2}]');
+      const result = parseJsonArray<{ id: number }>('[{"id": 1}, {"id": 2}]');
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe(1);
     });
 
     it("should throw if unexpected count", () => {
-      expect(() => parseJsonArray('[{"id": 1}]', 2)).toThrow(/Expected 2 items, got 1/);
+      expect(() => parseJsonArray('[{"id": 1}]', 2)).toThrow(
+        /Expected 2 items, got 1/,
+      );
     });
 
     it("should throw on invalid JSON", () => {
-      expect(() => parseJsonArray('Not json')).toThrow(/Failed to parse JSON/);
+      expect(() => parseJsonArray("Not json")).toThrow(/Failed to parse JSON/);
     });
   });
 });

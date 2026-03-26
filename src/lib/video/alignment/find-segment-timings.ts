@@ -1,5 +1,9 @@
 import { createLogger } from "../../logger";
-import { findSegmentEnd, findSegmentStartWithConfidence, type FlattenedWord } from "./text-matching";
+import {
+  findSegmentEnd,
+  findSegmentStartWithConfidence,
+  type FlattenedWord,
+} from "./text-matching";
 
 const logger = createLogger("aligner");
 
@@ -151,8 +155,7 @@ export function findSegmentTimingsSimple(
   const timings: { start: number; end: number; confidence: number }[] = [];
 
   for (let i = 0; i < segments.length; i++) {
-    const start =
-      starts[i] !== -1 ? starts[i] : i > 0 ? timings[i - 1].end : 0;
+    const start = starts[i] !== -1 ? starts[i] : i > 0 ? timings[i - 1].end : 0;
     const end =
       i < segments.length - 1
         ? starts[i + 1] !== -1

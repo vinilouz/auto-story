@@ -22,7 +22,8 @@ export function AudioStage({ state, actions }: AudioStageProps) {
           <CardTitle>Audio</CardTitle>
           {audio.batches.length > 0 && (
             <span className="text-xs text-muted-foreground">
-              {audio.batches.filter((b) => b.status === "completed").length}/{audio.batches.length}
+              {audio.batches.filter((b) => b.status === "completed").length}/
+              {audio.batches.length}
             </span>
           )}
         </div>
@@ -69,7 +70,9 @@ export function AudioStage({ state, actions }: AudioStageProps) {
                       size="sm"
                       variant="outline"
                       className="h-6 text-xs"
-                      onClick={() => audio.regenerateBatch(b.index, actions.audioOpts())}
+                      onClick={() =>
+                        audio.regenerateBatch(b.index, actions.audioOpts())
+                      }
                       disabled={b.status === "generating"}
                     >
                       {b.status === "error" ? "Retry" : "Redo"}

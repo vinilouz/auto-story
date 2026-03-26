@@ -80,13 +80,17 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         if (mode === "from-audio")
           return {
             fn: async () => {
-              const allWords = transcription.results.flatMap((r) => {
-                const data = r.data;
-                if (!data) return [];
-                return Array.isArray(data) ? data : (data as any).words ?? [];
-              });
+              const data = transcription.result?.data;
+              const allWords = data
+                ? Array.isArray(data)
+                  ? data
+                  : ((data as any).words ?? [])
+                : [];
               if (allWords.length === 0) return;
-              const newSegs = splitWordsIntoSegments(allWords, state.segmentSize[0]);
+              const newSegs = splitWordsIntoSegments(
+                allWords,
+                state.segmentSize[0],
+              );
               state.setSegments(newSegs);
               state.setStage("split");
               await actions.save({ segments: newSegs });
@@ -105,7 +109,8 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
       case "split":
         if (mode === "from-audio")
           return {
-            fn: async () => state.setStage(state.consistency ? "entities" : "descriptions"),
+            fn: async () =>
+              state.setStage(state.consistency ? "entities" : "descriptions"),
             ok: state.segments.length > 0,
             label: "Continue",
             busy: false,
@@ -153,7 +158,8 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         return {
           fn: actions.extractAndGenerateEntities,
           ok: state.segments.length > 0,
-          label: state.entities.length > 0 ? "Re-extract" : "Extract & Generate",
+          label:
+            state.entities.length > 0 ? "Re-extract" : "Extract & Generate",
           busy: loading,
         };
 
@@ -184,7 +190,10 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
       case "video":
         return {
           fn: actions.generateVideoPreview,
-          ok: mode === "video-story" ? hasClips || hasTranscription : hasTranscription,
+          ok:
+            mode === "video-story"
+              ? hasClips || hasTranscription
+              : hasTranscription,
           label: video.videoProps ? "Regenerate" : "Generate Preview",
           busy: video.isGenerating,
         };
@@ -221,7 +230,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     imageStatuses.size,
     audio.isLoading,
     transcription.isLoading,
-    transcription.results,
+    transcription.result,
     videoClips.isLoading,
     video.isGenerating,
     video.videoProps,
@@ -286,7 +295,8 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         <Tabs
           value={stage}
           onValueChange={(v) => {
-            if (stages.indexOf(v as Stage) <= maxStep) state.setStage(v as Stage);
+            if (stages.indexOf(v as Stage) <= maxStep)
+              state.setStage(v as Stage);
           }}
         >
           <TabsList className="w-full flex-wrap justify-start p-1">

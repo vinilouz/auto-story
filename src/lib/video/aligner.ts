@@ -28,7 +28,12 @@ const logger = createLogger("aligner");
 // --- Interfaces & Types ---
 
 interface AlignmentContext {
-  segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[];
+  segments: {
+    id: string;
+    text: string;
+    imageUrl: string;
+    videoClipUrl?: string;
+  }[];
   transcriptionResults: { words: Word[] }[];
   audioUrls: string[];
   audioDurations?: number[];
@@ -133,7 +138,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
     if (!videoDurations || videoDurations.length !== segments.length) {
       throw new Error(
         `[ContinuousAligner] videoDurations must have exactly one entry per segment. ` +
-        `Got ${videoDurations?.length ?? 0}, expected ${segments.length}.`,
+          `Got ${videoDurations?.length ?? 0}, expected ${segments.length}.`,
       );
     }
 
@@ -181,7 +186,7 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
       const isLast = i === segments.length - 1;
       const transitionType =
         ContinuousAlignmentStrategy.TRANSITIONS[
-        i % ContinuousAlignmentStrategy.TRANSITIONS.length
+          i % ContinuousAlignmentStrategy.TRANSITIONS.length
         ];
 
       scenes.push({
@@ -231,7 +236,8 @@ export class ContinuousAlignmentStrategy implements AlignmentStrategy {
 
     transcriptionResults.forEach((result, batchIndex) => {
       const words: any[] = Array.isArray(result) ? result : result.words;
-      const trackDurationSeconds = audioTracks[batchIndex].durationInFrames / fps;
+      const trackDurationSeconds =
+        audioTracks[batchIndex].durationInFrames / fps;
 
       words.forEach((w) => {
         if (!w.text.trim()) return;
@@ -336,7 +342,12 @@ export class ImageAlignmentStrategy implements AlignmentStrategy {
 export type AlignmentMode = "image" | "video";
 
 export function alignVideoProps(
-  segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[],
+  segments: {
+    id: string;
+    text: string;
+    imageUrl: string;
+    videoClipUrl?: string;
+  }[],
   transcriptionResults: { words: Word[] }[],
   audioUrls: string[],
   audioDurations: number[] = [],
@@ -354,7 +365,8 @@ export function alignVideoProps(
         audioUrls,
         audioDurations,
         fps,
-      }), videoVolume
+      }),
+      videoVolume,
     };
   }
 
@@ -367,6 +379,7 @@ export function alignVideoProps(
       audioDurations,
       videoDurations,
       fps,
-    }), videoVolume
+    }),
+    videoVolume,
   };
 }

@@ -1,7 +1,17 @@
-import { apiRequest, apiRequestRaw, apiRequestSSE, saveDebugLog } from "@/lib/ai/http-client";
+import {
+  apiRequest,
+  apiRequestRaw,
+  apiRequestSSE,
+  saveDebugLog,
+} from "@/lib/ai/http-client";
 
 jest.mock("@/lib/logger", () => ({
-  createLogger: () => ({ info: jest.fn(), success: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+  createLogger: () => ({
+    info: jest.fn(),
+    success: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }),
 }));
 
 jest.mock("fs", () => ({ writeFileSync: jest.fn(), existsSync: jest.fn() }));
@@ -29,7 +39,7 @@ describe("http-client", () => {
             Authorization: "Bearer key",
           },
           body: JSON.stringify({ prompt: "test" }),
-        })
+        }),
       );
     });
 
@@ -40,7 +50,9 @@ describe("http-client", () => {
         text: async () => "Bad request",
       });
 
-      await expect(apiRequest("http://api/v1", "key", {})).rejects.toThrow(/HTTP 400: Bad request/);
+      await expect(apiRequest("http://api/v1", "key", {})).rejects.toThrow(
+        /HTTP 400: Bad request/,
+      );
     });
   });
 

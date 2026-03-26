@@ -12,7 +12,13 @@ async function generateAndSave(
   projectId: string,
 ): Promise<string> {
   const { audioBuffer } = await execute("generateAudio", { text, voice });
-  const pubDir = path.join(process.cwd(), "public", "projects", projectId, "audios");
+  const pubDir = path.join(
+    process.cwd(),
+    "public",
+    "projects",
+    projectId,
+    "audios",
+  );
   if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
 
   const name = `audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`;

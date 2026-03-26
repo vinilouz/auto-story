@@ -13,7 +13,14 @@ interface HeaderProps {
   onBack: () => void;
 }
 
-export function Header({ mode, title, scriptText, isSaving, onSave, onBack }: HeaderProps) {
+export function Header({
+  mode,
+  title,
+  scriptText,
+  isSaving,
+  onSave,
+  onBack,
+}: HeaderProps) {
   const modeTitle =
     mode === "video-story"
       ? "Video Story"
@@ -29,7 +36,11 @@ export function Header({ mode, title, scriptText, isSaving, onSave, onBack }: He
         </Button>
         <h1 className="text-2xl font-bold">{title || modeTitle}</h1>
       </div>
-      <Button onClick={onSave} disabled={!scriptText.trim() || isSaving} variant="outline">
+      <Button
+        onClick={onSave}
+        disabled={!scriptText.trim() || isSaving}
+        variant="outline"
+      >
         {isSaving ? (
           <Loader2 className="w-4 h-4 animate-spin mr-2" />
         ) : (

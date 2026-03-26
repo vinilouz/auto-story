@@ -3,9 +3,19 @@ import { VideoStage } from "@/components/story-flow/stages/VideoStage";
 import type { StoryFlowState } from "@/components/story-flow/types";
 import type { CaptionStyle } from "@/lib/video/types";
 
-type PartialState = Partial<StoryFlowState> & Pick<StoryFlowState, "video" | "captionStyle" | "setCaptionStyle" | "videoVolume" | "setVideoVolume">;
+type PartialState = Partial<StoryFlowState> &
+  Pick<
+    StoryFlowState,
+    | "video"
+    | "captionStyle"
+    | "setCaptionStyle"
+    | "videoVolume"
+    | "setVideoVolume"
+  >;
 
-const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState => {
+const createMockState = (
+  overrides: Partial<PartialState> = {},
+): StoryFlowState => {
   const defaultCaptionStyle: CaptionStyle = {
     fontSize: 60,
     fontFamily: "TikTok Sans",
@@ -146,7 +156,14 @@ describe("VideoStage", () => {
   describe("controls display", () => {
     it("displays font size slider", () => {
       const state = createMockState({
-        captionStyle: { fontSize: 80, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+        captionStyle: {
+          fontSize: 80,
+          fontFamily: "TikTok Sans",
+          fontWeight: 800,
+          maxWordsPerLine: 3,
+          uppercase: true,
+          highlightColor: "#FFE81F",
+        },
         setCaptionStyle: jest.fn(),
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
@@ -161,7 +178,14 @@ describe("VideoStage", () => {
 
     it("displays words per line buttons", () => {
       const state = createMockState({
-        captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+        captionStyle: {
+          fontSize: 60,
+          fontFamily: "TikTok Sans",
+          fontWeight: 800,
+          maxWordsPerLine: 3,
+          uppercase: true,
+          highlightColor: "#FFE81F",
+        },
         setCaptionStyle: jest.fn(),
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
@@ -170,7 +194,10 @@ describe("VideoStage", () => {
     });
 
     it("displays clip audio volume slider", () => {
-      const state = createMockState({ videoVolume: 0.75, setVideoVolume: jest.fn() });
+      const state = createMockState({
+        videoVolume: 0.75,
+        setVideoVolume: jest.fn(),
+      });
       render(<VideoStage state={state} actions={createMockActions()} />);
       expect(screen.getByText(/clip audio/i)).toBeInTheDocument();
     });
@@ -180,7 +207,14 @@ describe("VideoStage", () => {
     it("updates font size via slider", () => {
       const setCaptionStyleMock = jest.fn();
       const state = createMockState({
-        captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+        captionStyle: {
+          fontSize: 60,
+          fontFamily: "TikTok Sans",
+          fontWeight: 800,
+          maxWordsPerLine: 3,
+          uppercase: true,
+          highlightColor: "#FFE81F",
+        },
         setCaptionStyle: setCaptionStyleMock,
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
@@ -190,11 +224,20 @@ describe("VideoStage", () => {
     it("updates highlight color on click", () => {
       const setCaptionStyleMock = jest.fn();
       const state = createMockState({
-        captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+        captionStyle: {
+          fontSize: 60,
+          fontFamily: "TikTok Sans",
+          fontWeight: 800,
+          maxWordsPerLine: 3,
+          uppercase: true,
+          highlightColor: "#FFE81F",
+        },
         setCaptionStyle: setCaptionStyleMock,
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
-      const colorButtons = screen.getAllByRole("button").filter(b => b.className.includes("rounded-full"));
+      const colorButtons = screen
+        .getAllByRole("button")
+        .filter((b) => b.className.includes("rounded-full"));
       if (colorButtons.length > 0) {
         fireEvent.click(colorButtons[1]);
         expect(setCaptionStyleMock).toHaveBeenCalled();
@@ -204,11 +247,20 @@ describe("VideoStage", () => {
     it("updates words per line on click", () => {
       const setCaptionStyleMock = jest.fn();
       const state = createMockState({
-        captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
+        captionStyle: {
+          fontSize: 60,
+          fontFamily: "TikTok Sans",
+          fontWeight: 800,
+          maxWordsPerLine: 3,
+          uppercase: true,
+          highlightColor: "#FFE81F",
+        },
         setCaptionStyle: setCaptionStyleMock,
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
-      const wordButtons = screen.getAllByRole("button").filter(b => ["1", "2", "3", "4", "5"].includes(b.textContent || ""));
+      const wordButtons = screen
+        .getAllByRole("button")
+        .filter((b) => ["1", "2", "3", "4", "5"].includes(b.textContent || ""));
       if (wordButtons.length > 0) {
         fireEvent.click(wordButtons[0]);
         expect(setCaptionStyleMock).toHaveBeenCalled();
@@ -220,7 +272,15 @@ describe("VideoStage", () => {
     it("shows 'Render MP4' button", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -236,7 +296,15 @@ describe("VideoStage", () => {
     it("disables button when rendering", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -262,13 +330,23 @@ describe("VideoStage", () => {
         },
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
-      expect(screen.getByRole("button", { name: /render mp4/i })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /render mp4/i }),
+      ).toBeDisabled();
     });
 
     it("shows 'Rendering...' when isRendering is true", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -285,7 +363,15 @@ describe("VideoStage", () => {
       const renderMock = jest.fn();
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -307,7 +393,15 @@ describe("VideoStage", () => {
     it("shows bundling stage", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -323,13 +417,26 @@ describe("VideoStage", () => {
     it("shows rendering stage with frame count", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
           isGenerating: false,
           isRendering: true,
-          renderProgress: { stage: "rendering", progress: 50, renderedFrames: 50, totalFrames: 100 },
+          renderProgress: {
+            stage: "rendering",
+            progress: 50,
+            renderedFrames: 50,
+            totalFrames: 100,
+          },
         },
       });
       render(<VideoStage state={state} actions={createMockActions()} />);
@@ -340,7 +447,15 @@ describe("VideoStage", () => {
     it("shows encoding stage", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -356,7 +471,15 @@ describe("VideoStage", () => {
     it("shows progress bar", () => {
       const state = createMockState({
         video: {
-          videoProps: { scenes: [], audioTracks: [], captions: [], fps: 30, durationInFrames: 100, width: 1920, height: 1080 },
+          videoProps: {
+            scenes: [],
+            audioTracks: [],
+            captions: [],
+            fps: 30,
+            durationInFrames: 100,
+            width: 1920,
+            height: 1080,
+          },
           setVideoProps: jest.fn(),
           generate: jest.fn(),
           render: jest.fn(),
@@ -392,7 +515,15 @@ describe("VideoStage", () => {
       const state = createMockState({
         video: {
           videoProps: {
-            scenes: [{ id: "1", imageUrl: "http://img.jpg", startFrame: 0, durationInFrames: 30, effect: "static" }],
+            scenes: [
+              {
+                id: "1",
+                imageUrl: "http://img.jpg",
+                startFrame: 0,
+                durationInFrames: 30,
+                effect: "static",
+              },
+            ],
             audioTracks: [],
             captions: [],
             fps: 30,

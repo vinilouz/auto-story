@@ -37,13 +37,14 @@ export function CommentsStage({ state }: CommentsStageProps) {
                       : "bg-muted/50",
                   )}
                 >
-                  {seg.type === "comment" && commentator?.appearance?.imageUrl && (
-                    <img
-                      src={commentator.appearance.imageUrl}
-                      className="w-6 h-6 rounded-full inline mr-2"
-                      alt=""
-                    />
-                  )}
+                  {seg.type === "comment" &&
+                    commentator?.appearance?.imageUrl && (
+                      <img
+                        src={commentator.appearance.imageUrl}
+                        className="w-6 h-6 rounded-full inline mr-2"
+                        alt=""
+                      />
+                    )}
                   {seg.text}
                 </div>
               ))}

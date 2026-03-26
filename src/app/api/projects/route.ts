@@ -33,10 +33,14 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       project = updateProject(existing, body);
-      log.success(`Updated project: ${project.name} (${project.id.substring(0, 8)})`);
+      log.success(
+        `Updated project: ${project.name} (${project.id.substring(0, 8)})`,
+      );
     } else {
       project = createProject(body);
-      log.success(`Created project: ${project.name} (${project.id.substring(0, 8)})`);
+      log.success(
+        `Created project: ${project.name} (${project.id.substring(0, 8)})`,
+      );
     }
 
     await StorageService.saveProject(project);

@@ -2,7 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,7 +86,9 @@ export function InputStage({ state }: InputStageProps) {
         <div className="grid md:grid-cols-2 gap-6">
           {mode !== "video-story" && (
             <div className="space-y-3">
-              <label className="text-sm font-medium">Segment size: {segmentSize[0]} chars</label>
+              <label className="text-sm font-medium">
+                Segment size: {segmentSize[0]} chars
+              </label>
               <Slider
                 value={segmentSize}
                 onValueChange={setSegmentSize}
@@ -108,7 +116,9 @@ export function InputStage({ state }: InputStageProps) {
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Image/Video Style (System Prompt)</label>
+          <label className="text-sm font-medium">
+            Image/Video Style (System Prompt)
+          </label>
           <Textarea
             value={imagePromptStyle}
             onChange={(e) => setImagePromptStyle(e.target.value)}
@@ -121,11 +131,13 @@ export function InputStage({ state }: InputStageProps) {
             <CardContent className="pt-4">
               <p className="text-sm">
                 <strong>Video models:</strong>{" "}
-                {ACTIONS.generateVideo.map((m) => `${m.model} (${m.clipDuration}s)`).join(", ")}
+                {ACTIONS.generateVideo
+                  .map((m) => `${m.model} (${m.clipDuration}s)`)
+                  .join(", ")}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                First available model will be used. Audio will be split into ~{clipDuration}s
-                segments, each generating one AI video clip.
+                First available model will be used. Audio will be split into ~
+                {clipDuration}s segments, each generating one AI video clip.
               </p>
             </CardContent>
           </Card>
@@ -134,7 +146,9 @@ export function InputStage({ state }: InputStageProps) {
           <div className="flex items-center space-x-2 pt-2 border-t">
             <Switch checked={consistency} onCheckedChange={setConsistency} />
             <div>
-              <label className="text-base font-medium">Character Consistency</label>
+              <label className="text-base font-medium">
+                Character Consistency
+              </label>
               <p className="text-sm text-muted-foreground">
                 Extract entities and generate reference images.
               </p>

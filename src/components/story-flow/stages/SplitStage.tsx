@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
 
@@ -29,7 +35,9 @@ export function SplitStage({ state }: SplitStageProps) {
               {segments.map((seg, i) => (
                 <div key={i} className="p-3 bg-muted/50 rounded border text-sm">
                   <div className="flex justify-between mb-1">
-                    <span className="font-mono text-xs font-bold">#{i + 1}</span>
+                    <span className="font-mono text-xs font-bold">
+                      #{i + 1}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {((seg.startMs || 0) / 1000).toFixed(1)}s —{" "}
                       {((seg.endMs || 0) / 1000).toFixed(1)}s

@@ -1,4 +1,7 @@
-import { splitBySentences, splitTranscriptionByDuration } from "@/lib/utils/text";
+import {
+  splitBySentences,
+  splitTranscriptionByDuration,
+} from "@/lib/utils/text";
 
 describe("Text Utils", () => {
   describe("splitBySentences", () => {
@@ -44,7 +47,12 @@ describe("Text Utils", () => {
         },
       ];
       const audioBatches = [
-        { index: 0, text: "Anything", status: "completed" as const, url: "mock-url" },
+        {
+          index: 0,
+          text: "Anything",
+          status: "completed" as const,
+          url: "mock-url",
+        },
       ];
       const audioDurationsMs = [12000]; // 12 second total audio
 
@@ -52,13 +60,13 @@ describe("Text Utils", () => {
         transcriptionResults,
         audioBatches,
         5, // 5 seconds per clip
-        audioDurationsMs
+        audioDurationsMs,
       );
 
       // 12s total / 5s clips => ceil(12/5) = 3 clips
       expect(result).toHaveLength(3);
       expect(result[0].text).toBe("Hello World"); // 0-5s
-      expect(result[1].text).toBe("Here");        // 5-10s
+      expect(result[1].text).toBe("Here"); // 5-10s
       expect(result[2].text).toBe("[Segment 3]"); // 10-12s (empty fallback)
     });
   });

@@ -19,7 +19,7 @@ export interface CreateProjectInput {
   commentator?: ProjectData["commentator"];
   audioSystemPrompt?: string;
   audioBatches?: ProjectData["audioBatches"];
-  transcriptionResults?: ProjectData["transcriptionResults"];
+  transcriptionResult?: ProjectData["transcriptionResult"];
   videoModel?: string;
 }
 
@@ -53,7 +53,7 @@ export function createProject(input: CreateProjectInput): ProjectData {
     commentator: input.commentator,
     audioSystemPrompt: input.audioSystemPrompt,
     audioBatches: input.audioBatches,
-    transcriptionResults: input.transcriptionResults,
+    transcriptionResult: input.transcriptionResult,
     videoModel: input.videoModel,
   };
 }

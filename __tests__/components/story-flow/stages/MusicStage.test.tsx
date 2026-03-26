@@ -2,108 +2,119 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MusicStage } from "@/components/story-flow/stages/MusicStage";
 import type { StoryFlowState } from "@/components/story-flow/types";
 
-type PartialState = Partial<StoryFlowState> & Pick<StoryFlowState, "musicUrl" | "setMusicUrl" | "loading">;
+type PartialState = Partial<StoryFlowState> &
+  Pick<StoryFlowState, "musicUrl" | "setMusicUrl" | "loading">;
 
-const createMockState = (overrides: Partial<PartialState> = {}): StoryFlowState => ({
-  mode: "simple",
-  stage: "music",
-  setStage: jest.fn(),
-  projectId: "test-project",
-  title: "",
-  setTitle: jest.fn(),
-  scriptText: "",
-  setScriptText: jest.fn(),
-  segmentSize: [200],
-  setSegmentSize: jest.fn(),
-  language: "english",
-  setLanguage: jest.fn(),
-  imagePromptStyle: "",
-  setImagePromptStyle: jest.fn(),
-  audioVoice: "default-voice",
-  setAudioVoice: jest.fn(),
-  consistency: false,
-  setConsistency: jest.fn(),
-  music: false,
-  setMusic: jest.fn(),
-  musicUrl: null,
-  setMusicUrl: jest.fn(),
-  commentator: null,
-  setCommentator: jest.fn(),
-  commName: "",
-  setCommName: jest.fn(),
-  commPersonality: "",
-  setCommPersonality: jest.fn(),
-  commImagePrompt: "",
-  setCommImagePrompt: jest.fn(),
-  commImage: null,
-  setCommImage: jest.fn(),
-  audioSystemPrompt: "",
-  setAudioSystemPrompt: jest.fn(),
-  segments: [],
-  setSegments: jest.fn(),
-  entities: [],
-  setEntities: jest.fn(),
-  imageStatuses: new Map(),
-  setImageStatuses: jest.fn(),
-  captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
-  setCaptionStyle: jest.fn(),
-  videoVolume: 1,
-  setVideoVolume: jest.fn(),
-  loading: false,
-  setLoading: jest.fn(),
-  stages: ["music"],
-  stageIdx: 0,
-  maxStep: 0,
-  hasPrompts: false,
-  hasImages: false,
-  hasClips: false,
-  hasMusic: false,
-  hasComments: false,
-  hasAudio: false,
-  hasTranscription: false,
-  clipDuration: 5,
-  audio: {
-    batches: [],
-    setBatches: jest.fn(),
-    generate: jest.fn(),
-    regenerateBatch: jest.fn(),
-    isLoading: false,
-  },
-  transcription: {
-    results: [],
-    setResults: jest.fn(),
-    transcribe: jest.fn(),
-    retry: jest.fn(),
-    isLoading: false,
-  },
-  videoClips: {
-    clipStatuses: new Map(),
-    generateAll: jest.fn(),
-    regenerateClip: jest.fn(),
-    isLoading: false,
-  },
-  video: {
-    videoProps: null,
-    setVideoProps: jest.fn(),
-    generate: jest.fn(),
-    render: jest.fn(),
-    isGenerating: false,
-    isRendering: false,
-    renderProgress: null,
-  },
-  project: {
+const createMockState = (
+  overrides: Partial<PartialState> = {},
+): StoryFlowState =>
+  ({
+    mode: "simple",
+    stage: "music",
+    setStage: jest.fn(),
     projectId: "test-project",
-    setProjectId: jest.fn(),
-    load: jest.fn(),
-    save: jest.fn(),
-    isSaving: false,
-  },
-  dl: {
-    downloadZip: jest.fn(),
-    isDownloading: false,
-  },
-  ...overrides,
-} as StoryFlowState);
+    title: "",
+    setTitle: jest.fn(),
+    scriptText: "",
+    setScriptText: jest.fn(),
+    segmentSize: [200],
+    setSegmentSize: jest.fn(),
+    language: "english",
+    setLanguage: jest.fn(),
+    imagePromptStyle: "",
+    setImagePromptStyle: jest.fn(),
+    audioVoice: "default-voice",
+    setAudioVoice: jest.fn(),
+    consistency: false,
+    setConsistency: jest.fn(),
+    music: false,
+    setMusic: jest.fn(),
+    musicUrl: null,
+    setMusicUrl: jest.fn(),
+    commentator: null,
+    setCommentator: jest.fn(),
+    commName: "",
+    setCommName: jest.fn(),
+    commPersonality: "",
+    setCommPersonality: jest.fn(),
+    commImagePrompt: "",
+    setCommImagePrompt: jest.fn(),
+    commImage: null,
+    setCommImage: jest.fn(),
+    audioSystemPrompt: "",
+    setAudioSystemPrompt: jest.fn(),
+    segments: [],
+    setSegments: jest.fn(),
+    entities: [],
+    setEntities: jest.fn(),
+    imageStatuses: new Map(),
+    setImageStatuses: jest.fn(),
+    captionStyle: {
+      fontSize: 60,
+      fontFamily: "TikTok Sans",
+      fontWeight: 800,
+      maxWordsPerLine: 3,
+      uppercase: true,
+      highlightColor: "#FFE81F",
+    },
+    setCaptionStyle: jest.fn(),
+    videoVolume: 1,
+    setVideoVolume: jest.fn(),
+    loading: false,
+    setLoading: jest.fn(),
+    stages: ["music"],
+    stageIdx: 0,
+    maxStep: 0,
+    hasPrompts: false,
+    hasImages: false,
+    hasClips: false,
+    hasMusic: false,
+    hasComments: false,
+    hasAudio: false,
+    hasTranscription: false,
+    clipDuration: 5,
+    audio: {
+      batches: [],
+      setBatches: jest.fn(),
+      generate: jest.fn(),
+      regenerateBatch: jest.fn(),
+      isLoading: false,
+    },
+    transcription: {
+      results: [],
+      setResults: jest.fn(),
+      transcribe: jest.fn(),
+      retry: jest.fn(),
+      isLoading: false,
+    },
+    videoClips: {
+      clipStatuses: new Map(),
+      generateAll: jest.fn(),
+      regenerateClip: jest.fn(),
+      isLoading: false,
+    },
+    video: {
+      videoProps: null,
+      setVideoProps: jest.fn(),
+      generate: jest.fn(),
+      render: jest.fn(),
+      isGenerating: false,
+      isRendering: false,
+      renderProgress: null,
+    },
+    project: {
+      projectId: "test-project",
+      setProjectId: jest.fn(),
+      load: jest.fn(),
+      save: jest.fn(),
+      isSaving: false,
+    },
+    dl: {
+      downloadZip: jest.fn(),
+      isDownloading: false,
+    },
+    ...overrides,
+  }) as StoryFlowState;
 
 const createMockActions = () => ({
   save: jest.fn(),
@@ -163,17 +174,27 @@ describe("MusicStage", () => {
     it("shows spinner when loading and no music", () => {
       const state = createMockState({ musicUrl: null, loading: true });
       render(<MusicStage state={state} actions={createMockActions()} />);
-      expect(screen.getByText(/generating background music/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/generating background music/i),
+      ).toBeInTheDocument();
     });
 
     it("shows 'Generating...' in regenerate button when loading", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: true, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: true,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       expect(screen.getByText(/generating/i)).toBeInTheDocument();
     });
 
     it("disables regenerate button when loading", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: true, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: true,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       const buttons = screen.getAllByRole("button");
       expect(buttons.length).toBeGreaterThan(0);
@@ -182,7 +203,11 @@ describe("MusicStage", () => {
 
   describe("with music", () => {
     it("shows audio player when musicUrl exists", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: false, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: false,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       const audio = document.querySelector("audio");
       expect(audio).toBeInTheDocument();
@@ -190,13 +215,21 @@ describe("MusicStage", () => {
     });
 
     it("shows 'Regenerate' button when music exists", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: false, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: false,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       expect(screen.getByText("Regenerate")).toBeInTheDocument();
     });
 
     it("enables 'Regenerate' button when not loading", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: false, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: false,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       expect(screen.getByText("Regenerate")).not.toBeDisabled();
     });
@@ -216,7 +249,11 @@ describe("MusicStage", () => {
 
     it("calls generateMusic when 'Regenerate' clicked", () => {
       const generateMock = jest.fn();
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: false, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: false,
+        setMusicUrl: jest.fn(),
+      });
       const actions = { ...createMockActions(), generateMusic: generateMock };
 
       render(<MusicStage state={state} actions={actions} />);
@@ -234,7 +271,11 @@ describe("MusicStage", () => {
     });
 
     it("does not show 'Generate Music' button when music exists", () => {
-      const state = createMockState({ musicUrl: "http://music.mp3", loading: false, setMusicUrl: jest.fn() });
+      const state = createMockState({
+        musicUrl: "http://music.mp3",
+        loading: false,
+        setMusicUrl: jest.fn(),
+      });
       render(<MusicStage state={state} actions={createMockActions()} />);
       expect(screen.queryByText("Generate Music")).not.toBeInTheDocument();
     });

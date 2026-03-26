@@ -3,8 +3,7 @@ export const RENDERER = {
   MEDIABUNNY: "mediabunny",
 } as const;
 
-export type RendererType =
-  (typeof RENDERER)[keyof typeof RENDERER];
+export type RendererType = (typeof RENDERER)[keyof typeof RENDERER];
 
 export const ACTIVE_RENDERER: RendererType =
   process.env.RENDERER === "mediabunny"

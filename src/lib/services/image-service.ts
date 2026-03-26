@@ -1,9 +1,37 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { BatchResult } from "@/lib/ai/queue";
 import type { ImageRequest, ImageResponse } from "@/lib/ai/registry";
 import { StorageService } from "@/lib/storage";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("image-service");
+
+async function resolveImage(url?: string): Promise<string | undefined> {
+  if (!url) return undefined;
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:")
+  )
+    return url;
+  if (url.startsWith("/")) {
+    try {
+      const buf = await fs.readFile(path.join(process.cwd(), "public", url));
+      const ext = path.extname(url).replace(".", "");
+      return `data:image/${ext === "jpg" ? "jpeg" : ext};base64,${buf.toString("base64")}`;
+    } catch {
+      return undefined;
+    }
+  }
+  return url;
+}
+
+async function resolveImages(urls?: string[]): Promise<string[] | undefined> {
+  if (!urls?.length) return undefined;
+  const resolved = await Promise.all(urls.map(resolveImage));
+  return resolved.filter((u): u is string => !!u);
+}
 
 export interface SingleImageInput {
   imagePrompt: string;
@@ -64,7 +92,11 @@ async function saveAndPatchImage(
     );
     log.success(`Entity image saved: ${input.entityName} → ${localUrl}`);
   } else if (input.index !== undefined) {
-    await StorageService.patchSegmentImage(input.projectId, input.index, localUrl);
+    await StorageService.patchSegmentImage(
+      input.projectId,
+      input.index,
+      localUrl,
+    );
   }
 
   return localUrl;
@@ -74,11 +106,17 @@ export async function processSingleImage(
   input: SingleImageInput,
   executeBatchFn: typeof import("@/lib/ai/queue").executeBatch,
 ): Promise<{ imageUrl: string; id: number }> {
+  let resolvedRefs: string[] | undefined;
+  if (input.referenceImages?.length) {
+    resolvedRefs = await resolveImages(input.referenceImages);
+  } else if (input.referenceImage) {
+    const r = await resolveImage(input.referenceImage);
+    if (r) resolvedRefs = [r];
+  }
+
   const request: ImageRequest = {
     prompt: input.imagePrompt,
-    referenceImages:
-      input.referenceImages ||
-      (input.referenceImage ? [input.referenceImage] : undefined),
+    referenceImages: resolvedRefs,
     config: input.imageConfig,
   };
 
@@ -97,18 +135,28 @@ export async function processSingleImage(
   return { imageUrl, id: result.id };
 }
 
-export function createBatchHandler(
+export async function createBatchHandler(
   items: BatchImageItem[],
   executeBatchFn: typeof import("@/lib/ai/queue").executeBatch,
   encoder: TextEncoder,
 ) {
-  const requests: ImageRequest[] = items.map((item) => ({
-    prompt: item.imagePrompt,
-    referenceImages:
-      item.referenceImages ||
-      (item.referenceImage ? [item.referenceImage] : undefined),
-    config: item.imageConfig,
-  }));
+  const requests: ImageRequest[] = await Promise.all(
+    items.map(async (item) => {
+      let resolvedRefs: string[] | undefined;
+      if (item.referenceImages?.length) {
+        resolvedRefs = await resolveImages(item.referenceImages);
+      } else if (item.referenceImage) {
+        const r = await resolveImage(item.referenceImage);
+        if (r) resolvedRefs = [r];
+      }
+
+      return {
+        prompt: item.imagePrompt,
+        referenceImages: resolvedRefs,
+        config: item.imageConfig,
+      };
+    }),
+  );
 
   return {
     requests,

@@ -20,7 +20,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!file.type.startsWith("audio/") && !file.name.match(/\.(mp3|wav|ogg|m4a|webm)$/i)) {
+    if (
+      !file.type.startsWith("audio/") &&
+      !file.name.match(/\.(mp3|wav|ogg|m4a|webm)$/i)
+    ) {
       return NextResponse.json(
         { error: "Invalid file type — audio required" },
         { status: 400 },
@@ -39,7 +42,9 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     writeFileSync(filePath, Buffer.from(bytes));
 
-    log.success(`Audio uploaded: ${publicPath} (${Math.round(file.size / 1024)} KB)`);
+    log.success(
+      `Audio uploaded: ${publicPath} (${Math.round(file.size / 1024)} KB)`,
+    );
 
     return NextResponse.json({ audioPath: publicPath, fileName });
   } catch (e: any) {

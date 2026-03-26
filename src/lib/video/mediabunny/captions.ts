@@ -62,7 +62,10 @@ function wrapText(
     const wordWidth = ctx.measureText(word).width;
     const spaceWidth = ctx.measureText(" ").width;
 
-    if (currentLineWidth + wordWidth + spaceWidth > maxWidth && currentLine.length > 0) {
+    if (
+      currentLineWidth + wordWidth + spaceWidth > maxWidth &&
+      currentLine.length > 0
+    ) {
       lines.push(centerLine(currentLine, ctx.canvas.width));
       currentLine = [];
       currentLineWidth = 0;

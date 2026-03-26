@@ -7,10 +7,15 @@ export interface GenerateScenesOptions {
 }
 
 export function generateScenes(
-  segments: { id: string; imageUrl?: string; videoClipUrl?: string; text?: string }[],
+  segments: {
+    id: string;
+    imageUrl?: string;
+    videoClipUrl?: string;
+    text?: string;
+  }[],
   timings: { start: number; end: number; confidence?: number }[],
   fps: number,
-  options: GenerateScenesOptions
+  options: GenerateScenesOptions,
 ): VideoScene[] {
   const scenes: VideoScene[] = [];
   const TRANSITION_FRAMES = options.transitionFrames;

@@ -3,105 +3,116 @@ import { AudioStage } from "@/components/story-flow/stages/AudioStage";
 import type { StoryFlowState } from "@/components/story-flow/types";
 import type { AudioBatch } from "@/lib/flows/types";
 
-const createMockState = (batches: AudioBatch[] = [], isLoading = false): StoryFlowState => ({
-  mode: "simple",
-  stage: "audio",
-  setStage: jest.fn(),
-  projectId: "test-project",
-  title: "",
-  setTitle: jest.fn(),
-  scriptText: "",
-  setScriptText: jest.fn(),
-  segmentSize: [200],
-  setSegmentSize: jest.fn(),
-  language: "english",
-  setLanguage: jest.fn(),
-  imagePromptStyle: "",
-  setImagePromptStyle: jest.fn(),
-  audioVoice: "default-voice",
-  setAudioVoice: jest.fn(),
-  consistency: false,
-  setConsistency: jest.fn(),
-  music: false,
-  setMusic: jest.fn(),
-  musicUrl: null,
-  setMusicUrl: jest.fn(),
-  commentator: null,
-  setCommentator: jest.fn(),
-  commName: "",
-  setCommName: jest.fn(),
-  commPersonality: "",
-  setCommPersonality: jest.fn(),
-  commImagePrompt: "",
-  setCommImagePrompt: jest.fn(),
-  commImage: null,
-  setCommImage: jest.fn(),
-  audioSystemPrompt: "",
-  setAudioSystemPrompt: jest.fn(),
-  segments: [],
-  setSegments: jest.fn(),
-  entities: [],
-  setEntities: jest.fn(),
-  imageStatuses: new Map(),
-  setImageStatuses: jest.fn(),
-  captionStyle: { fontSize: 60, fontFamily: "TikTok Sans", fontWeight: 800, maxWordsPerLine: 3, uppercase: true, highlightColor: "#FFE81F" },
-  setCaptionStyle: jest.fn(),
-  videoVolume: 1,
-  setVideoVolume: jest.fn(),
-  loading: false,
-  setLoading: jest.fn(),
-  stages: ["audio"],
-  stageIdx: 0,
-  maxStep: 0,
-  hasPrompts: false,
-  hasImages: false,
-  hasClips: false,
-  hasMusic: false,
-  hasComments: false,
-  hasAudio: false,
-  hasTranscription: false,
-  clipDuration: 5,
-  audio: {
-    batches,
-    setBatches: jest.fn(),
-    generate: jest.fn(),
-    regenerateBatch: jest.fn(),
-    isLoading,
-  },
-  transcription: {
-    results: [],
-    setResults: jest.fn(),
-    transcribe: jest.fn(),
-    retry: jest.fn(),
-    isLoading: false,
-  },
-  videoClips: {
-    clipStatuses: new Map(),
-    generateAll: jest.fn(),
-    regenerateClip: jest.fn(),
-    isLoading: false,
-  },
-  video: {
-    videoProps: null,
-    setVideoProps: jest.fn(),
-    generate: jest.fn(),
-    render: jest.fn(),
-    isGenerating: false,
-    isRendering: false,
-    renderProgress: null,
-  },
-  project: {
+const createMockState = (
+  batches: AudioBatch[] = [],
+  isLoading = false,
+): StoryFlowState =>
+  ({
+    mode: "simple",
+    stage: "audio",
+    setStage: jest.fn(),
     projectId: "test-project",
-    setProjectId: jest.fn(),
-    load: jest.fn(),
-    save: jest.fn(),
-    isSaving: false,
-  },
-  dl: {
-    downloadZip: jest.fn(),
-    isDownloading: false,
-  },
-} as StoryFlowState);
+    title: "",
+    setTitle: jest.fn(),
+    scriptText: "",
+    setScriptText: jest.fn(),
+    segmentSize: [200],
+    setSegmentSize: jest.fn(),
+    language: "english",
+    setLanguage: jest.fn(),
+    imagePromptStyle: "",
+    setImagePromptStyle: jest.fn(),
+    audioVoice: "default-voice",
+    setAudioVoice: jest.fn(),
+    consistency: false,
+    setConsistency: jest.fn(),
+    music: false,
+    setMusic: jest.fn(),
+    musicUrl: null,
+    setMusicUrl: jest.fn(),
+    commentator: null,
+    setCommentator: jest.fn(),
+    commName: "",
+    setCommName: jest.fn(),
+    commPersonality: "",
+    setCommPersonality: jest.fn(),
+    commImagePrompt: "",
+    setCommImagePrompt: jest.fn(),
+    commImage: null,
+    setCommImage: jest.fn(),
+    audioSystemPrompt: "",
+    setAudioSystemPrompt: jest.fn(),
+    segments: [],
+    setSegments: jest.fn(),
+    entities: [],
+    setEntities: jest.fn(),
+    imageStatuses: new Map(),
+    setImageStatuses: jest.fn(),
+    captionStyle: {
+      fontSize: 60,
+      fontFamily: "TikTok Sans",
+      fontWeight: 800,
+      maxWordsPerLine: 3,
+      uppercase: true,
+      highlightColor: "#FFE81F",
+    },
+    setCaptionStyle: jest.fn(),
+    videoVolume: 1,
+    setVideoVolume: jest.fn(),
+    loading: false,
+    setLoading: jest.fn(),
+    stages: ["audio"],
+    stageIdx: 0,
+    maxStep: 0,
+    hasPrompts: false,
+    hasImages: false,
+    hasClips: false,
+    hasMusic: false,
+    hasComments: false,
+    hasAudio: false,
+    hasTranscription: false,
+    clipDuration: 5,
+    audio: {
+      batches,
+      setBatches: jest.fn(),
+      generate: jest.fn(),
+      regenerateBatch: jest.fn(),
+      isLoading,
+    },
+    transcription: {
+      results: [],
+      setResults: jest.fn(),
+      transcribe: jest.fn(),
+      retry: jest.fn(),
+      isLoading: false,
+    },
+    videoClips: {
+      clipStatuses: new Map(),
+      generateAll: jest.fn(),
+      regenerateClip: jest.fn(),
+      isLoading: false,
+    },
+    video: {
+      videoProps: null,
+      setVideoProps: jest.fn(),
+      generate: jest.fn(),
+      render: jest.fn(),
+      isGenerating: false,
+      isRendering: false,
+      renderProgress: null,
+    },
+    project: {
+      projectId: "test-project",
+      setProjectId: jest.fn(),
+      load: jest.fn(),
+      save: jest.fn(),
+      isSaving: false,
+    },
+    dl: {
+      downloadZip: jest.fn(),
+      isDownloading: false,
+    },
+  }) as StoryFlowState;
 
 const createMockActions = () => ({
   save: jest.fn(),
@@ -152,9 +163,19 @@ describe("AudioStage", () => {
   describe("batch status display", () => {
     it("shows completed count in header when batches exist", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "First", status: "completed", url: "http://audio1.mp3" },
+        {
+          index: 0,
+          text: "First",
+          status: "completed",
+          url: "http://audio1.mp3",
+        },
         { index: 1, text: "Second", status: "generating" },
-        { index: 2, text: "Third", status: "completed", url: "http://audio3.mp3" },
+        {
+          index: 2,
+          text: "Third",
+          status: "completed",
+          url: "http://audio3.mp3",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -181,7 +202,12 @@ describe("AudioStage", () => {
 
     it("displays batch text for completed status", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "Completed batch text", status: "completed", url: "http://audio.mp3" },
+        {
+          index: 0,
+          text: "Completed batch text",
+          status: "completed",
+          url: "http://audio.mp3",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -190,7 +216,12 @@ describe("AudioStage", () => {
 
     it("displays batch text for error status", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "Error batch text", status: "error", error: "Failed" },
+        {
+          index: 0,
+          text: "Error batch text",
+          status: "error",
+          error: "Failed",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -211,7 +242,12 @@ describe("AudioStage", () => {
 
     it("applies green styling for completed batches", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "Completed batch", status: "completed", url: "http://audio.mp3" },
+        {
+          index: 0,
+          text: "Completed batch",
+          status: "completed",
+          url: "http://audio.mp3",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -232,7 +268,12 @@ describe("AudioStage", () => {
 
     it("shows Redo button for completed batches", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "Completed", status: "completed", url: "http://audio.mp3" },
+        {
+          index: 0,
+          text: "Completed",
+          status: "completed",
+          url: "http://audio.mp3",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -253,7 +294,12 @@ describe("AudioStage", () => {
   describe("audio controls", () => {
     it("renders audio element for completed batch with url", () => {
       const batches: AudioBatch[] = [
-        { index: 0, text: "Completed", status: "completed", url: "http://audio.mp3" },
+        {
+          index: 0,
+          text: "Completed",
+          status: "completed",
+          url: "http://audio.mp3",
+        },
       ];
       const state = createMockState(batches);
       render(<AudioStage state={state} actions={createMockActions()} />);
@@ -284,7 +330,12 @@ describe("AudioStage", () => {
         projectName: "Test Project",
       });
       const batches: AudioBatch[] = [
-        { index: 0, text: "Completed", status: "completed", url: "http://audio.mp3" },
+        {
+          index: 0,
+          text: "Completed",
+          status: "completed",
+          url: "http://audio.mp3",
+        },
       ];
       const state = {
         ...createMockState(batches),

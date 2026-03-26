@@ -1,4 +1,9 @@
-import type { CaptionStyle, CommentatorConfig, EntityAsset, Segment } from "@/lib/flows/types";
+import type {
+  CaptionStyle,
+  CommentatorConfig,
+  EntityAsset,
+  Segment,
+} from "@/lib/flows/types";
 import type { AudioBatch, TranscriptionResult } from "@/lib/flows/types";
 
 export type Stage =
@@ -72,15 +77,21 @@ export interface StoryFlowState {
   segments: Segment[];
   setSegments: (segments: Segment[] | ((prev: Segment[]) => Segment[])) => void;
   entities: EntityAsset[];
-  setEntities: (entities: EntityAsset[] | ((prev: EntityAsset[]) => EntityAsset[])) => void;
+  setEntities: (
+    entities: EntityAsset[] | ((prev: EntityAsset[]) => EntityAsset[]),
+  ) => void;
   imageStatuses: Map<number, "generating" | "error">;
   setImageStatuses: (
     statuses:
       | Map<number, "generating" | "error">
-      | ((prev: Map<number, "generating" | "error">) => Map<number, "generating" | "error">),
+      | ((
+          prev: Map<number, "generating" | "error">,
+        ) => Map<number, "generating" | "error">),
   ) => void;
   captionStyle: CaptionStyle;
-  setCaptionStyle: (style: CaptionStyle | ((prev: CaptionStyle) => CaptionStyle)) => void;
+  setCaptionStyle: (
+    style: CaptionStyle | ((prev: CaptionStyle) => CaptionStyle),
+  ) => void;
   videoVolume: number;
   setVideoVolume: (volume: number) => void;
   loading: boolean;
@@ -97,7 +108,9 @@ export interface StoryFlowState {
   hasTranscription: boolean;
   clipDuration: number;
   audio: ReturnType<typeof import("@/lib/flows/hooks").useAudio>;
-  transcription: ReturnType<typeof import("@/lib/flows/hooks").useTranscription>;
+  transcription: ReturnType<
+    typeof import("@/lib/flows/hooks").useTranscription
+  >;
   videoClips: ReturnType<typeof import("@/lib/flows/hooks").useVideoClips>;
   video: ReturnType<typeof import("@/lib/flows/hooks").useVideo>;
   project: ReturnType<typeof import("@/lib/flows/hooks").useProject>;

@@ -2,63 +2,68 @@ import { useCallback, useState } from "react";
 import type { TranscriptionResult } from "../types";
 
 export function useTranscription() {
-  const [results, setResults] = useState<TranscriptionResult[]>([]);
+  const [result, setResult] = useState<TranscriptionResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const transcribe = async (projectId: string, projectName: string) => {
+  const transcribe = async (projectId: string) => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/generate/transcription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, projectName }),
+        body: JSON.stringify({ projectId }),
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Request failed with status ${res.status}`);
+        throw new Error(
+          errorData.error || `Request failed with status ${res.status}`,
+        );
       }
       const data = await res.json();
-      const result: TranscriptionResult = {
+      const newResult: TranscriptionResult = {
         url: data.url,
         status: "completed",
         data: data.words,
       };
-      setResults([result]);
-      return [result];
+      setResult(newResult);
+      return newResult;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const retry = useCallback(async (projectId: string, projectName: string) => {
+  const retry = useCallback(async (projectId: string) => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/generate/transcription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, projectName }),
+        body: JSON.stringify({ projectId }),
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Request failed with status ${res.status}`);
+        throw new Error(
+          errorData.error || `Request failed with status ${res.status}`,
+        );
       }
       const data = await res.json();
-      const result: TranscriptionResult = {
+      const newResult: TranscriptionResult = {
         url: data.url,
         status: "completed",
         data: data.words,
       };
-      setResults([result]);
-      return [result];
+      setResult(newResult);
+      return newResult;
     } catch {
-      setResults((prev) => [
-        ...prev,
-        { url: "", status: "error" as const, error: "Retry failed" },
-      ]);
+      setResult((prev) => ({
+        url: prev?.url || "",
+        status: "error",
+        error: "Retry failed",
+      }));
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  return { results, setResults, transcribe, retry, isLoading };
+  return { result, setResult, transcribe, retry, isLoading };
 }

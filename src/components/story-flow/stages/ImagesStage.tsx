@@ -63,7 +63,9 @@ export function ImagesStage({ state, actions }: ImagesStageProps) {
                     <Skeleton className="w-full h-48" />
                   ) : st === "error" ? (
                     <div className="h-48 bg-muted rounded flex flex-col items-center justify-center gap-2">
-                      <span className="text-sm text-muted-foreground">Error</span>
+                      <span className="text-sm text-muted-foreground">
+                        Error
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"

@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { type AlignmentMode, alignVideoProps } from "@/lib/video/aligner";
 import type { RemotionVideoProps } from "@/lib/video/types";
-import type { AudioBatch, CaptionStyle, TranscriptionResult, TranscriptionWord } from "../types";
+import type {
+  AudioBatch,
+  CaptionStyle,
+  TranscriptionResult,
+  TranscriptionWord,
+} from "../types";
 
 export function useVideo() {
   const [videoProps, setVideoProps] = useState<RemotionVideoProps | null>(null);
@@ -15,9 +20,14 @@ export function useVideo() {
   } | null>(null);
 
   const generate = async (
-    segments: { id: string; text: string; imageUrl: string; videoClipUrl?: string }[],
+    segments: {
+      id: string;
+      text: string;
+      imageUrl: string;
+      videoClipUrl?: string;
+    }[],
     audioBatches: AudioBatch[],
-    transcriptionResults: TranscriptionResult[],
+    transcriptionResult: TranscriptionResult | null,
     alignmentMode: AlignmentMode = "video",
     videoVolume: number = 0.1,
   ) => {
@@ -25,11 +35,14 @@ export function useVideo() {
       (b) => b.status === "completed" && b.url,
     );
     const audioUrls = completed.map((b) => b.url!);
-    const tMap = new Map(
-      transcriptionResults
-        .filter((r) => r.status === "completed" && r.data)
-        .map((r) => [r.url, r.data]),
-    );
+
+    const tMap = new Map<string, any>();
+    if (
+      transcriptionResult?.status === "completed" &&
+      transcriptionResult.data
+    ) {
+      tMap.set(transcriptionResult.url, transcriptionResult.data);
+    }
     const validUrls = audioUrls.filter((u) => tMap.has(u));
     if (!validUrls.length) throw new Error("No valid transcriptions");
 
@@ -58,8 +71,14 @@ export function useVideo() {
                 8000,
               );
               const el = new Audio(url);
-              el.onloadedmetadata = () => { clearTimeout(timeout); resolve(el.duration); };
-              el.onerror = () => { clearTimeout(timeout); reject(new Error(`Audio load error: ${url}`)); };
+              el.onloadedmetadata = () => {
+                clearTimeout(timeout);
+                resolve(el.duration);
+              };
+              el.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error(`Audio load error: ${url}`));
+              };
             }),
         ),
       );
@@ -79,12 +98,16 @@ export function useVideo() {
                 return resolve(0);
               }
               const timeout = setTimeout(
-                () => reject(new Error(`Video load error: ${seg.videoClipUrl}`)),
+                () =>
+                  reject(new Error(`Video load error: ${seg.videoClipUrl}`)),
                 8000,
               );
               const el = document.createElement("video");
               el.preload = "metadata";
-              el.onloadedmetadata = () => { clearTimeout(timeout); resolve(el.duration); };
+              el.onloadedmetadata = () => {
+                clearTimeout(timeout);
+                resolve(el.duration);
+              };
               el.onerror = () => {
                 clearTimeout(timeout);
                 reject(new Error(`Video load error: ${seg.videoClipUrl}`));
@@ -105,7 +128,8 @@ export function useVideo() {
         videoVolume,
       );
 
-      if (props.durationInFrames <= 0) throw new Error("Zero duration after alignment");
+      if (props.durationInFrames <= 0)
+        throw new Error("Zero duration after alignment");
       setVideoProps(props);
       return props;
     } finally {
@@ -117,7 +141,6 @@ export function useVideo() {
     props: RemotionVideoProps,
     captionStyle: CaptionStyle,
     projectId?: string,
-    projectName?: string,
   ) => {
     setIsRendering(true);
     setRenderProgress({ progress: 0, stage: "bundling" });
@@ -128,7 +151,6 @@ export function useVideo() {
         body: JSON.stringify({
           videoProps: { ...props, captionStyle },
           projectId,
-          projectName,
         }),
       });
       if (!res.ok)

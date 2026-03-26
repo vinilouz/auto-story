@@ -35,7 +35,7 @@ export function flattenTranscription(
       if (!w.text.trim()) return;
       const startSeconds = w.startMs / 1000;
       const endSeconds = w.endMs / 1000;
-      
+
       allWords.push({
         ...w,
         originalIndex: i,
@@ -48,9 +48,9 @@ export function flattenTranscription(
     globalTimeOffset += durationSeconds;
   });
 
-  return { 
-    allWords, 
-    audioTracks, 
-    totalAudioDurationSeconds: globalTimeOffset 
+  return {
+    allWords,
+    audioTracks,
+    totalAudioDurationSeconds: globalTimeOffset,
   };
 }
