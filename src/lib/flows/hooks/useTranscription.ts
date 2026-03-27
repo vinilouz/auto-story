@@ -23,7 +23,7 @@ export function useTranscription() {
       const newResult: TranscriptionResult = {
         url: data.url,
         status: "completed",
-        data: data.words,
+        transcriptionUrl: data.transcriptionUrl,
       };
       setResult(newResult);
       return newResult;
@@ -50,7 +50,7 @@ export function useTranscription() {
       const newResult: TranscriptionResult = {
         url: data.url,
         status: "completed",
-        data: data.words,
+        transcriptionUrl: data.transcriptionUrl,
       };
       setResult(newResult);
       return newResult;

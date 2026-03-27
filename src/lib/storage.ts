@@ -40,6 +40,8 @@ export interface ProjectData {
   audioSystemPrompt?: string;
   audioBatches?: AudioBatch[];
   transcriptionResult?: TranscriptionResult;
+  /** @deprecated Use transcriptionResult instead */
+  transcriptionResults?: TranscriptionResult;
   videoModel?: string;
   music?: string;
 }
@@ -311,15 +313,6 @@ export const StorageService = {
       const project: ProjectData = JSON.parse(
         await fs.readFile(configPath, "utf-8"),
       );
-      if (project.transcriptionResult) {
-        if (typeof project.transcriptionResult.data === "string") {
-          try {
-            project.transcriptionResult.data = JSON.parse(
-              project.transcriptionResult.data,
-            );
-          } catch {}
-        }
-      }
       return project;
     } catch (e) {
       log.error("Failed to load project", e);

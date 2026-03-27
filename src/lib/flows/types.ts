@@ -31,7 +31,6 @@ export interface TranscriptionResult {
   url: string;
   status: "completed" | "error";
   transcriptionUrl?: string;
-  data?: TranscriptionWord[] | { words: TranscriptionWord[] };
   error?: string;
 }
 

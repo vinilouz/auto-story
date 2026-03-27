@@ -21,7 +21,7 @@ import { VideoStage } from "./stages/VideoStage";
 import { DownloadStage } from "./stages/DownloadStage";
 import { MusicStage } from "./stages/MusicStage";
 import { STAGE_LABELS } from "./config";
-import { splitWordsIntoSegments } from "@/lib/utils/text";
+import { getTranscription, splitWordsIntoSegments } from "@/lib/utils/text";
 import type { StoryFlowProps, Stage, ExecuteConfig } from "./types";
 
 export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
@@ -80,12 +80,9 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
         if (mode === "from-audio")
           return {
             fn: async () => {
-              const data = transcription.result?.data;
-              const allWords = data
-                ? Array.isArray(data)
-                  ? data
-                  : ((data as any).words ?? [])
-                : [];
+              const transcriptionUrl = transcription.result?.transcriptionUrl;
+              if (!transcriptionUrl) return;
+              const allWords = await getTranscription(transcriptionUrl);
               if (allWords.length === 0) return;
               const newSegs = splitWordsIntoSegments(
                 allWords,

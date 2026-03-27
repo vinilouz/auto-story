@@ -89,8 +89,8 @@ registerProvider({
       size: req.config?.image_size || "2K",
     };
 
-    if (req.referenceImages?.[0]) {
-      payload.image_ref = req.referenceImages[0];
+    if (req.referenceImages?.length) {
+      payload.images = req.referenceImages;
     }
 
     const data = await apiRequest<{ b64_json?: string; url?: string }>(
@@ -126,7 +126,7 @@ registerProvider({
     };
 
     if (req.referenceImage) {
-      payload.image_ref = req.referenceImage;
+      payload.images = [req.referenceImage];
     }
 
     const data = await apiRequest<{ url: string }>(

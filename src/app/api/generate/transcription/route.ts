@@ -45,13 +45,12 @@ export async function POST(req: Request) {
         : await concatenateAudio(files, path.join(dir, "full_audio.mp3"));
 
     const cachePath = `${audioPath}.elevenlabs.json`;
+    const audioUrl = `/projects/${projectId}/audios/${path.basename(audioPath)}`;
+    const transcriptionUrl = `${audioUrl}.elevenlabs.json`;
+
     if (fs.existsSync(cachePath)) {
-      const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
       log.info("Using cached transcription");
-      return NextResponse.json({
-        words: cached,
-        url: `/projects/${projectId}/audios/${path.basename(audioPath)}`,
-      });
+      return NextResponse.json({ url: audioUrl, transcriptionUrl });
     }
 
     log.info("Transcribing audio via LouzLabs API...");
@@ -61,10 +60,7 @@ export async function POST(req: Request) {
     fs.writeFileSync(cachePath, JSON.stringify(words, null, 2));
     log.success(`Transcription complete: ${words.length} words`);
 
-    return NextResponse.json({
-      words,
-      url: `/projects/${projectId}/audios/${path.basename(audioPath)}`,
-    });
+    return NextResponse.json({ url: audioUrl, transcriptionUrl });
   } catch (e: unknown) {
     log.error("Transcription route error", e);
     return NextResponse.json(

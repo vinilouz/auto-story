@@ -136,8 +136,8 @@ export function useStoryFlowState(
         }
         if (p.audioBatches) audio.setBatches(p.audioBatches);
         if (p.audioSystemPrompt) setAudioSystemPrompt(p.audioSystemPrompt);
-        if (p.transcriptionResult)
-          transcription.setResult(p.transcriptionResult);
+        const tr = p.transcriptionResult || (p as any).transcriptionResults;
+        if (tr) transcription.setResult(tr);
         if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
 
         setStage(determineInitialStage(mode, p));

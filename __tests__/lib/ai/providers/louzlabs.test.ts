@@ -7,6 +7,7 @@ jest.mock("@/lib/ai/http-client", () => ({
   apiRequest: jest.fn(),
   apiRequestRaw: jest.fn(),
   apiRequestSSE: jest.fn(),
+  apiRequestMultipart: jest.fn(),
 }));
 
 describe("louzlabs provider", () => {
@@ -49,7 +50,7 @@ describe("louzlabs provider", () => {
       "secret",
       {
         prompt: "draw me",
-        image_ref: "ref.png",
+        images: ["ref.png"],
         aspect_ratio: "16:9",
         size: "2K",
       },
@@ -91,13 +92,13 @@ describe("louzlabs provider", () => {
     expect(httpClient.apiRequest).toHaveBeenCalledWith(
       "http://api/v1/video/generations",
       "secret",
-      { prompt: "move", image_ref: "ref.png" },
+      { prompt: "move", images: ["ref.png"] },
       expect.any(Object),
     );
   });
 
   it("generateTranscription should map to /v1/audio/transcriptions", async () => {
-    (httpClient.apiRequest as jest.Mock).mockResolvedValue({
+    (httpClient.apiRequestMultipart as jest.Mock).mockResolvedValue({
       words: [{ text: "hi", startMs: 0, endMs: 500 }],
     });
     const res = await provider!.generateTranscription!(
@@ -106,10 +107,10 @@ describe("louzlabs provider", () => {
       creds,
     );
 
-    expect(httpClient.apiRequest).toHaveBeenCalledWith(
+    expect(httpClient.apiRequestMultipart).toHaveBeenCalledWith(
       "http://api/v1/audio/transcriptions",
       "secret",
-      { file: "http://audio.mp3" },
+      "http://audio.mp3",
       expect.any(Object),
     );
     expect(res.words[0].text).toBe("hi");

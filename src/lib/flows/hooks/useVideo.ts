@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { type AlignmentMode, alignVideoProps } from "@/lib/video/aligner";
 import type { RemotionVideoProps } from "@/lib/video/types";
+import { getTranscription } from "@/lib/utils/text";
 import type {
   AudioBatch,
   CaptionStyle,
@@ -36,31 +37,29 @@ export function useVideo() {
     );
     const audioUrls = completed.map((b) => b.url!);
 
-    const tMap = new Map<string, any>();
     if (
-      transcriptionResult?.status === "completed" &&
-      transcriptionResult.data
+      !transcriptionResult?.status ||
+      transcriptionResult.status !== "completed" ||
+      !transcriptionResult.transcriptionUrl
     ) {
-      tMap.set(transcriptionResult.url, transcriptionResult.data);
+      throw new Error("No valid transcription");
     }
-    const validUrls = audioUrls.filter((u) => tMap.has(u));
-    if (!validUrls.length) throw new Error("No valid transcriptions");
+
+    const words = await getTranscription(transcriptionResult.transcriptionUrl);
 
     setIsGenerating(true);
     try {
-      const transcriptions = validUrls.map((u) => {
-        const raw = tMap.get(u)!;
-        const words: TranscriptionWord[] = Array.isArray(raw)
-          ? raw
-          : (raw as any).words;
-        return {
+      const transcriptions = [
+        {
           words: words.map((w) => ({
             text: w.text,
             startMs: w.startMs,
             endMs: w.endMs,
           })),
-        };
-      });
+        },
+      ];
+
+      const validUrls = [transcriptionResult.url];
 
       const audioDurations = await Promise.all(
         validUrls.map(

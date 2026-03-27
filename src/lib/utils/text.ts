@@ -8,6 +8,15 @@ import type {
 
 const log = createLogger("utils/text");
 
+export async function getTranscription(
+  url: string,
+): Promise<TranscriptionWord[]> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load transcription: ${url}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.words || [];
+}
+
 const PROTECTED_ABBREVIATIONS = [
   "dr.",
   "dra.",
@@ -201,41 +210,40 @@ export function splitIntoBatches(
   return batches;
 }
 
-export function splitTranscriptionByDuration(
+export async function splitTranscriptionByDuration(
   transcriptionResults: TranscriptionResult[],
   audioBatches: AudioBatch[],
   clipDurationSec: number,
   audioDurationsMs: number[],
-): Segment[] {
+): Promise<Segment[]> {
   const allWords: (TranscriptionWord & {
     globalStartMs: number;
     globalEndMs: number;
   })[] = [];
-  let globalOffsetMs = 0;
 
   const completedBatches = audioBatches.filter(
     (b) => b.status === "completed" && b.url,
   );
 
+  // Use the first completed transcription result (single transcription for all audio)
+  const validResult = transcriptionResults.find(
+    (r) => r.status === "completed" && r.transcriptionUrl,
+  );
+
+  if (!validResult?.transcriptionUrl) return [];
+
+  const words = await getTranscription(validResult.transcriptionUrl);
+
+  let globalOffsetMs = 0;
   for (let batchIdx = 0; batchIdx < completedBatches.length; batchIdx++) {
-    const batch = completedBatches[batchIdx];
     const batchDurationMs = audioDurationsMs[batchIdx];
-    const result = transcriptionResults.find(
-      (r) => r.url === batch.url && r.status === "completed" && r.data,
-    );
 
-    if (result?.data) {
-      const words: TranscriptionWord[] = Array.isArray(result.data)
-        ? result.data
-        : (result.data as any).words || [];
-
-      for (const w of words) {
-        allWords.push({
-          ...w,
-          globalStartMs: globalOffsetMs + w.startMs,
-          globalEndMs: globalOffsetMs + w.endMs,
-        });
-      }
+    for (const w of words) {
+      allWords.push({
+        ...w,
+        globalStartMs: globalOffsetMs + w.startMs,
+        globalEndMs: globalOffsetMs + w.endMs,
+      });
     }
 
     globalOffsetMs += batchDurationMs;

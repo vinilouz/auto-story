@@ -3,6 +3,9 @@ import {
   splitTranscriptionByDuration,
 } from "@/lib/utils/text";
 
+// Mock fetch for getTranscription
+global.fetch = jest.fn();
+
 describe("Text Utils", () => {
   describe("splitBySentences", () => {
     it("should split cleanly by sentences after reaching min length", () => {
@@ -30,20 +33,26 @@ describe("Text Utils", () => {
   });
 
   describe("splitTranscriptionByDuration", () => {
-    it("should split correctly into uniform segments based on time", () => {
-      // Create fake words spanning 0 to 12s
+    beforeEach(() => {
+      (global.fetch as jest.Mock).mockReset();
+    });
+
+    it("should split correctly into uniform segments based on time", async () => {
+      // Mock fetch to return transcription words
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { text: "Hello", startMs: 0, endMs: 1000 },
+          { text: "World", startMs: 1000, endMs: 2000 },
+          { text: "Here", startMs: 6000, endMs: 7000 },
+        ],
+      });
+
       const transcriptionResults = [
         {
           url: "mock-url",
           status: "completed" as const,
-          data: {
-            words: [
-              { text: "Hello", startMs: 0, endMs: 1000 },
-              { text: "World", startMs: 1000, endMs: 2000 },
-              // Gap
-              { text: "Here", startMs: 6000, endMs: 7000 },
-            ],
-          },
+          transcriptionUrl: "mock-transcription-url",
         },
       ];
       const audioBatches = [
@@ -56,7 +65,7 @@ describe("Text Utils", () => {
       ];
       const audioDurationsMs = [12000]; // 12 second total audio
 
-      const result = splitTranscriptionByDuration(
+      const result = await splitTranscriptionByDuration(
         transcriptionResults,
         audioBatches,
         5, // 5 seconds per clip

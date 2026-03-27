@@ -857,7 +857,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         ]),
       ),
     );
-    const newSegs = splitTranscriptionByDuration(
+    const newSegs = await splitTranscriptionByDuration(
       transcription.result ? [transcription.result] : [],
       audio.batches,
       clipDuration,

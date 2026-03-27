@@ -85,17 +85,22 @@ export function determineInitialStage(
       type?: string;
     }>;
     audioBatches?: Array<{ status: string }>;
-    transcriptionResults?: unknown[];
+    transcriptionResult?: { status?: string; transcriptionUrl?: string };
+    transcriptionResults?: { status?: string; transcriptionUrl?: string };
     commentator?: unknown;
     entities?: unknown[];
   },
 ): Stage {
+  const hasTranscription =
+    project.transcriptionResult?.status === "completed" ||
+    project.transcriptionResults?.status === "completed";
+
   // ── from-audio ────────────────────────────────────────────────────────────
   if (mode === "from-audio") {
     if (project.segments?.some((s) => s.imagePath)) return "images";
     if (project.segments?.some((s) => s.imagePrompt)) return "descriptions";
     if (project.segments?.length) return "split";
-    if (project.transcriptionResults?.length) return "transcription";
+    if (hasTranscription) return "transcription";
     return "input";
   }
 
@@ -105,14 +110,14 @@ export function determineInitialStage(
     if (project.segments?.some((s) => s.imagePath)) return "images";
     if (project.segments?.some((s) => s.imagePrompt)) return "descriptions";
     if (project.segments?.length) return "split";
-    if (project.transcriptionResults?.length) return "transcription";
+    if (hasTranscription) return "transcription";
     if (project.audioBatches?.some((b) => b.status === "completed"))
       return "audio";
     return "input";
   }
 
   // ── simple / commentator ──────────────────────────────────────────────────
-  if (project.transcriptionResults?.length) return "video";
+  if (hasTranscription) return "video";
   if (project.audioBatches?.some((b) => b.status === "completed"))
     return "audio";
   if (project.segments?.some((s) => s.imagePath)) return "images";
