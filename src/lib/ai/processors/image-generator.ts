@@ -1,7 +1,6 @@
-import fs from "fs/promises";
-import path from "path";
 import { execute } from "@/lib/ai/providers";
 import { createLogger } from "@/lib/logger";
+import { resolveImage } from "@/lib/utils/resolve-image";
 
 const log = createLogger("image");
 
@@ -11,26 +10,6 @@ export interface GenerateImageRequest {
   referenceImages?: string[];
   imageConfig?: { aspect_ratio?: string; image_size?: string };
   systemPrompt?: string;
-}
-
-async function resolveImage(url?: string): Promise<string | undefined> {
-  if (!url) return undefined;
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("data:")
-  )
-    return url;
-  if (url.startsWith("/")) {
-    try {
-      const buf = await fs.readFile(path.join(process.cwd(), "public", url));
-      const ext = path.extname(url).replace(".", "");
-      return `data:image/${ext === "jpg" ? "jpeg" : ext};base64,${buf.toString("base64")}`;
-    } catch {
-      return undefined;
-    }
-  }
-  return url;
 }
 
 export async function generateSingleImage(

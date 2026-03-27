@@ -53,7 +53,7 @@ export function useStoryFlowState(
   const [captionStyle, setCaptionStyle] = useState<
     StoryFlowState["captionStyle"]
   >(DEFAULT_CAPTION_STYLE);
-  const [videoVolume, setVideoVolume] = useState(0.1);
+  const [videoVolume, setVideoVolume] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const audio = useAudio();

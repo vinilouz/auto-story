@@ -1,33 +1,13 @@
 import fs from "fs";
-import fsp from "fs/promises";
 import path from "path";
 import { execute } from "@/lib/ai/providers";
 import { type BatchResult, executeBatch } from "@/lib/ai/queue";
 import type { VideoResponse } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
 import { StorageService } from "@/lib/storage";
+import { resolveImage } from "@/lib/utils/resolve-image";
 
 const log = createLogger("video-clip");
-
-async function resolveImage(url?: string): Promise<string | undefined> {
-  if (!url) return undefined;
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("data:")
-  )
-    return url;
-  if (url.startsWith("/")) {
-    try {
-      const buf = await fsp.readFile(path.join(process.cwd(), "public", url));
-      const ext = path.extname(url).replace(".", "");
-      return `data:image/${ext === "jpg" ? "jpeg" : ext};base64,${buf.toString("base64")}`;
-    } catch {
-      return undefined;
-    }
-  }
-  return url;
-}
 
 export interface VideoClipRequest {
   prompt: string;

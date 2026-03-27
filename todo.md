@@ -1,6 +1,5 @@
 # Geral
 * [ ] revisao de clean code e clean arch do que esta feito
-* [ ] transcrições apenas referenciarem o arquivo com a transcrição completa
 * [ ] envio de image ref como base64 via formdata no payload e nao path fixo de imagem seguindo o padrao de https://api.louzlabs.com.br/openapi.json
 * [ ] click em imagem para ver grande, abrir em lightbox interativa com setas para quando a mais (stages de entities, segments e clips de video)
 

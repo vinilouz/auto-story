@@ -78,7 +78,7 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
     })) ?? [],
 });
 
-const RENDER_CONCURRENCY = Math.max(1, os.cpus().length);
+const RENDER_CONCURRENCY = Math.max(1, Math.floor(os.cpus().length / 2));
 
 export async function POST(req: NextRequest) {
   let tempOutput = "";
