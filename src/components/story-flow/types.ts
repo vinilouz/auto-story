@@ -57,6 +57,8 @@ export interface StoryFlowState {
   setConsistency: (consistency: boolean) => void;
   music: boolean;
   setMusic: (music: boolean) => void;
+  musicPrompt: string;
+  setMusicPrompt: (prompt: string) => void;
   musicUrl: string | null;
   setMusicUrl: (url: string | null) => void;
   /** Audio file chosen by the user – only used in the from-audio flow */

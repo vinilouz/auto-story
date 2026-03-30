@@ -121,9 +121,15 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
 
       case "music":
         return {
-          fn: actions.generateMusic,
+          fn: state.musicPrompt
+            ? actions.generateMusic
+            : actions.generateMusicPrompt,
           ok: true,
-          label: hasMusic ? "Regenerate" : "Generate Music",
+          label: hasMusic
+            ? "Regenerate"
+            : state.musicPrompt
+              ? "Generate Music"
+              : "Generate Prompt",
           busy: loading,
         };
 
@@ -220,6 +226,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
     hasImages,
     hasClips,
     hasMusic,
+    state.musicPrompt,
     hasComments,
     hasAudio,
     hasTranscription,

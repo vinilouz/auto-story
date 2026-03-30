@@ -74,14 +74,15 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
 
       <div className="grid grid-cols-2 gap-4">
         {visibleSegments.map((seg, i) => {
-          const st = videoClips.clipStatuses.get(i);
+          const realIdx = segments.indexOf(seg);
+          const st = videoClips.clipStatuses.get(realIdx);
 
           return (
             <Card key={i}>
               <CardContent className="space-y-2 p-4">
                 <div className="mb-1 flex justify-between">
                   <span className="font-mono text-xs font-bold">
-                    Clip #{i + 1}
+                    Clip #{realIdx + 1}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {clipDuration}s
@@ -106,7 +107,7 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                         onClick={() =>
                           setExpandedClip({
                             src: seg.videoClipUrl!,
-                            label: `Clip #${i + 1}`,
+                            label: `Clip #${realIdx + 1}`,
                           })
                         }
                       >
@@ -118,7 +119,7 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                         className="h-8 w-8 shadow"
                         onClick={() =>
                           videoClips.regenerateClip(
-                            i,
+                            realIdx,
                             segments,
                             state.setSegments,
                             {
@@ -143,8 +144,30 @@ export function ClipsStage({ state, actions }: ClipsStageProps) {
                     </span>
                   </div>
                 ) : st === "error" ? (
-                  <div className="flex h-24 w-full items-center justify-center rounded bg-red-50">
-                    <span className="text-xs text-red-400">Error</span>
+                  <div className="flex h-24 w-full flex-col items-center justify-center gap-2 rounded bg-red-50">
+                    <span className="text-xs font-medium text-red-500">Error</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 gap-1 text-[10px] text-red-600 hover:bg-red-100 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        videoClips.regenerateClip(
+                          realIdx,
+                          segments,
+                          state.setSegments,
+                          {
+                            projectId: project.projectId || projectId,
+                            clipDuration,
+                            onClipCompleted: async (newSegments) => {
+                              await actions.save({ segments: newSegments });
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Retry
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex h-24 w-full items-center justify-center rounded bg-muted/50">

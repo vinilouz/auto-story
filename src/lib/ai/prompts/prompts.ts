@@ -160,6 +160,34 @@ export const COMMENTATOR_IMAGE_GENERATION_PROMPT = (description: string) =>
 
 const VIDEO_SILENCE_PROMPT = "No voice, No Speaking, no music, only sfx";
 
+export const MUSIC_PROMPT_GENERATOR = (
+  segments: Array<{ id: string; scriptText: string }>,
+  language: string,
+) => `<Role>
+You are a Music Supervisor specialized in analyzing narrative content and creating precise instrumental music descriptions for AI music generation.
+</Role>
+
+<Objective>
+Analyze the story segments below and generate a SINGLE detailed instrumental music prompt that captures the overall mood, emotion, and atmosphere of the narrative. The music will be used as background for the entire story.
+</Objective>
+
+<Constraints>
+1. The music MUST be instrumental — no vocals, no singing, no voice.
+2. Describe instruments, tempo, mood, genre, and atmosphere.
+3. Be specific about dynamics (e.g., "builds from gentle to powerful").
+4. The prompt must be in English regardless of the story language.
+5. Keep the prompt between 100 and 300 characters.
+</Constraints>
+
+<InputScript language="${language}">
+${toJsonForPrompt(segments, true)}
+</InputScript>
+
+<OutputFormat>
+Return ONLY a plain text string with the music prompt. No JSON, no markdown, no quotes around it, no explanation.
+Example: "Cinematic orchestral instrumental, gentle piano melody with rising strings, reflective and emotional mood, builds to a hopeful crescendo, no vocals"
+</OutputFormat>`;
+
 export const GENERATE_VIDEO_PROMPT = (
   style: string,
   sceneDescription: string,

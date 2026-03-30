@@ -32,6 +32,7 @@ export function useStoryFlowState(
   const [audioVoice, setAudioVoice] = useState("nPczCjzI2devNBz1zQrb");
   const [consistency, setConsistency] = useState(false);
   const [music, setMusic] = useState(false);
+  const [musicPrompt, setMusicPrompt] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
 
   // from-audio flow: local File object chosen by the user in InputAudioStage
@@ -92,6 +93,7 @@ export function useStoryFlowState(
         hasTranscription,
         hasCommentator: !!commentator,
         hasSegments: segments.length > 0,
+        hasMusic,
         consistency,
       }),
     [
@@ -107,6 +109,7 @@ export function useStoryFlowState(
       hasTranscription,
       commentator,
       segments.length,
+      hasMusic,
       consistency,
     ],
   );
@@ -125,6 +128,7 @@ export function useStoryFlowState(
         if (p.consistency) setConsistency(p.consistency);
         if (p.musicEnabled) setMusic(p.musicEnabled);
         if (p.music) setMusicUrl(p.music);
+        if ((p as any).musicPrompt) setMusicPrompt((p as any).musicPrompt);
         if (p.segments) setSegments(p.segments);
         if (p.entities) setEntities(p.entities);
         if (p.commentator) {
@@ -166,6 +170,8 @@ export function useStoryFlowState(
     setConsistency,
     music,
     setMusic,
+    musicPrompt,
+    setMusicPrompt,
     musicUrl,
     setMusicUrl,
     uploadedAudioFile,

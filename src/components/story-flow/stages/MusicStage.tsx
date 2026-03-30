@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState, RefObject } from "react";
-import { Loader2, Music, RefreshCw } from "lucide-react";
+import { Loader2, Music, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
 
@@ -68,7 +69,7 @@ interface MusicStageProps {
 }
 
 export function MusicStage({ state, actions }: MusicStageProps) {
-  const { musicUrl, loading } = state;
+  const { musicPrompt, musicUrl, loading } = state;
   const audioRef = useRef<HTMLAudioElement>(null);
   const { isDucked, toggle, init } = useAudioDucking(audioRef);
 
@@ -77,7 +78,7 @@ export function MusicStage({ state, actions }: MusicStageProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Music className="h-5 w-5" />
-          Background Music
+          Música
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -109,24 +110,91 @@ export function MusicStage({ state, actions }: MusicStageProps) {
               </Button>
             </div>
 
-            <Button
-              onClick={() => actions.generateMusic()}
-              disabled={loading}
-              variant="outline"
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Regenerate
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => actions.generateMusicPrompt()}
+                disabled={loading}
+                variant="outline"
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerando prompt...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Regenerar Prompt
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => actions.generateMusic()}
+                disabled={loading}
+                variant="outline"
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerando música...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerar Música
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : musicPrompt ? (
+          <div className="space-y-4">
+            <Textarea
+              value={musicPrompt}
+              onChange={(e) => state.setMusicPrompt(e.target.value)}
+              rows={4}
+              className="resize-y"
+              placeholder="Descrição musical instrumental..."
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => actions.generateMusicPrompt()}
+                disabled={loading}
+                variant="outline"
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Regenerando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Regenerar Prompt
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => actions.generateMusic()}
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando música...
+                  </>
+                ) : (
+                  <>
+                    <Music className="mr-2 h-4 w-4" />
+                    Gerar Música
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4 py-8">
@@ -134,17 +202,18 @@ export function MusicStage({ state, actions }: MusicStageProps) {
               <>
                 <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Generating background music...
+                  Analisando a história para sugerir o prompt musical...
                 </p>
               </>
             ) : (
               <>
                 <Music className="h-12 w-12 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  No music generated yet
+                  Gere um prompt musical baseado na sua história
                 </p>
-                <Button onClick={() => actions.generateMusic()} disabled={loading}>
-                  Generate Music
+                <Button onClick={() => actions.generateMusicPrompt()}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Gerar Prompt Musical
                 </Button>
               </>
             )}

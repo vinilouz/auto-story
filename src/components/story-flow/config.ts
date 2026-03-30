@@ -54,7 +54,6 @@ export function getStages(
   return (
     [
       "input",
-      ...(music ? (["music"] as Stage[]) : []),
       "commentator",
       "comments",
       ...(consistency ? (["entities"] as Stage[]) : []),
@@ -62,6 +61,7 @@ export function getStages(
       "images",
       "audio",
       "transcription",
+      ...(music ? (["music"] as Stage[]) : []),
       "video",
       "download",
     ] as Stage[]

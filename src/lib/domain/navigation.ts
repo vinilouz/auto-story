@@ -11,6 +11,7 @@ export interface NavigationState {
   hasTranscription: boolean;
   hasCommentator: boolean;
   hasSegments: boolean;
+  hasMusic: boolean;
   consistency: boolean;
 }
 
@@ -27,7 +28,13 @@ export function calculateMaxStep(
   // ── from-audio ────────────────────────────────────────────────────────────
   if (mode === "from-audio") {
     if (state.hasVideoProps) return idx("download");
-    if (state.hasImages) return idx("video");
+    if (state.hasImages) {
+      const musicIdx = stages.indexOf("music");
+      if (musicIdx >= 0) {
+        return state.hasMusic ? idx("video") : idx("music");
+      }
+      return idx("video");
+    }
     if (state.hasPrompts) return idx("images");
     if (state.consistency && state.hasEntities) return idx("descriptions");
     if (state.hasSegments)
@@ -40,7 +47,13 @@ export function calculateMaxStep(
   // ── video-story ───────────────────────────────────────────────────────────
   if (mode === "video-story") {
     if (state.hasVideoProps) return idx("download");
-    if (state.hasClips) return idx("video");
+    if (state.hasClips) {
+      const musicIdx = stages.indexOf("music");
+      if (musicIdx >= 0) {
+        return state.hasMusic ? idx("video") : idx("music");
+      }
+      return idx("video");
+    }
     if (state.hasImages) return idx("clips");
     if (state.hasPrompts) return idx("images");
     if (state.consistency && state.hasEntities) return idx("descriptions");
@@ -53,7 +66,8 @@ export function calculateMaxStep(
 
   // ── simple / commentator ──────────────────────────────────────────────────
   if (state.hasVideoProps) return idx("download");
-  if (state.hasTranscription) return idx("video");
+  if (state.hasTranscription)
+    return state.hasMusic ? idx("video") : idx("music");
   if (state.hasAudio) return idx("transcription");
   if (state.hasImages) return idx("audio");
   if (state.hasPrompts) return idx("images");

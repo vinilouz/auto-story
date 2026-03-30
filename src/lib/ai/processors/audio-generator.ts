@@ -10,6 +10,7 @@ async function generateAndSave(
   text: string,
   voice: string,
   projectId: string,
+  batchIndex: number,
 ): Promise<string> {
   const { audioBuffer } = await execute("generateAudio", { text, voice });
   const pubDir = path.join(
@@ -21,7 +22,7 @@ async function generateAndSave(
   );
   if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
 
-  const name = `audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`;
+  const name = `audio_${batchIndex + 1}.mp3`;
   fs.writeFileSync(path.join(pubDir, name), Buffer.from(audioBuffer));
   return `/projects/${projectId}/audios/${name}`;
 }
@@ -62,6 +63,7 @@ export async function generateAudio(opts: {
           segments[idx],
           voice,
           projectId,
+          idx,
         );
         batches[idx].status = "completed";
         log.success(`Batch #${idx + 1} completed`);

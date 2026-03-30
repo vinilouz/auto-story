@@ -13,8 +13,8 @@ export interface ModelConfig {
 }
 
 export const DEFAULT_CLIP_DURATION = 8;
-export const DEFAULT_CONCURRENCY = 5;
-export const DEFAULT_MAX_RETRIES = 3;
+export const DEFAULT_CONCURRENCY = 30;
+export const DEFAULT_MAX_RETRIES = 4;
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [{ provider: "louzlabs", model: "gemini-3-flash-preview" }],

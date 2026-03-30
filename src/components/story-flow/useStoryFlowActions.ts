@@ -41,6 +41,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
     setLoading,
     clipDuration,
     music,
+    musicPrompt,
+    setMusicPrompt,
     musicUrl,
     setMusicUrl,
     uploadedAudioFile,
@@ -975,6 +977,30 @@ export function useStoryFlowActions(state: StoryFlowState) {
     [setSegments],
   );
 
+  const generateMusicPrompt = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/generate/music-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          segments: segments.map((s) => ({ text: s.text })),
+          language,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setMusicPrompt(data.musicPrompt);
+      await save({ musicPrompt: data.musicPrompt } as any);
+      toast.success("Music prompt generated!");
+    } catch {
+      toast.error("Failed to generate music prompt");
+    } finally {
+      setLoading(false);
+    }
+  }, [segments, language, setMusicPrompt, setStage, save, setLoading]);
+
   const generateMusic = useCallback(async () => {
     setLoading(true);
     try {
@@ -989,23 +1015,53 @@ export function useStoryFlowActions(state: StoryFlowState) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: pid || state.projectId,
+          prompt: musicPrompt || undefined,
         }),
       });
 
       if (!res.ok) throw new Error();
-      const data = await res.json();
-      setMusicUrl(data.musicUrl);
-      await save({ music: data.musicUrl });
-      toast.success("Music generated!");
-    } catch {
-      toast.error("Failed to generate music");
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let event: any;
+          try {
+            event = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (event.type === "error") {
+            throw new Error(event.error || "Music generation failed");
+          }
+
+          if (event.type === "done" && event.musicUrl) {
+            setMusicUrl(event.musicUrl);
+            await save({ music: event.musicUrl });
+            toast.success("Music generated!");
+          }
+        }
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate music");
     } finally {
       setLoading(false);
     }
   }, [
     project.projectId,
     state.projectId,
-    title,
+    musicPrompt,
     setMusicUrl,
     save,
     setLoading,
@@ -1065,6 +1121,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     renderVideoAction,
     downloadZipAction,
     updateSegmentImagePrompt,
+    generateMusicPrompt,
     generateMusic,
     generateCommentatorImage,
   };

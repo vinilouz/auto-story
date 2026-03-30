@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleBatch(requests: any[], projectId?: string) {
-  const items: BatchImageItem[] = requests.map((r, i) => ({
-    index: i,
+  const items: BatchImageItem[] = requests.map((r) => ({
+    index: r.index ?? 0,
     imagePrompt: r.imagePrompt,
     referenceImage: r.referenceImage,
     referenceImages: r.referenceImages,

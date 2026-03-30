@@ -80,8 +80,19 @@ export function ImagesStage({ state, actions }: ImagesStageProps) {
                 ) : st === "generating" ? (
                   <Skeleton className="h-48 w-full" />
                 ) : st === "error" ? (
-                  <div className="flex h-24 w-full items-center justify-center rounded bg-red-50">
-                    <span className="text-xs text-red-400">Error</span>
+                  <div className="flex h-24 w-full flex-col items-center justify-center gap-2 rounded bg-red-50">
+                    <span className="text-xs font-medium text-red-500">Error</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 gap-1 text-[10px] text-red-600 hover:bg-red-100 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        actions.generateSingleImage(realIdx);
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Retry
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex h-24 w-full items-center justify-center rounded bg-muted/50">
