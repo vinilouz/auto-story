@@ -322,7 +322,6 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
 
       <NavigationBar
         stageIdx={stageIdx}
-        maxStep={maxStep}
         canNext={canNext}
         exec={exec}
         onNext={goNext}

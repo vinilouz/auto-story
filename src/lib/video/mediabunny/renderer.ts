@@ -71,7 +71,6 @@ export async function renderWithMediabunny(
       sample.close();
     }
 
-    sink.close();
     input.dispose();
   }
 

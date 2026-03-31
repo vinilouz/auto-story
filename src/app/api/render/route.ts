@@ -9,6 +9,7 @@ import os from "node:os";
 import { type NextRequest, NextResponse } from "next/server";
 import { ACTIVE_RENDERER, RENDERER } from "@/lib/video/config";
 import { renderWithMediabunny } from "@/lib/video/mediabunny";
+import type { RemotionVideoProps } from "@/lib/video/types";
 import { createLogger } from "@/lib/logger";
 import {
   REMOTION_CACHE_SIZE,
@@ -150,7 +151,7 @@ async function handleMediabunnyRender(
         const { outputPath, videoUrl } = getOutputPath(projectId);
 
         await renderWithMediabunny(
-          props as Parameters<typeof renderWithMediabunny>[0],
+          props as unknown as RemotionVideoProps,
           outputPath,
           (progress) => {
             sendEvent({
@@ -192,7 +193,7 @@ async function handleRemotionRender(
   compositionId: string,
 ): Promise<Response> {
   const bundleLocation = await ensureBundle();
-  const tempOutput = path.join(os.tmpdir(), `render-${Date.now()}.mp4`);
+  const { outputPath, videoUrl } = getOutputPath(projectId);
 
   log.info(
     `Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`,
@@ -218,10 +219,16 @@ async function handleRemotionRender(
             fps: props.fps as number,
             width: props.width as number,
             height: props.height as number,
+            defaultProps: {},
+            defaultCodec: null,
+            defaultOutName: null,
+            defaultVideoImageFormat: null,
+            defaultPixelFormat: null,
+            defaultProResProfile: null,
           },
           serveUrl: bundleLocation,
           codec: "h264",
-          outputLocation: tempOutput,
+          outputLocation: outputPath,
           inputProps: props,
           timeoutInMilliseconds: 3600000,
           concurrency: RENDER_CONCURRENCY,
@@ -264,16 +271,13 @@ async function handleRemotionRender(
 
         sendEvent({ type: "progress", progress: 100, stage: "encoding" });
 
-        const { outputPath, videoUrl } = getOutputPath(projectId);
-
-        await fs.promises.rename(tempOutput, outputPath);
         log.success(`Remotion render complete: ${videoUrl}`);
         sendEvent({ type: "complete", videoUrl });
         controller.close();
       } catch (error: unknown) {
         log.error("Remotion render failed", error);
-        if (tempOutput && fs.existsSync(tempOutput))
-          fs.promises.unlink(tempOutput).catch(() => {});
+        if (fs.existsSync(outputPath))
+          fs.promises.unlink(outputPath).catch(() => {});
         sendEvent({
           type: "error",
           error: error instanceof Error ? error.message : "Render failed",
