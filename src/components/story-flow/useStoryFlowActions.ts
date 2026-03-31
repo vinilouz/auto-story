@@ -182,7 +182,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
 
       // 3. Transcribe the uploaded audio
       const tResults = await transcription.transcribe(pid);
-      if (tResults) await save({ transcriptionResults: tResults });
+      if (tResults) await save({ transcriptionResult: tResults });
 
       toast.success("Audio uploaded & transcribed!");
       setStage("transcription");

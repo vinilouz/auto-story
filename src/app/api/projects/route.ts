@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.scriptText) {
+    if (body.scriptText === undefined) {
       return NextResponse.json(
         { error: "Missing required field: scriptText" },
         { status: 400 },
