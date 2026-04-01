@@ -123,6 +123,7 @@ registerProvider({
   async generateVideo(model, req: VideoRequest, creds): Promise<VideoResponse> {
     const payload: Record<string, unknown> = {
       prompt: req.prompt,
+      aspect_ratio: "16:9",
     };
 
     if (req.referenceImage) {
