@@ -75,5 +75,7 @@ export interface RemotionVideoProps {
   captions: Caption[];
   captionStyle?: CaptionStyle;
   videoVolume?: number;
+  musicSrc?: string;
+  musicVolume?: number;
   transitionOverride?: string;
 }

@@ -9,7 +9,7 @@ import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
 
 const COMPRESSOR_CONFIG = {
-  threshold: -35,
+  threshold: -40,
   ratio: 20,
   knee: 0,
   attack: 0,

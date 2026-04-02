@@ -15,7 +15,7 @@ interface VideoStageProps {
 }
 
 export function VideoStage({ state, actions }: VideoStageProps) {
-  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume } =
+  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume, musicUrl, musicVolume, setMusicVolume } =
     state;
 
   return (
@@ -92,6 +92,20 @@ export function VideoStage({ state, actions }: VideoStageProps) {
               onValueChange={(v) => setVideoVolume(v[0] / 100)}
             />
           </div>
+          {musicUrl && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Music ({Math.round(musicVolume * 100)}%)
+              </label>
+              <Slider
+                min={0}
+                max={100}
+                step={5}
+                value={[musicVolume * 100]}
+                onValueChange={(v) => setMusicVolume(v[0] / 100)}
+              />
+            </div>
+          )}
         </div>
         <div className="flex justify-end">
           <Button
@@ -134,7 +148,7 @@ export function VideoStage({ state, actions }: VideoStageProps) {
         )}
         {video.videoProps ? (
           <VideoPlayer
-            props={{ ...video.videoProps, captionStyle, videoVolume }}
+            props={{ ...video.videoProps, captionStyle, videoVolume, musicVolume }}
           />
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">

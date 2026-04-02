@@ -31,6 +31,8 @@ export function useVideo() {
     transcriptionResult: TranscriptionResult | null,
     alignmentMode: AlignmentMode = "video",
     videoVolume: number = 0.1,
+    musicUrl?: string,
+    musicVolume: number = 0.3,
   ) => {
     const completed = audioBatches.filter(
       (b) => b.status === "completed" && b.url,
@@ -129,6 +131,12 @@ export function useVideo() {
 
       if (props.durationInFrames <= 0)
         throw new Error("Zero duration after alignment");
+
+      if (musicUrl) {
+        props.musicSrc = musicUrl;
+        props.musicVolume = musicVolume;
+      }
+
       setVideoProps(props);
       return props;
     } finally {

@@ -108,7 +108,8 @@ export async function apiRequest<T>(
       // Create a simplified response log to avoid storing giant base64 strings
       let logRes: unknown = data;
       if (data && typeof data === "object") {
-        if ("b64_json" in data) logRes = { has_b64: true, url: data.url };
+        if ("b64_json" in data)
+          logRes = { b64_json: `[${(data as any).b64_json?.length ?? 0} chars]`, url: data.url };
         else if ("words" in data)
           logRes = {
             words_count: Array.isArray(data.words) ? data.words.length : 0,

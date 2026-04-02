@@ -61,6 +61,8 @@ export interface StoryFlowState {
   setMusicPrompt: (prompt: string) => void;
   musicUrl: string | null;
   setMusicUrl: (url: string | null) => void;
+  musicVolume: number;
+  setMusicVolume: (volume: number) => void;
   /** Audio file chosen by the user – only used in the from-audio flow */
   uploadedAudioFile: File | null;
   setUploadedAudioFile: (file: File | null) => void;

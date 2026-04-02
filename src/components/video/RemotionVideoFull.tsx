@@ -31,9 +31,15 @@ export const RemotionVideoFull: React.FC<RemotionVideoProps> = ({
   captionStyle,
   videoVolume = 0.1,
   transitionOverride,
+  musicSrc,
+  musicVolume = 0.3,
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
+      {/* Background Music */}
+      {musicSrc && musicVolume > 0 && (
+        <Audio src={musicSrc} volume={musicVolume} />
+      )}
       {/* ── Layer 1: Video visuals with transitions ────────────────────────── */}
       <TransitionSeries>
         {scenes.map((scene) => (

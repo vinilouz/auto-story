@@ -77,9 +77,12 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
       ...t,
       src: toAbsoluteUrl(t.src as string, origin),
     })) ?? [],
+  musicSrc: props.musicSrc
+    ? toAbsoluteUrl(props.musicSrc as string, origin)
+    : undefined,
 });
 
-const RENDER_CONCURRENCY = Math.max(1, Math.floor(os.cpus().length / 2));
+const RENDER_CONCURRENCY = 10;
 
 export async function POST(req: NextRequest) {
   let tempOutput = "";
@@ -195,9 +198,7 @@ async function handleRemotionRender(
   const bundleLocation = await ensureBundle();
   const { outputPath, videoUrl } = getOutputPath(projectId);
 
-  log.info(
-    `Rendering video (concurrency: ${RENDER_CONCURRENCY}, composition: ${compositionId})`,
-  );
+  log.info(`Rendering video (composition: ${compositionId})`);
 
   const encoder = new TextEncoder();
 

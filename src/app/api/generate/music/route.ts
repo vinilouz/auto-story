@@ -1,9 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import path from "path";
 import { getCredentials } from "@/lib/ai/registry";
 import { apiRequestSSE } from "@/lib/ai/http-client";
-import { StorageService } from "@/lib/storage";
+import { saveMusic } from "@/lib/services/media-saver";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/music");
@@ -16,10 +14,6 @@ const DEFAULT_MUSIC_PROMPT =
 export async function POST(request: NextRequest) {
   try {
     const { projectId, prompt } = await request.json();
-
-    if (!projectId) {
-      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
-    }
 
     const creds = getCredentials("louzlabs");
     if (!creds) {
@@ -84,42 +78,11 @@ export async function POST(request: NextRequest) {
 
                 if (!parsed.url) continue;
 
-                send(controller, {
-                  type: "status",
-                  message: "Downloading music file...",
-                });
+                const finalUrl = projectId
+                  ? await saveMusic(parsed.url, projectId)
+                  : parsed.url;
 
-                const musicDir = path.join(
-                  process.cwd(),
-                  "public",
-                  "projects",
-                  projectId,
-                  "music",
-                );
-                if (!existsSync(musicDir))
-                  mkdirSync(musicDir, { recursive: true });
-
-                const filename = "background.mp4";
-                const filepath = path.join(musicDir, filename);
-                const publicPath = `/projects/${projectId}/music/${filename}`;
-
-                if (parsed.url.startsWith("data:")) {
-                  const [, base64Data] = parsed.url.split(",");
-                  writeFileSync(filepath, Buffer.from(base64Data, "base64"));
-                } else {
-                  const dl = await fetch(parsed.url);
-                  if (!dl.ok)
-                    throw new Error(`Download failed: HTTP ${dl.status}`);
-                  writeFileSync(
-                    filepath,
-                    Buffer.from(await dl.arrayBuffer()),
-                  );
-                }
-
-                await StorageService.patchMusic(projectId, publicPath);
-
-                log.success(`Music saved: ${publicPath}`);
-                send(controller, { type: "done", musicUrl: publicPath });
+                send(controller, { type: "done", musicUrl: finalUrl });
                 controller.close();
                 return;
               }

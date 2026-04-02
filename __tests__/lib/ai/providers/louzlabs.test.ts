@@ -92,7 +92,7 @@ describe("louzlabs provider", () => {
     expect(httpClient.apiRequest).toHaveBeenCalledWith(
       "http://api/v1/video/generations",
       "secret",
-      { prompt: "move", images: ["ref.png"] },
+      { prompt: "move", aspect_ratio: "16:9", images: ["ref.png"] },
       expect.any(Object),
     );
   });

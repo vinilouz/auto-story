@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { generateAndSaveVideoClip } from "@/lib/ai/processors/video-clip-generator";
+import { generateVideoClip } from "@/lib/ai/processors/video-clip-generator";
+import { saveVideoClip } from "@/lib/services/media-saver";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/video-clips");
@@ -17,13 +18,18 @@ export async function POST(request: NextRequest) {
       `Video clip request: ${duration || "?"}s, prompt: ${prompt.substring(0, 80)}...`,
     );
 
-    const videoUrl = await generateAndSaveVideoClip(
-      { prompt, referenceImage, duration },
-      projectId,
-    );
+    const { videoUrl } = await generateVideoClip({
+      prompt,
+      referenceImage,
+      duration,
+    });
 
-    log.success(`Video clip saved: ${videoUrl}`);
-    return NextResponse.json({ videoUrl });
+    const finalUrl = projectId
+      ? await saveVideoClip(videoUrl, projectId, 0)
+      : videoUrl;
+
+    log.success(`Video clip: ${finalUrl}`);
+    return NextResponse.json({ videoUrl: finalUrl });
   } catch (e: any) {
     log.error("Video clip generation failed", e);
     return NextResponse.json(

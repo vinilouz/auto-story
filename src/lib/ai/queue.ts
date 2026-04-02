@@ -125,7 +125,7 @@ export async function executeBatch<A extends ActionType>(
   const validCreds = creds;
 
   log.info(
-    `Batch: ${total} × ${action} via ${cfg.provider}/${cfg.model} (concurrency: ${concurrency})`,
+    `Batch: ${total} × ${action} via ${cfg.provider}/${cfg.model || "auto"}`,
   );
 
   const results: BatchResult<ActionMap[A]["res"]>[] = new Array(total);

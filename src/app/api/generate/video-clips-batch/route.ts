@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import {
   type BatchClipRequest,
-  generateAndSaveVideoClipBatch,
+  generateVideoClipBatch,
 } from "@/lib/ai/processors/video-clip-generator";
+import { saveVideoClip } from "@/lib/services/media-saver";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/video-clips-batch");
@@ -10,7 +11,7 @@ const log = createLogger("api/video-clips-batch");
 export async function POST(request: NextRequest) {
   const { clips, projectId } = (await request.json()) as {
     clips: BatchClipRequest[];
-    projectId: string;
+    projectId?: string;
   };
 
   if (!clips?.length) {
@@ -30,16 +31,29 @@ export async function POST(request: NextRequest) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
           );
-        } catch (e) {
+        } catch {
           // ignore closed streams
         }
       };
 
       try {
-        const results = await generateAndSaveVideoClipBatch(
+        const results = await generateVideoClipBatch(
           clips,
-          projectId,
-          (result) => send({ type: "result", ...result }),
+          async (result) => {
+            if (result.status === "success" && projectId && result.videoUrl) {
+              try {
+                result.videoUrl = await saveVideoClip(
+                  result.videoUrl,
+                  projectId,
+                  result.index,
+                );
+              } catch (e: any) {
+                result.status = "error";
+                result.error = `Save failed: ${e.message}`;
+              }
+            }
+            send({ type: "result", ...result });
+          },
         );
 
         const ok = results.filter((r) => r.status === "success").length;

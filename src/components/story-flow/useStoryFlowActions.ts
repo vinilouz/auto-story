@@ -45,6 +45,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     setMusicPrompt,
     musicUrl,
     setMusicUrl,
+    musicVolume,
     uploadedAudioFile,
     audio,
     transcription,
@@ -74,6 +75,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         videoVolume,
         musicEnabled: music,
         music: musicUrl,
+        musicVolume,
         ...extra,
       };
       const saved = await project.save(data);
@@ -97,6 +99,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       videoVolume,
       music,
       musicUrl,
+      musicVolume,
       mode,
       project,
     ],
@@ -925,6 +928,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
         transcription.result,
         alignmentMode,
         videoVolume,
+        musicUrl ?? undefined,
+        musicVolume,
       );
       setStage("video");
     } catch (e: any) {
@@ -937,6 +942,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
     transcription.result,
     video,
     videoVolume,
+    musicUrl,
+    musicVolume,
     setStage,
   ]);
 

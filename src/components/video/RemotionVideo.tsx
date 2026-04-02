@@ -22,15 +22,18 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
   captionStyle,
   transitionOverride,
   videoVolume,
+  musicSrc,
+  musicVolume = 0.3,
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      {/* Audio Tracks */}
+      {/* Background Music */}
+      {musicSrc && musicVolume > 0 && (
+        <Audio src={musicSrc} volume={musicVolume} />
+      )}
 
-      {/* We need to sequence audio tracks properly */}
+      {/* Narration Audio Tracks */}
       {audioTracks.map((track, i) => (
-        // Remotion <Audio> by itself plays from frame 0 relative to parent.
-        // We can wrap in Sequence to delay start.
         <Sequence
           key={`audio-${i}`}
           from={track.startFrame}

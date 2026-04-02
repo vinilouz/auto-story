@@ -34,6 +34,7 @@ export function useStoryFlowState(
   const [music, setMusic] = useState(false);
   const [musicPrompt, setMusicPrompt] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
+  const [musicVolume, setMusicVolume] = useState(0.3);
 
   // from-audio flow: local File object chosen by the user in InputAudioStage
   const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
@@ -143,6 +144,7 @@ export function useStoryFlowState(
         const tr = p.transcriptionResult || (p as any).transcriptionResults;
         if (tr) transcription.setResult(tr);
         if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
+        if ((p as any).musicVolume !== undefined) setMusicVolume((p as any).musicVolume);
 
         setStage(determineInitialStage(mode, p));
       })
@@ -174,6 +176,8 @@ export function useStoryFlowState(
     setMusicPrompt,
     musicUrl,
     setMusicUrl,
+    musicVolume,
+    setMusicVolume,
     uploadedAudioFile,
     setUploadedAudioFile,
     commentator,
