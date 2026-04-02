@@ -77,5 +77,6 @@ export interface RemotionVideoProps {
   videoVolume?: number;
   musicSrc?: string;
   musicVolume?: number;
+  musicCompressor?: boolean;
   transitionOverride?: string;
 }

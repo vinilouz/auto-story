@@ -1,9 +1,13 @@
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import path from "path";
+import ffmpeg from "ffmpeg-static";
 import { StorageService } from "@/lib/storage";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("media-saver");
+const execFileAsync = promisify(execFile);
 
 const PUBLIC_DIR = path.join(process.cwd(), "public", "projects");
 
@@ -20,6 +24,22 @@ async function writeToFile(urlOrBase64: string, destPath: string): Promise<void>
 
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
+
+async function normalizeLoudness(inputPath: string, outputPath: string): Promise<void> {
+  if (!ffmpeg) return;
+
+  const af =
+    "acompressor=threshold=0.01:ratio=20:knee=1:attack=0.01:release=210:makeup=1:detection=peak," +
+    "alimiter=limit=0.01:attack=0.1:release=210:level_in=1:level_out=1";
+
+  await execFileAsync(ffmpeg, [
+    "-y",
+    "-i", inputPath,
+    "-af", af,
+    "-c:v", "copy",
+    outputPath,
+  ]);
 }
 
 export async function saveAudio(
@@ -61,11 +81,17 @@ export async function saveMusic(
   const dir = path.join(PUBLIC_DIR, projectId, "music");
   ensureDir(dir);
 
-  const filename = "background.mp4";
-  await writeToFile(musicUrlOrBase64, path.join(dir, filename));
-  const publicPath = `/projects/${projectId}/music/${filename}`;
+  const rawName = "background-raw.mp4";
+  const rawPath = path.join(dir, rawName);
+  await writeToFile(musicUrlOrBase64, rawPath);
 
+  const compressedName = "background.mp4";
+  const compressedPath = path.join(dir, compressedName);
+
+  await normalizeLoudness(rawPath, compressedPath);
+
+  const publicPath = `/projects/${projectId}/music/${compressedName}`;
   await StorageService.patchMusic(projectId, publicPath);
-  log.success(`Music saved: ${publicPath}`);
+  log.success(`Music saved (raw + compressed): ${publicPath}`);
   return publicPath;
 }

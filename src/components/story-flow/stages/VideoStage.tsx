@@ -4,6 +4,7 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import type { StoryFlowState } from "../types";
@@ -15,7 +16,7 @@ interface VideoStageProps {
 }
 
 export function VideoStage({ state, actions }: VideoStageProps) {
-  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume, musicUrl, musicVolume, setMusicVolume } =
+  const { video, captionStyle, setCaptionStyle, videoVolume, setVideoVolume, musicUrl, musicVolume, setMusicVolume, musicCompressor, setMusicCompressor } =
     state;
 
   return (
@@ -104,6 +105,15 @@ export function VideoStage({ state, actions }: VideoStageProps) {
                 value={[musicVolume * 100]}
                 onValueChange={(v) => setMusicVolume(v[0] / 100)}
               />
+              <div className="flex items-center gap-2 pt-1">
+                <Switch
+                  checked={musicCompressor}
+                  onCheckedChange={setMusicCompressor}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Compressor (duck on narration)
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -148,7 +158,7 @@ export function VideoStage({ state, actions }: VideoStageProps) {
         )}
         {video.videoProps ? (
           <VideoPlayer
-            props={{ ...video.videoProps, captionStyle, videoVolume, musicVolume }}
+            props={{ ...video.videoProps, captionStyle, videoVolume, musicVolume, musicCompressor }}
           />
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">

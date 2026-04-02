@@ -46,6 +46,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
     musicUrl,
     setMusicUrl,
     musicVolume,
+    musicCompressor,
+    musicRaw,
     uploadedAudioFile,
     audio,
     transcription,
@@ -76,6 +78,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         musicEnabled: music,
         music: musicUrl,
         musicVolume,
+        musicRaw,
         ...extra,
       };
       const saved = await project.save(data);
@@ -100,6 +103,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       music,
       musicUrl,
       musicVolume,
+      musicRaw,
       mode,
       project,
     ],
@@ -922,13 +926,16 @@ export function useStoryFlowActions(state: StoryFlowState) {
       }));
       const alignmentMode =
         mode === "video-story" ? ("video" as const) : ("image" as const);
+      const effectiveMusicUrl = musicUrl && musicRaw
+        ? musicUrl.replace("background.mp4", "background-raw.mp4")
+        : musicUrl ?? undefined;
       await video.generate(
         segs,
         audio.batches,
         transcription.result,
         alignmentMode,
         videoVolume,
-        musicUrl ?? undefined,
+        effectiveMusicUrl,
         musicVolume,
       );
       setStage("video");
@@ -944,6 +951,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     videoVolume,
     musicUrl,
     musicVolume,
+    musicRaw,
     setStage,
   ]);
 
@@ -951,14 +959,14 @@ export function useStoryFlowActions(state: StoryFlowState) {
     if (!video.videoProps) return;
     try {
       await video.render(
-        { ...video.videoProps, videoVolume },
+        { ...video.videoProps, videoVolume, musicVolume, musicCompressor },
         captionStyle,
         project.projectId || undefined,
       );
     } catch (e: any) {
       toast.error(`Render failed: ${e.message}`);
     }
-  }, [video, captionStyle, videoVolume, project.projectId]);
+  }, [video, captionStyle, videoVolume, musicVolume, musicCompressor, project.projectId]);
 
   const downloadZipAction = useCallback(async () => {
     try {

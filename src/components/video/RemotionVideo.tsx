@@ -15,6 +15,8 @@ const PRESENTATIONS: Record<string, any> = {
   slide: slide(),
 };
 
+const DUCK_VOLUME = 0.08;
+
 export const RemotionVideo: React.FC<RemotionVideoProps> = ({
   scenes,
   audioTracks,
@@ -24,12 +26,23 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
   videoVolume,
   musicSrc,
   musicVolume = 0.3,
+  musicCompressor,
 }) => {
+  const isNarrationAt = (frame: number) =>
+    audioTracks.some(
+      (t) => frame >= t.startFrame && frame < t.startFrame + t.durationInFrames,
+    );
+
+  const musicVol = musicCompressor
+    ? (frame: number) =>
+        isNarrationAt(frame) ? DUCK_VOLUME * musicVolume : musicVolume
+    : musicVolume;
+
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
       {/* Background Music */}
       {musicSrc && musicVolume > 0 && (
-        <Audio src={musicSrc} volume={musicVolume} />
+        <Audio src={musicSrc} volume={musicVol} />
       )}
 
       {/* Narration Audio Tracks */}

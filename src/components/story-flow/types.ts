@@ -63,6 +63,10 @@ export interface StoryFlowState {
   setMusicUrl: (url: string | null) => void;
   musicVolume: number;
   setMusicVolume: (volume: number) => void;
+  musicCompressor: boolean;
+  setMusicCompressor: (enabled: boolean) => void;
+  musicRaw: boolean;
+  setMusicRaw: (raw: boolean) => void;
   /** Audio file chosen by the user – only used in the from-audio flow */
   uploadedAudioFile: File | null;
   setUploadedAudioFile: (file: File | null) => void;

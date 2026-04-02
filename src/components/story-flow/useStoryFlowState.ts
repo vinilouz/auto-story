@@ -35,6 +35,8 @@ export function useStoryFlowState(
   const [musicPrompt, setMusicPrompt] = useState("");
   const [musicUrl, setMusicUrl] = useState<string | null>(null);
   const [musicVolume, setMusicVolume] = useState(0.3);
+  const [musicCompressor, setMusicCompressor] = useState(true);
+  const [musicRaw, setMusicRaw] = useState(false);
 
   // from-audio flow: local File object chosen by the user in InputAudioStage
   const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
@@ -178,6 +180,10 @@ export function useStoryFlowState(
     setMusicUrl,
     musicVolume,
     setMusicVolume,
+    musicCompressor,
+    setMusicCompressor,
+    musicRaw,
+    setMusicRaw,
     uploadedAudioFile,
     setUploadedAudioFile,
     commentator,

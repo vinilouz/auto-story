@@ -1,67 +1,12 @@
 "use client";
 
-import { useRef, useState, RefObject } from "react";
 import { Loader2, Music, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
-
-const COMPRESSOR_CONFIG = {
-  threshold: -40,
-  ratio: 20,
-  knee: 0,
-  attack: 0,
-  release: 0.21,
-} as const;
-
-function useAudioDucking(audioRef: RefObject<HTMLAudioElement | null>) {
-  const [isDucked, setIsDucked] = useState(false);
-  const nodes = useRef<{
-    ctx: AudioContext;
-    src: MediaElementAudioSourceNode;
-    comp: DynamicsCompressorNode;
-  } | null>(null);
-
-  const init = () => {
-    if (nodes.current || !audioRef.current) return;
-
-    const AudioCtx =
-      window.AudioContext || (window as any).webkitAudioContext;
-    const ctx = new AudioCtx();
-    const src = ctx.createMediaElementSource(audioRef.current);
-    const comp = ctx.createDynamicsCompressor();
-
-    comp.threshold.value = COMPRESSOR_CONFIG.threshold;
-    comp.ratio.value = COMPRESSOR_CONFIG.ratio;
-    comp.knee.value = COMPRESSOR_CONFIG.knee;
-    comp.attack.value = COMPRESSOR_CONFIG.attack;
-    comp.release.value = COMPRESSOR_CONFIG.release;
-
-    nodes.current = { ctx, src, comp };
-    src.connect(ctx.destination);
-  };
-
-  const toggle = () => {
-    init();
-    if (!nodes.current) return;
-    const { ctx, src, comp } = nodes.current;
-
-    src.disconnect();
-    comp.disconnect();
-
-    if (!isDucked) {
-      src.connect(comp).connect(ctx.destination);
-    } else {
-      src.connect(ctx.destination);
-    }
-
-    setIsDucked((prev) => !prev);
-  };
-
-  return { isDucked, toggle, init };
-}
 
 interface MusicStageProps {
   state: StoryFlowState;
@@ -69,9 +14,11 @@ interface MusicStageProps {
 }
 
 export function MusicStage({ state, actions }: MusicStageProps) {
-  const { musicPrompt, musicUrl, loading } = state;
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const { isDucked, toggle, init } = useAudioDucking(audioRef);
+  const { musicPrompt, musicUrl, loading, musicRaw, setMusicRaw } = state;
+
+  const audioSrc = musicUrl && musicRaw
+    ? musicUrl.replace("background.mp4", "background-raw.mp4")
+    : musicUrl;
 
   return (
     <Card>
@@ -85,29 +32,19 @@ export function MusicStage({ state, actions }: MusicStageProps) {
         {musicUrl ? (
           <div className="space-y-4">
             <audio
-              ref={audioRef}
               controls
               className="w-full"
-              src={musicUrl}
-              onPlay={init}
+              src={audioSrc ?? undefined}
             />
 
-            <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-              <div className="flex-1">
-                <p className="text-sm font-medium">Compressor de Áudio</p>
-                <p className="text-xs text-muted-foreground">
-                  Threshold {COMPRESSOR_CONFIG.threshold} dBFS · Ratio{" "}
-                  {COMPRESSOR_CONFIG.ratio}:1 · Release{" "}
-                  {COMPRESSOR_CONFIG.release}s
-                </p>
-              </div>
-              <Button
-                variant={isDucked ? "default" : "outline"}
-                size="sm"
-                onClick={toggle}
-              >
-                {isDucked ? "LIGADO" : "DESLIGADO"}
-              </Button>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={musicRaw}
+                onCheckedChange={setMusicRaw}
+              />
+              <span className="text-xs text-muted-foreground">
+                {musicRaw ? "Áudio cru" : "Comprimido (acompressor + limiter)"}
+              </span>
             </div>
 
             <div className="flex gap-2">
