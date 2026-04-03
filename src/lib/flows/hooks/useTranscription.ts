@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { notify } from "@/lib/utils/notify";
 import type { TranscriptionResult } from "../types";
 
 export function useTranscription() {
@@ -26,6 +27,7 @@ export function useTranscription() {
         transcriptionUrl: data.transcriptionUrl,
       };
       setResult(newResult);
+      notify("Transcription Ready");
       return newResult;
     } finally {
       setIsLoading(false);
@@ -53,6 +55,7 @@ export function useTranscription() {
         transcriptionUrl: data.transcriptionUrl,
       };
       setResult(newResult);
+      notify("Transcription Ready");
       return newResult;
     } catch {
       setResult((prev) => ({

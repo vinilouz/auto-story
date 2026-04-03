@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { notify } from "@/lib/utils/notify";
 import { type AlignmentMode, alignVideoProps } from "@/lib/video/aligner";
 import type { RemotionVideoProps } from "@/lib/video/types";
 import { getTranscription } from "@/lib/utils/text";
@@ -187,6 +188,7 @@ export function useVideo() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            notify("Video Ready", "Download started");
           } else if (data.type === "error") throw new Error(data.error);
         }
       }

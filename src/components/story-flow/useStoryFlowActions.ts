@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { notify } from "@/lib/utils/notify";
 import {
   COMMENTATOR_IMAGE_GENERATION_PROMPT,
   GENERATE_ENTITY_IMAGE_PROMPT,
@@ -602,6 +603,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         });
         await save({ entities: updatedEnts });
         toast.success(`Generated image for ${e.name}`);
+        notify("Image Ready", e.name);
       } catch {
         setEntities((prev) =>
           prev.map((ent, i) =>
@@ -672,6 +674,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
           return n;
         });
         await save({ segments: updatedSegs });
+        notify("Image Ready", seg?.text?.slice(0, 50));
       } catch {
         setImageStatuses((p) => new Map(p).set(segIndex, "error"));
       }
@@ -809,6 +812,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
 
       setSegments(latestSegs);
       await save({ segments: latestSegs });
+      notify("All Images Ready");
     } catch {
       const errorMap = new Map<number, "error" | "generating">(
         indices.map((i) => [i, "error"]),
@@ -1065,6 +1069,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
             setMusicUrl(event.musicUrl);
             await save({ music: event.musicUrl });
             toast.success("Music generated!");
+            notify("Music Ready");
           }
         }
       }

@@ -30,8 +30,9 @@ async function normalizeLoudness(inputPath: string, outputPath: string): Promise
   if (!ffmpeg) return;
 
   const af =
-    "acompressor=threshold=0.01:ratio=20:knee=1:attack=0.01:release=210:makeup=1:detection=peak," +
-    "alimiter=limit=0.01:attack=0.1:release=210:level_in=1:level_out=1";
+    "compand=attacks=0:decays=0.21:soft-knee=0.01:gain=0" +
+    ":points=-80/-80|-40/-40|-20/-39.8|0/-39.6" +
+    ":delay=0.001";
 
   await execFileAsync(ffmpeg, [
     "-y",

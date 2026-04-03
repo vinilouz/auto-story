@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { notify } from "@/lib/utils/notify";
 import type { AudioBatch } from "../types";
 
 export function useAudio() {
@@ -22,6 +23,7 @@ export function useAudio() {
       if (!res.ok) throw new Error("Audio generation failed");
       const data = await res.json();
       if (data.batches) setBatches(data.batches);
+      notify("Audio Ready");
       return data.batches as AudioBatch[];
     } finally {
       setIsLoading(false);

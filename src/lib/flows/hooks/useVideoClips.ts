@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { notify } from "@/lib/utils/notify";
 import type { Segment } from "../types";
 
 export function useVideoClips() {
@@ -90,6 +91,7 @@ export function useVideoClips() {
             console.log(
               `[video] Batch done: ${data.success} success, ${data.failed} failed`,
             );
+            notify("Video Clips Ready", `${data.success} clips generated`);
           } else if (data.type === "error") {
             console.error("[video] Batch error:", data.error);
           }

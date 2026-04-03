@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStoryFlowState } from "./useStoryFlowState";
 import { useStoryFlowActions } from "./useStoryFlowActions";
@@ -27,6 +27,12 @@ import type { StoryFlowProps, Stage, ExecuteConfig } from "./types";
 export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
   const state = useStoryFlowState(mode, projectId);
   const actions = useStoryFlowActions(state);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const {
     stage,
