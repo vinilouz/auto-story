@@ -20,7 +20,6 @@ import {
   type VideoResponse,
 } from "@/lib/ai/registry";
 
-const TIMEOUT_VIDEO = 120_000;
 const TIMEOUT_MUSIC = 240_000;
 
 async function parseMusicSSE(response: Response): Promise<string> {
@@ -135,7 +134,6 @@ registerProvider({
       creds.apiKey,
       payload,
       {
-        timeoutMs: TIMEOUT_VIDEO,
         actionName: "generateVideo",
         providerAndModel: `louzlabs/${model}`,
       },
