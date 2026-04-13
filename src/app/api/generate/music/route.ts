@@ -1,7 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { existsSync } from "fs";
+import path from "path";
 import { getCredentials } from "@/lib/ai/registry";
 import { apiRequestSSE } from "@/lib/ai/http-client";
 import { saveMusic } from "@/lib/services/media-saver";
+import { StorageService } from "@/lib/storage";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/music");
@@ -14,6 +17,23 @@ const DEFAULT_MUSIC_PROMPT =
 export async function POST(request: NextRequest) {
   try {
     const { projectId, prompt, style } = await request.json();
+
+    if (projectId) {
+      const rawPath = path.join(
+        process.cwd(), "public", "projects", projectId, "music", "background-raw.mp4",
+      );
+      const compressedPath = path.join(
+        process.cwd(), "public", "projects", projectId, "music", "background.mp4",
+      );
+
+      if (existsSync(rawPath) || existsSync(compressedPath)) {
+        const useCompressed = existsSync(compressedPath);
+        const publicPath = `/projects/${projectId}/music/${useCompressed ? "background.mp4" : "background-raw.mp4"}`;
+        await StorageService.patchMusic(projectId, publicPath);
+        log.success(`Music already exists, returning cached: ${publicPath}`);
+        return NextResponse.json({ type: "done", musicUrl: publicPath });
+      }
+    }
 
     const creds = getCredentials("louzlabs");
     if (!creds) {

@@ -928,8 +928,9 @@ export function useStoryFlowActions(state: StoryFlowState) {
         imageUrl: s.imagePath || "",
         videoClipUrl: s.videoClipUrl || undefined,
       }));
-      const alignmentMode =
-        mode === "video-story" ? ("video" as const) : ("image" as const);
+      const alignmentMode = segments.every((s) => !!s.videoClipUrl)
+        ? ("video" as const)
+        : ("image" as const);
       const effectiveMusicUrl = musicUrl && musicRaw
         ? musicUrl.replace("background.mp4", "background-raw.mp4")
         : musicUrl ?? undefined;
@@ -1087,6 +1088,27 @@ export function useStoryFlowActions(state: StoryFlowState) {
     setLoading,
   ]);
 
+  const compressMusic = useCallback(async () => {
+    setLoading(true);
+    try {
+      const pid = project.projectId || state.projectId;
+      const res = await fetch("/api/generate/music/compress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: pid }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Compression failed");
+      const data = await res.json();
+      setMusicUrl(data.musicUrl);
+      await save({ music: data.musicUrl });
+      toast.success("Music compressed!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to compress music");
+    } finally {
+      setLoading(false);
+    }
+  }, [project.projectId, state.projectId, setMusicUrl, save, setLoading]);
+
   const generateCommentatorImage = useCallback(async () => {
     if (!commImagePrompt.trim()) return;
     setLoading(true);
@@ -1143,6 +1165,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     updateSegmentImagePrompt,
     generateMusicPrompt,
     generateMusic,
+    compressMusic,
     generateCommentatorImage,
   };
 }

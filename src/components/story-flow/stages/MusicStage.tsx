@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Music, RefreshCw, Sparkles } from "lucide-react";
+import { Loader2, Music, RefreshCw, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +15,8 @@ interface MusicStageProps {
 
 export function MusicStage({ state, actions }: MusicStageProps) {
   const { musicPrompt, musicUrl, loading, musicRaw, setMusicRaw } = state;
+
+  const needsCompression = musicUrl?.includes("background-raw.mp4");
 
   const audioSrc = musicUrl && musicRaw
     ? musicUrl.replace("background.mp4", "background-raw.mp4")
@@ -41,13 +43,38 @@ export function MusicStage({ state, actions }: MusicStageProps) {
               <Switch
                 checked={musicRaw}
                 onCheckedChange={setMusicRaw}
+                disabled={needsCompression}
               />
               <span className="text-xs text-muted-foreground">
-                {musicRaw ? "Áudio cru" : "Comprimido (acompressor + limiter)"}
+                {musicRaw
+                  ? "Áudio cru"
+                  : needsCompression
+                    ? "Comprimido (indisponível)"
+                    : "Comprimido (acompressor + limiter)"}
               </span>
             </div>
 
             <div className="flex gap-2">
+              {needsCompression && (
+                <Button
+                  onClick={() => actions.compressMusic()}
+                  disabled={loading}
+                  variant="default"
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Comprimindo...
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="mr-2 h-4 w-4" />
+                      Comprimir Áudio
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 onClick={() => actions.generateMusicPrompt()}
                 disabled={loading}

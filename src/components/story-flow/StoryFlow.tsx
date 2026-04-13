@@ -201,7 +201,7 @@ export default function StoryFlow({ mode, projectId, onBack }: StoryFlowProps) {
           fn: actions.generateVideoPreview,
           ok:
             mode === "video-story"
-              ? hasClips || hasTranscription
+              ? hasImages || hasTranscription
               : hasTranscription,
           label: video.videoProps ? "Regenerate" : "Generate Preview",
           busy: video.isGenerating,

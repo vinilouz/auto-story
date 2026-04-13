@@ -26,8 +26,8 @@ function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-async function normalizeLoudness(inputPath: string, outputPath: string): Promise<void> {
-  if (!ffmpeg) return;
+export async function normalizeLoudness(inputPath: string, outputPath: string): Promise<void> {
+  if (!ffmpeg || !existsSync(ffmpeg)) return;
 
   const af =
     "compand=attacks=0:decays=0.21:soft-knee=0.01:gain=0" +
@@ -89,10 +89,16 @@ export async function saveMusic(
   const compressedName = "background.mp4";
   const compressedPath = path.join(dir, compressedName);
 
-  await normalizeLoudness(rawPath, compressedPath);
+  try {
+    await normalizeLoudness(rawPath, compressedPath);
+  } catch (e) {
+    log.warn("Loudness normalization failed, using raw file", e);
+  }
 
-  const publicPath = `/projects/${projectId}/music/${compressedName}`;
+  const useCompressed = existsSync(compressedPath);
+  const finalName = useCompressed ? compressedName : rawName;
+  const publicPath = `/projects/${projectId}/music/${finalName}`;
   await StorageService.patchMusic(projectId, publicPath);
-  log.success(`Music saved (raw + compressed): ${publicPath}`);
+  log.success(`Music saved: ${publicPath}${useCompressed ? " (compressed)" : " (raw fallback)"}`);
   return publicPath;
 }

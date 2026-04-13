@@ -47,14 +47,13 @@ export function calculateMaxStep(
   // ── video-story ───────────────────────────────────────────────────────────
   if (mode === "video-story") {
     if (state.hasVideoProps) return idx("download");
-    if (state.hasClips) {
+    if (state.hasClips || state.hasImages) {
       const musicIdx = stages.indexOf("music");
       if (musicIdx >= 0) {
         return state.hasMusic ? idx("video") : idx("music");
       }
       return idx("video");
     }
-    if (state.hasImages) return idx("clips");
     if (state.hasPrompts) return idx("images");
     if (state.consistency && state.hasEntities) return idx("descriptions");
     if (state.hasSegments)
