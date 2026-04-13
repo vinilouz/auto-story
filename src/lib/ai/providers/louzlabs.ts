@@ -21,8 +21,9 @@ import {
 } from "@/lib/ai/registry";
 
 const TIMEOUT_MUSIC = 240_000;
+const TIMEOUT_VIDEO = 300_000;
 
-async function parseMusicSSE(response: Response): Promise<string> {
+async function parseSSE(response: Response, timeoutMs: number): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("No response body");
 
@@ -31,10 +32,20 @@ async function parseMusicSSE(response: Response): Promise<string> {
 
   const timer = new Promise<never>((_, reject) =>
     setTimeout(
-      () => reject(new Error(`Music timeout after ${TIMEOUT_MUSIC / 1000}s`)),
-      TIMEOUT_MUSIC,
+      () => reject(new Error(`SSE timeout after ${timeoutMs / 1000}s`)),
+      timeoutMs,
     ),
   );
+
+  const processLine = (line: string): string | undefined => {
+    if (!line.startsWith("data: ")) return undefined;
+    const raw = line.slice(6).trim();
+    if (raw === "[DONE]" || raw.startsWith(": ") || !raw) return undefined;
+    const data = JSON.parse(raw);
+    if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+    if (data.url) return data.url;
+    return undefined;
+  };
 
   const read = async () => {
     while (true) {
@@ -47,17 +58,28 @@ async function parseMusicSSE(response: Response): Promise<string> {
 
       for (const chunk of chunks) {
         for (const line of chunk.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (raw === "[DONE]" || raw.startsWith(": ") || !raw) continue;
           try {
-            const data = JSON.parse(raw);
-            if (data.url) return data.url;
-          } catch {}
+            const result = processLine(line);
+            if (result) return result;
+          } catch (err: any) {
+            if (err.message && !err.message.includes("JSON")) throw err;
+          }
         }
       }
     }
-    throw new Error("Music stream ended without URL");
+    
+    if (buffer.trim()) {
+      for (const line of buffer.split("\n")) {
+        try {
+          const result = processLine(line);
+          if (result) return result;
+        } catch (err: any) {
+          if (err.message && !err.message.includes("JSON")) throw err;
+        }
+      }
+    }
+    
+    throw new Error("Stream ended without URL");
   };
 
   try {
@@ -129,18 +151,19 @@ registerProvider({
       payload.images = [req.referenceImage];
     }
 
-    const data = await apiRequest<{ url: string }>(
+    const res = await apiRequestSSE(
       `${creds.baseUrl}/v1/video/generations`,
       creds.apiKey,
       payload,
       {
+        timeoutMs: TIMEOUT_VIDEO,
         actionName: "generateVideo",
         providerAndModel: `louzlabs/${model}`,
       },
     );
 
-    if (!data.url) throw new Error("No video URL in response");
-    return { videoUrl: data.url };
+    const videoUrl = await parseSSE(res, TIMEOUT_VIDEO);
+    return { videoUrl };
   },
 
   async generateMusic(model, req: MusicRequest, creds): Promise<MusicResponse> {
@@ -151,6 +174,7 @@ registerProvider({
         prompt:
           req.prompt ||
           "Soft spiritual instrumental, gentle piano, warm strings",
+        style: req.style,
         instrumental: req.instrumental,
       },
       {
@@ -160,7 +184,7 @@ registerProvider({
       },
     );
 
-    const musicUrl = await parseMusicSSE(res);
+    const musicUrl = await parseSSE(res, TIMEOUT_MUSIC);
     return { musicUrl };
   },
 

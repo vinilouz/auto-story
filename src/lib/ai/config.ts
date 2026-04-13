@@ -17,7 +17,7 @@ export const DEFAULT_CONCURRENCY = 3;
 export const DEFAULT_MAX_RETRIES = 4;
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
-  generateText: [{ provider: "louzlabs", model: "gemini-3-flash-preview" }],
+  generateText: [{ provider: "louzlabs", model: "gemini-3.1-flash-lite-preview" }],
   generateImage: [{ provider: "louzlabs" }],
   generateAudio: [{ provider: "louzlabs" }],
   generateVideo: [

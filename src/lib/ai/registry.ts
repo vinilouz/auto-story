@@ -42,6 +42,7 @@ export interface VideoResponse {
 
 export interface MusicRequest {
   prompt?: string;
+  style?: string;
   instrumental: boolean;
 }
 export interface MusicResponse {

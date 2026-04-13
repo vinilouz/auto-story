@@ -13,7 +13,7 @@ const DEFAULT_MUSIC_PROMPT =
 
 export async function POST(request: NextRequest) {
   try {
-    const { projectId, prompt } = await request.json();
+    const { projectId, prompt, style } = await request.json();
 
     const creds = getCredentials("louzlabs");
     if (!creds) {
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
             creds.apiKey,
             {
               prompt: prompt || DEFAULT_MUSIC_PROMPT,
+              style,
               instrumental: true,
             },
             {

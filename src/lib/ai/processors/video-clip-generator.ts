@@ -53,6 +53,7 @@ export async function generateVideoClipBatch(
 
   await executeBatch("generateVideo", resolved, {
     maxRetries: 3,
+    concurrency: 2,
     onResult: (br: BatchResult<VideoResponse>) => {
       const segmentIndex = requests[br.id].index;
 
