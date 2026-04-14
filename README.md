@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Auto Story
 
-## Getting Started
+Transforme textos em vídeos narrados, com imagens geradas por IA, áudio profissional e trilha sonora.
 
-First, run the development server:
+## O que é
+
+Você escreve ou cola um roteiro. O Auto Story transforma esse roteiro em um vídeo completo: cenas ilustradas, narração com voz sintética, legendas sincronizadas e música de fundo. Tudo gerado automaticamente. No final, você baixa o vídeo pronto e todos os arquivos individuais (imagens, áudios, transcrições).
+
+## Como funciona
+
+O processo passa por 4 etapas, em sequência:
+
+**1. Roteiro** — Você escreve ou cola o texto da sua história. Pode ser um conto, um roteiro de vídeo, um capítulo de livro, qualquer coisa. Também escolhe o idioma (português, inglês ou espanhol), o estilo visual e a voz do narrador.
+
+**2. Geração** — O sistema divide o texto em cenas e, para cada cena, gera:
+- Uma imagem no estilo que você escolheu
+- A narração em áudio com a voz selecionada
+- Legendas sincronizadas com a fala
+- Música de fundo (opcional)
+
+**3. Montagem** — Todas as cenas são montadas em sequência com transições, formando o vídeo final.
+
+**4. Exportação** — Você assiste ao preview e baixa um pacote ZIP com o vídeo MP4, as imagens, os áudios, as legendas e os metadados do projeto.
+
+## Modos de criação
+
+Existem 4 formas de começar um projeto:
+
+| Modo | Quando usar |
+|------|-------------|
+| **História simples** | Você tem um texto e quer transformar em vídeo narrado com imagens |
+| **Com comentarista** | Mesmo que o anterior, mas com um personagem extra que comenta a história (como um narrador-espectador com personalidade própria) |
+| **História em vídeo** | Em vez de imagens estáticas, cada cena vira um clipe de vídeo gerado por IA |
+| **A partir de áudio** | Você já tem uma gravação de áudio (podcast, narração, entrevista). Faz o upload e o sistema transforma em vídeo |
+
+## Funcionalidades
+
+- **3 idiomas** — Português, inglês e espanhol
+- **Várias vozes** — Escolha entre dezenas de vozes sintéticas
+- **Estilo visual** — Defina o estilo das imagens (realista, desenho, pintura, etc.)
+- **Consistência de personagens** — Mantém a aparência dos personagens consistente entre cenas
+- **Música de fundo** — Gerada automaticamente no estilo da história
+- **Comentarista** — Adiciona um personagem que comenta a história com voz e personalidade próprias
+- **Clipes de vídeo** — Em vez de imagens estáticas, gera vídeos curtos por cena
+- **Pacote completo** — Exporta tudo: vídeo, imagens, áudios, legendas e dados do projeto
+
+## Começando
+
+### Pré-requisitos
+
+- Node.js 18+
+- npm, yarn, pnpm ou bun
+
+### Instalação
+
+```bash
+# Clone o repositório
+git clone <url-do-repo>
+cd auto-story
+
+# Instale as dependências
+npm install
+
+# Configure as variáveis de ambiente
+cp .env.example .env.local
+```
+
+Edite o `.env.local` com suas chaves de API (serviços de IA para geração de imagens, áudio e vídeo).
+
+### Rodando
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000) no navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build para produção
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+npm start
+```
