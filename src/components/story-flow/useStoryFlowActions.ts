@@ -10,6 +10,7 @@ import {
 } from "@/lib/ai/prompts/prompts";
 import { splitTranscriptionByDuration } from "@/lib/flows/hooks";
 import type { StoryFlowState } from "./types";
+import type { AlignmentMode } from "@/lib/video/aligner";
 
 export function useStoryFlowActions(state: StoryFlowState) {
   const {
@@ -928,7 +929,8 @@ export function useStoryFlowActions(state: StoryFlowState) {
         imageUrl: s.imagePath || "",
         videoClipUrl: s.videoClipUrl || undefined,
       }));
-      const alignmentMode = "hybrid" as const;
+      const hasAnyClip = segs.some((s) => s.videoClipUrl);
+      const alignmentMode = (hasAnyClip ? "hybrid" : "image") as AlignmentMode;
       const effectiveMusicUrl = musicUrl && musicRaw
         ? musicUrl.replace("background.mp4", "background-raw.mp4")
         : musicUrl ?? undefined;

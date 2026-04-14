@@ -151,7 +151,7 @@ registerProvider({
       payload.images = [req.referenceImage];
     }
 
-    const res = await apiRequestSSE(
+    const data = await apiRequest<{ url?: string; b64_json?: string }>(
       `${creds.baseUrl}/v1/video/generations`,
       creds.apiKey,
       payload,
@@ -162,7 +162,8 @@ registerProvider({
       },
     );
 
-    const videoUrl = await parseSSE(res, TIMEOUT_VIDEO);
+    const videoUrl = data.url;
+    if (!videoUrl) throw new Error("No video URL in response");
     return { videoUrl };
   },
 
