@@ -1,0 +1,193 @@
+{
+  "phase": "executing",
+  "problem": "we need to fix erros like  when we create story in video flow, we want to see preview and render if wanted, before all video-clips are created, just filling the image in the time with the image",
+  "doubts": [
+    {
+      "id": "D001",
+      "question": "Should preview auto-refresh as new video clips finish generating, or does the user manually re-trigger \"Generate Preview\"?",
+      "why": "Determines whether we need a polling/watch mechanism or just fix the one-shot generation logic.",
+      "defaultAnswer": "Manual re-trigger — user clicks \"Generate Preview\" again after clips finish.",
+      "resolved": true,
+      "answer": "Manual re-trigger — user clicks \"Generate Preview\" again after clips finish."
+    },
+    {
+      "id": "D002",
+      "question": "For segments with no video clip yet, what duration should be used for alignment — the audio segment duration or a fixed default?",
+      "why": "Video clips have natural duration from the AI output. Static images need a synthetic duration. Current alignVideoProps may not handle mixed durations correctly.",
+      "defaultAnswer": "Use audio-derived duration for image segments (same as current \"image\" alignment mode).",
+      "resolved": true,
+      "answer": "the rule of duration still the same, aways when video-flow is 8s fixed. AWAYS and this can be changed. if one or more isnt 8s exacly its a BIG mistake"
+    },
+    {
+      "id": "D003",
+      "question": "When a video clip later becomes available, should a previously rendered MP4 be considered stale, or is the user responsible for re-rendering?",
+      "why": "Impacts whether we need versioning/cache-busting on videoProps or render output.",
+      "defaultAnswer": "Manual — user re-generates preview and re-renders.",
+      "resolved": true,
+      "answer": "Manual — user re-generates preview and re-renders."
+    },
+    {
+      "id": "D004",
+      "question": "Are there error states where some video clips fail permanently? Should those segments remain as images forever?",
+      "why": "If clips can fail, the mixed-mode preview is the final state, not a transient one. Affects whether we need a \"retry failed clips\" mechanism.",
+      "defaultAnswer": "Failed clips stay as images. User can retry from clips stage.",
+      "resolved": true,
+      "answer": "Failed clips stay as images. User can retry from clips stage."
+    },
+    {
+      "id": "D005",
+      "question": "Does the current alignVideoProps function support mixed alignment (some segments video, some image) or only all-video or all-image?",
+      "why": "If alignVideoProps only supports uniform mode, it needs modification for mixed segments.",
+      "defaultAnswer": "It likely only supports uniform mode based on the alignmentMode parameter being per-composition, not per-segment.",
+      "resolved": true,
+      "answer": "i think we can make one new alignVideoProps thats works for both method and any other future method like \"components\" video=xxx image=yyy otherFuture=zzz"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Create HybridAlignmentStrategy in aligner.ts",
+      "description": "Create a new `HybridAlignmentStrategy` class in `src/lib/video/aligner.ts`. This strategy handles mixed media — segments with `videoClipUrl` render as video clips, segments without fall back to static images with Ken Burns effects. All segments use a fixed 8s duration (no per-segment metadata loading).\n\n**Changes to `src/lib/video/aligner.ts`:**\n\n1. Add constant `FIXED_CLIP_DURATION_SECONDS = 8` at module scope.\n\n2. Add `\"hybrid\"` to the `AlignmentMode` type:\n   ```typescript\n   export type AlignmentMode = \"image\" | \"video\" | \"hybrid\";\n   ```\n\n3. Create `HybridAlignmentStrategy` class implementing `AlignmentStrategy`:\n   - Same `PLAYBACK_RATE = 0.92` and `TRANSITIONS` array as `ContinuousAlignmentStrategy`.\n   - Add `EFFECTS` array: `[\"zoom-in\", \"zoom-out\", \"pan-left\", \"pan-right\"]` for image segments.\n   - Accept `fixedClipDuration` (number, default 8) in the alignment context (extend `AlignmentContext` with optional `fixedClipDuration?: number`).\n\n   **align() method logic:**\n   - **Audio tracks:** identical to `ContinuousAlignmentStrategy` — iterate `transcriptionResults`, build `audioTracks[]` from `audioDurations`, sum `totalAudioDurationSeconds`. Throw if any `audioDurations[i]` is missing/zero.\n   - **Scenes loop** (for each segment):\n     - `naturalDurationSeconds = fixedClipDuration` (always 8, not loaded from media)\n     - `slowedDurationSeconds = naturalDurationSeconds / PLAYBACK_RATE`\n     - `naturalFrames = Math.round(naturalDurationSeconds * fps)` = 192\n     - `slowedFrames = Math.round(slowedDurationSeconds * fps)` ≈ 209\n     - `transitionFrames = slowedFrames - naturalFrames` ≈ 17\n     - **If `segment.videoClipUrl` exists:** scene gets `videoClipUrl`, `playbackRate: 0.92`, `effect: \"static\"`\n     - **If no `videoClipUrl`:** scene gets `videoClipUrl: undefined`, `playbackRate: undefined`, `effect: random pick from EFFECTS`\n     - Transition: same as Continuous — cycle through `TRANSITIONS`, only on non-last segments, `{ type, durationInFrames: transitionFrames }`\n     - Build `debug` object same as Continuous\n   - **Total duration:** identical calculation to Continuous — subtract overlapping transition frames, assert `totalAudioFrames <= totalVideoFrames`, set `totalFrames = totalAudioFrames`.\n   - **Captions:** identical to `ContinuousAlignmentStrategy` — iterate words per batch, apply `globalTimeOffset`.\n\n4. Update `alignVideoProps()` function:\n   - Add parameter `fixedClipDuration?: number` (default 8) to the function signature, after `videoVolume`.\n   - Add dispatch case for `mode === \"hybrid\"`:\n     ```typescript\n     if (mode === \"hybrid\") {\n       const strategy = new HybridAlignmentStrategy();\n       return {\n         ...strategy.align({\n           segments,\n           transcriptionResults,\n           audioUrls,\n           audioDurations,\n           fps,\n           fixedClipDuration: fixedClipDuration ?? FIXED_CLIP_DURATION_SECONDS,\n         }),\n         videoVolume,\n       };\n     }\n     ```\n   - Keep existing \"image\" and \"video\" branches unchanged.\n\n5. Log with `logger.info(\"Hybrid Alignment Complete.\", { scenes, videoCount, imageCount, ... })` — include counts of video vs image segments for debug visibility.\n\n**Do NOT modify** existing strategies (PrecisionAlignmentStrategy, ContinuousAlignmentStrategy, ImageAlignmentStrategy). They stay backward-compatible.",
+      "dependencies": [],
+      "status": "done",
+      "files": [
+        "src/lib/video/aligner.ts"
+      ],
+      "acceptanceCriteria": [
+        "`AlignmentMode` type includes `\"hybrid\"` literal",
+        "`HybridAlignmentStrategy` class exists with `align()` method returning `RemotionVideoProps`",
+        "For segment with `videoClipUrl`: output scene has `videoClipUrl` set, `playbackRate: 0.92`, `effect: \"static\"`",
+        "For segment without `videoClipUrl`: output scene has `videoClipUrl` undefined, no `playbackRate`, effect is one of `[\"zoom-in\", \"zoom-out\", \"pan-left\", \"pan-right\"]`",
+        "All segments have identical `durationInFrames` derived from fixed 8s / PLAYBACK_RATE",
+        "`alignVideoProps()` accepts `fixedClipDuration` parameter and dispatches to `HybridAlignmentStrategy` when `mode === \"hybrid\"`",
+        "Existing \"image\" and \"video\" modes produce identical output as before (no regression)",
+        "Code compiles without TypeScript errors"
+      ],
+      "attempts": 1,
+      "result": {
+        "summary": "Added `HybridAlignmentStrategy` class with mixed video/image segment support. Segments with `videoClipUrl` render as video clips (playbackRate 0.92, effect \"static\"); segments without fall back to images with random Ken Burns effects. All segments use fixed 8s duration. Updated `AlignmentMode` type to include `\"hybrid\"`. Updated `alignVideoProps()` to accept `fixedClipDuration` param and dispatch to `HybridAlignmentStrategy` when `mode === \"hybrid\"`.",
+        "filesChanged": [
+          "src/lib/video/aligner.ts`: Added `FIXED_CLIP_DURATION_SECONDS` constant, extended `AlignmentContext` with `fixedClipDuration`, added `HybridAlignmentStrategy` class, updated `AlignmentMode` union type, updated `alignVideoProps()` signature and dispatch logic."
+        ],
+        "completedAt": "2026-04-13T22:47:19.323Z"
+      }
+    },
+    {
+      "id": "002",
+      "title": "Update useVideo.ts generate() for mixed segments",
+      "description": "Modify `src/lib/flows/hooks/useVideo.ts` `generate()` function to handle mixed video/image segments instead of hard-rejecting when a segment lacks `videoClipUrl`.\n\n**Changes to `src/lib/flows/hooks/useVideo.ts`:**\n\n1. **Lines 88-120 (videoDurations loading):** Replace the rejection logic. When `alignmentMode === \"hybrid\"` or `\"video\"`:\n   - If `seg.videoClipUrl` exists: load metadata as before (resolve with `el.duration`)\n   - If `seg.videoClipUrl` is missing AND `alignmentMode === \"hybrid\"`: resolve with `0` (duration comes from `fixedClipDuration` in the strategy)\n   - If `seg.videoClipUrl` is missing AND `alignmentMode === \"video\"`: still reject with existing error (backward compat)\n   \n   The existing code at line 92-100 already has the `resolve(0)` path for non-video modes — the fix is to include `\"hybrid\"` in that path:\n   ```typescript\n   if (!seg.videoClipUrl) {\n     if (alignmentMode === \"video\") {\n       return reject(new Error(...));\n     }\n     return resolve(0);\n   }\n   ```\n   This already works correctly — `\"hybrid\"` falls through to `resolve(0)`. **No change needed here** — just verify this is the case.\n\n2. **Lines 122-131 (alignVideoProps call):** Add `fixedClipDuration` parameter:\n   ```typescript\n   const props = alignVideoProps(\n     segments,\n     transcriptions,\n     validUrls,\n     audioDurations,\n     videoDurations,\n     undefined,\n     alignmentMode,\n     videoVolume,\n     8, // fixedClipDuration\n   );\n   ```\n   The `8` is passed as the new `fixedClipDuration` parameter added to `alignVideoProps` in T001.\n\n**Key integration point:** The `alignVideoProps` signature change from T001. This task depends on T001 being complete.\n\n**Backward compat:** When `alignmentMode === \"video\"`, behavior is identical to current — every segment must have `videoClipUrl` and metadata is loaded. When `alignmentMode === \"image\"`, `fixedClipDuration` is unused (PrecisionAlignmentStrategy ignores it).",
+      "dependencies": [
+        "001"
+      ],
+      "status": "done",
+      "files": [
+        "src/lib/flows/hooks/useVideo.ts"
+      ],
+      "acceptanceCriteria": [
+        "`generate()` does NOT throw when called with `alignmentMode=\"hybrid\"` and some segments missing `videoClipUrl`",
+        "Segments with `videoClipUrl` still load video metadata via `document.createElement(\"video\")`",
+        "Segments without `videoClipUrl` in `\"hybrid\"` mode resolve with duration `0` (no video element created)",
+        "`fixedClipDuration` (value `8`) is passed as the last argument to `alignVideoProps()`",
+        "`alignmentMode=\"video\"` still rejects on missing `videoClipUrl` (backward compat)",
+        "`alignmentMode=\"image\"` works unchanged"
+      ],
+      "attempts": 1,
+      "result": {
+        "summary": "Added `fixedClipDuration: 8` as the last argument to the `alignVideoProps()` call in `useVideo.ts`. Verified that the existing `videoDurations` logic at lines 92-101 already correctly handles `\"hybrid\"` mode — it only rejects on missing `videoClipUrl` when `alignmentMode === \"video\"`, and resolves `0` for all other modes including `\"hybrid\"`.",
+        "filesChanged": [
+          "src/lib/flows/hooks/useVideo.ts`: Added `8` as `fixedClipDuration` argument to `alignVideoProps()` call (line 131)"
+        ],
+        "completedAt": "2026-04-13T22:49:11.912Z"
+      }
+    },
+    {
+      "id": "003",
+      "title": "Replace binary clip check with hybrid mode in useStoryFlowActions",
+      "description": "Modify `src/components/story-flow/useStoryFlowActions.ts` to always use `\"hybrid\"` alignment mode for video preview generation, removing the binary all-or-nothing clip check.\n\n**Changes to `src/components/story-flow/useStoryFlowActions.ts`:**\n\n1. **Lines 931-933** — Replace the binary alignment mode selection:\n   ```typescript\n   // BEFORE:\n   const alignmentMode = segments.every((s) => !!s.videoClipUrl)\n     ? (\"video\" as const)\n     : (\"image\" as const);\n\n   // AFTER:\n   const alignmentMode = \"hybrid\" as const;\n   ```\n\n2. That is the only change. Everything downstream already works:\n   - `video.generate()` (updated in T002) accepts `\"hybrid\"` mode\n   - `alignVideoProps()` (updated in T001) dispatches to `HybridAlignmentStrategy`\n   - `Scene.tsx` already handles `videoClipUrl → imageUrl` fallback per scene\n   - `setStage(\"video\")` still fires on success\n\n**Behavior change:**\n- Before: no clips ready → \"image\" mode, all clips ready → \"video\" mode, partial clips → \"image\" mode (wastes available clips)\n- After: always \"hybrid\" mode — any mix of clips and images works. All clips = all video scenes. No clips = all image scenes. Partial = mixed.",
+      "dependencies": [
+        "002"
+      ],
+      "status": "done",
+      "files": [
+        "src/components/story-flow/useStoryFlowActions.ts"
+      ],
+      "acceptanceCriteria": [
+        "Line referencing `segments.every((s) => !!s.videoClipUrl)` is replaced with `const alignmentMode = \"hybrid\" as const`",
+        "Preview generates successfully when SOME segments have `videoClipUrl` and others don't",
+        "Preview generates successfully when NO segments have `videoClipUrl` (all images with Ken Burns)",
+        "Preview generates successfully when ALL segments have `videoClipUrl` (all video, same as before)",
+        "`setStage(\"video\")` still called on successful generation",
+        "Error handling (toast.error) still fires on failure — no change"
+      ],
+      "attempts": 1,
+      "result": {
+        "summary": "Replaced binary `segments.every()` alignment mode check with constant `\"hybrid\"` mode in `generateVideoPreview`. Preview now works with any mix of video clips and images.",
+        "filesChanged": [
+          "src/components/story-flow/useStoryFlowActions.ts`: Lines 931-933 — `alignmentMode` now always `\"hybrid\"` instead of conditional `\"video\"`/`\"image\"`"
+        ],
+        "completedAt": "2026-04-13T22:50:28.542Z"
+      }
+    }
+  ],
+  "currentTaskIndex": 0,
+  "maxRetries": 3,
+  "createdAt": "2026-04-13T22:28:28.454Z",
+  "updatedAt": "2026-04-13T22:50:55.288Z",
+  "_analysis": {
+    "rewrite": "In the \"video-story\" flow, video clips are generated asynchronously per-segment via external AI APIs. \nThe current code blocks preview generation until either ALL segments have videoClipUrl (video mode) \nor NONE do (image mode). If some clips are ready and others are still processing, preview fails or \nfalls back entirely to static images — the user sees nothing until every clip finishes.\n\nRequired behavior: Allow preview and render while video clips are being generated. Segments that \nhave a completed videoClipUrl should display their clip; segments still pending should display \ntheir static image (imageUrl) as a placeholder, maintaining correct timing/alignment for both. \nThe preview should be generatable and updatable as clips become available, not gated on all clips \nbeing complete.\n\nConstraints:\n- Alignment timing must remain correct regardless of mix (clips + images)\n- Audio/transcription must still be complete before preview (no change)\n- Scene.tsx already handles fallback (videoClipUrl → imageUrl) at render time\n- The gap is in useVideo.ts generate() and useStoryFlowActions alignmentMode logic",
+    "assumptions": [
+      "Standard assumptions"
+    ],
+    "doubts": [
+      {
+        "id": "D001",
+        "question": "Should preview auto-refresh as new video clips finish generating, or does the user manually re-trigger \"Generate Preview\"?",
+        "why": "Determines whether we need a polling/watch mechanism or just fix the one-shot generation logic.",
+        "defaultAnswer": "Manual re-trigger — user clicks \"Generate Preview\" again after clips finish.",
+        "resolved": true,
+        "answer": "Manual re-trigger — user clicks \"Generate Preview\" again after clips finish."
+      },
+      {
+        "id": "D002",
+        "question": "For segments with no video clip yet, what duration should be used for alignment — the audio segment duration or a fixed default?",
+        "why": "Video clips have natural duration from the AI output. Static images need a synthetic duration. Current alignVideoProps may not handle mixed durations correctly.",
+        "defaultAnswer": "Use audio-derived duration for image segments (same as current \"image\" alignment mode).",
+        "resolved": true,
+        "answer": "the rule of duration still the same, aways when video-flow is 8s fixed. AWAYS and this can be changed. if one or more isnt 8s exacly its a BIG mistake"
+      },
+      {
+        "id": "D003",
+        "question": "When a video clip later becomes available, should a previously rendered MP4 be considered stale, or is the user responsible for re-rendering?",
+        "why": "Impacts whether we need versioning/cache-busting on videoProps or render output.",
+        "defaultAnswer": "Manual — user re-generates preview and re-renders.",
+        "resolved": true,
+        "answer": "Manual — user re-generates preview and re-renders."
+      },
+      {
+        "id": "D004",
+        "question": "Are there error states where some video clips fail permanently? Should those segments remain as images forever?",
+        "why": "If clips can fail, the mixed-mode preview is the final state, not a transient one. Affects whether we need a \"retry failed clips\" mechanism.",
+        "defaultAnswer": "Failed clips stay as images. User can retry from clips stage.",
+        "resolved": true,
+        "answer": "Failed clips stay as images. User can retry from clips stage."
+      },
+      {
+        "id": "D005",
+        "question": "Does the current alignVideoProps function support mixed alignment (some segments video, some image) or only all-video or all-image?",
+        "why": "If alignVideoProps only supports uniform mode, it needs modification for mixed segments.",
+        "defaultAnswer": "It likely only supports uniform mode based on the alignmentMode parameter being per-composition, not per-segment.",
+        "resolved": true,
+        "answer": "i think we can make one new alignVideoProps thats works for both method and any other future method like \"components\" video=xxx image=yyy otherFuture=zzz"
+      }
+    ],
+    "scopeIn": [
+      "As described"
+    ],
+    "scopeOut": [
+      "Not specified"
+    ],
+    "criteria": [
+      "Working implementation"
+    ]
+  }
+}

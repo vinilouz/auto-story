@@ -928,9 +928,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         imageUrl: s.imagePath || "",
         videoClipUrl: s.videoClipUrl || undefined,
       }));
-      const alignmentMode = segments.every((s) => !!s.videoClipUrl)
-        ? ("video" as const)
-        : ("image" as const);
+      const alignmentMode = "hybrid" as const;
       const effectiveMusicUrl = musicUrl && musicRaw
         ? musicUrl.replace("background.mp4", "background-raw.mp4")
         : musicUrl ?? undefined;

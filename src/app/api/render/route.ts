@@ -5,7 +5,6 @@ import fs from "node:fs";
 import path from "node:path";
 // @ts-expect-error
 import ffprobe from "ffprobe-static";
-import os from "node:os";
 import { type NextRequest, NextResponse } from "next/server";
 import { ACTIVE_RENDERER, RENDERER } from "@/lib/video/config";
 import { renderWithMediabunny } from "@/lib/video/mediabunny";
@@ -82,7 +81,52 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
     : undefined,
 });
 
-const RENDER_CONCURRENCY = Math.max(1, Math.floor(os.cpus().length / 2));
+const RENDER_CONCURRENCY = 10;
+
+async function checkUrl(url: string): Promise<{ url: string; ok: boolean; status?: number }> {
+  if (!url || url.startsWith("data:")) return { url, ok: true };
+  try {
+    const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(8000) });
+    return { url, ok: res.ok, status: res.status };
+  } catch {
+    return { url, ok: false };
+  }
+}
+
+async function validateAssets(
+  props: Record<string, unknown>,
+): Promise<{ valid: boolean; broken: string[] }> {
+  const urls: string[] = [];
+
+  const scenes = props.scenes as Array<Record<string, unknown>> | undefined;
+  if (scenes) {
+    for (const s of scenes) {
+      if (s.imageUrl) urls.push(s.imageUrl as string);
+      if (s.videoClipUrl) urls.push(s.videoClipUrl as string);
+    }
+  }
+
+  const audioTracks = props.audioTracks as Array<Record<string, unknown>> | undefined;
+  if (audioTracks) {
+    for (const t of audioTracks) {
+      if (t.src) urls.push(t.src as string);
+    }
+  }
+
+  if (props.musicSrc) urls.push(props.musicSrc as string);
+
+  const uniqueUrls = [...new Set(urls)];
+  const results = await Promise.all(uniqueUrls.map(checkUrl));
+  const broken = results.filter((r) => !r.ok).map((r) => r.url);
+
+  if (broken.length > 0) {
+    log.error(`Asset validation failed: ${broken.length}/${uniqueUrls.length} URLs broken`);
+  } else {
+    log.info(`Asset validation passed: ${uniqueUrls.length} URLs OK`);
+  }
+
+  return { valid: broken.length === 0, broken };
+}
 
 export async function POST(req: NextRequest) {
   let tempOutput = "";
@@ -124,7 +168,7 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: unknown) {
     log.error("Render route error", error);
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
+    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { });
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to render",
@@ -144,11 +188,25 @@ async function handleMediabunnyRender(
 
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
       const sendEvent = (data: Record<string, unknown>) => {
+        if (closed) return;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
       try {
+        sendEvent({ type: "progress", progress: 0, stage: "validating" });
+        const { valid, broken } = await validateAssets(props);
+        if (!valid) {
+          sendEvent({
+            type: "error",
+            error: `Broken assets (${broken.length}): ${broken.join(", ")}`,
+          });
+          closed = true;
+          controller.close();
+          return;
+        }
+
         sendEvent({ type: "progress", progress: 0, stage: "rendering" });
 
         const { outputPath, videoUrl } = getOutputPath(projectId);
@@ -168,6 +226,7 @@ async function handleMediabunnyRender(
         log.success(`Mediabunny render complete: ${videoUrl}`);
         sendEvent({ type: "progress", progress: 100, stage: "complete" });
         sendEvent({ type: "complete", videoUrl });
+        closed = true;
         controller.close();
       } catch (error: unknown) {
         log.error("Mediabunny render failed", error);
@@ -175,6 +234,7 @@ async function handleMediabunnyRender(
           type: "error",
           error: error instanceof Error ? error.message : "Render failed",
         });
+        closed = true;
         controller.close();
       }
     },
@@ -204,11 +264,25 @@ async function handleRemotionRender(
 
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
       const sendEvent = (data: Record<string, unknown>) => {
+        if (closed) return;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
       try {
+        sendEvent({ type: "progress", progress: 0, stage: "validating" });
+        const { valid, broken } = await validateAssets(props);
+        if (!valid) {
+          sendEvent({
+            type: "error",
+            error: `Broken assets (${broken.length}): ${broken.join(", ")}`,
+          });
+          closed = true;
+          controller.close();
+          return;
+        }
+
         sendEvent({ type: "progress", progress: 0, stage: "bundling" });
         let totalFrames = (props.durationInFrames as number) || 1;
 
@@ -254,6 +328,7 @@ async function handleRemotionRender(
               progress: 0,
               stage: "rendering",
               totalFrames,
+              renderStartMs: Date.now(),
             });
           },
           onProgress: (progress) => {
@@ -274,15 +349,17 @@ async function handleRemotionRender(
 
         log.success(`Remotion render complete: ${videoUrl}`);
         sendEvent({ type: "complete", videoUrl });
+        closed = true;
         controller.close();
       } catch (error: unknown) {
         log.error("Remotion render failed", error);
         if (fs.existsSync(outputPath))
-          fs.promises.unlink(outputPath).catch(() => {});
+          fs.promises.unlink(outputPath).catch(() => { });
         sendEvent({
           type: "error",
           error: error instanceof Error ? error.message : "Render failed",
         });
+        closed = true;
         controller.close();
       }
     },

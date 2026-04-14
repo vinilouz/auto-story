@@ -10,6 +10,8 @@ import type {
   TranscriptionWord,
 } from "../types";
 
+const MEDIA_METADATA_TIMEOUT_MS = 8000;
+
 export function useVideo() {
   const [videoProps, setVideoProps] = useState<RemotionVideoProps | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,6 +21,7 @@ export function useVideo() {
     stage: string;
     renderedFrames?: number;
     totalFrames?: number;
+    remainingSeconds?: number;
   } | null>(null);
 
   const generate = async (
@@ -70,7 +73,7 @@ export function useVideo() {
             new Promise<number>((resolve, reject) => {
               const timeout = setTimeout(
                 () => reject(new Error(`Audio metadata timeout: ${url}`)),
-                8000,
+                MEDIA_METADATA_TIMEOUT_MS,
               );
               const el = new Audio(url);
               el.onloadedmetadata = () => {
@@ -85,42 +88,83 @@ export function useVideo() {
         ),
       );
 
-      const videoDurations = await Promise.all(
-        segments.map(
-          (seg, i) =>
-            new Promise<number>((resolve, reject) => {
-              if (!seg.videoClipUrl) {
-                if (alignmentMode === "video") {
-                  return reject(
-                    new Error(
-                      `[generate] Segment ${i} ("${seg.id}") has no videoClipUrl but alignmentMode is "video".`,
-                    ),
-                  );
+      // In hybrid mode: validate clips — strip videoClipUrl for corrupt/inaccessible files
+      const validatedSegments =
+        alignmentMode === "hybrid"
+          ? await Promise.all(
+              segments.map(async (seg) => {
+                if (!seg.videoClipUrl) return seg;
+                try {
+                  await new Promise<void>((resolve, reject) => {
+                    const timeout = setTimeout(
+                      () => reject(new Error("timeout")),
+                      MEDIA_METADATA_TIMEOUT_MS,
+                    );
+                    const el = document.createElement("video");
+                    el.preload = "metadata";
+                    el.onloadedmetadata = () => {
+                      clearTimeout(timeout);
+                      resolve();
+                    };
+                    el.onerror = () => {
+                      clearTimeout(timeout);
+                      reject(new Error("load failed"));
+                    };
+                    el.src = seg.videoClipUrl!;
+                  });
+                  return seg;
+                } catch {
+                  return { ...seg, videoClipUrl: undefined };
                 }
-                return resolve(0);
-              }
-              const timeout = setTimeout(
-                () =>
-                  reject(new Error(`Video load error: ${seg.videoClipUrl}`)),
-                8000,
-              );
-              const el = document.createElement("video");
-              el.preload = "metadata";
-              el.onloadedmetadata = () => {
-                clearTimeout(timeout);
-                resolve(el.duration);
-              };
-              el.onerror = () => {
-                clearTimeout(timeout);
-                reject(new Error(`Video load error: ${seg.videoClipUrl}`));
-              };
-              el.src = seg.videoClipUrl;
-            }),
-        ),
-      );
+              }),
+            )
+          : segments;
+
+      const videoDurations =
+        alignmentMode === "hybrid"
+          ? validatedSegments.map(() => 0)
+          : await Promise.all(
+              segments.map(
+                (seg, i) =>
+                  new Promise<number>((resolve, reject) => {
+                    if (!seg.videoClipUrl) {
+                      if (alignmentMode === "video") {
+                        return reject(
+                          new Error(
+                            `[generate] Segment ${i} ("${seg.id}") has no videoClipUrl but alignmentMode is "video".`,
+                          ),
+                        );
+                      }
+                      return resolve(0);
+                    }
+                    const timeout = setTimeout(
+                      () =>
+                        reject(
+                          new Error(
+                            `Video load error: ${seg.videoClipUrl}`,
+                          ),
+                        ),
+                      MEDIA_METADATA_TIMEOUT_MS,
+                    );
+                    const el = document.createElement("video");
+                    el.preload = "metadata";
+                    el.onloadedmetadata = () => {
+                      clearTimeout(timeout);
+                      resolve(el.duration);
+                    };
+                    el.onerror = () => {
+                      clearTimeout(timeout);
+                      reject(
+                        new Error(`Video load error: ${seg.videoClipUrl}`),
+                      );
+                    };
+                    el.src = seg.videoClipUrl;
+                  }),
+              ),
+            );
 
       const props = alignVideoProps(
-        segments,
+        validatedSegments,
         transcriptions,
         validUrls,
         audioDurations,
@@ -128,6 +172,7 @@ export function useVideo() {
         undefined,
         alignmentMode,
         videoVolume,
+        8,
       );
 
       if (props.durationInFrames <= 0)
@@ -170,6 +215,7 @@ export function useVideo() {
       if (!reader) throw new Error("No stream");
       const decoder = new TextDecoder();
       let buffer = "";
+      let renderStartMs: number | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -180,7 +226,17 @@ export function useVideo() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const data = JSON.parse(line.slice(6));
-          if (data.type === "progress") setRenderProgress(data);
+          if (data.type === "progress") {
+            if (data.stage === "rendering" && data.renderStartMs) {
+              renderStartMs = data.renderStartMs;
+            }
+            if (renderStartMs && data.stage === "rendering" && data.progress > 0) {
+              const elapsedMs = Date.now() - renderStartMs;
+              const totalEstimatedMs = elapsedMs / (data.progress / 100);
+              data.remainingSeconds = Math.round((totalEstimatedMs - elapsedMs) / 1000);
+            }
+            setRenderProgress(data);
+          }
           else if (data.type === "complete") {
             const link = document.createElement("a");
             link.href = data.videoUrl;

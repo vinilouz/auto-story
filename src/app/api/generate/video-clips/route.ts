@@ -7,7 +7,7 @@ const log = createLogger("api/video-clips");
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, referenceImage, duration, projectId } =
+    const { prompt, referenceImage, duration, projectId, index = 0 } =
       await request.json();
 
     if (!prompt) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     });
 
     const finalUrl = projectId
-      ? await saveVideoClip(videoUrl, projectId, 0)
+      ? await saveVideoClip(videoUrl, projectId, index)
       : videoUrl;
 
     log.success(`Video clip: ${finalUrl}`);

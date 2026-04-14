@@ -140,13 +140,19 @@ export function VideoStage({ state, actions }: VideoStageProps) {
           <div className="space-y-1">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>
-                {video.renderProgress.stage === "bundling"
-                  ? "Bundling..."
-                  : video.renderProgress.stage === "rendering"
-                    ? `Rendering ${video.renderProgress.renderedFrames ?? 0}/${video.renderProgress.totalFrames ?? "?"}`
-                    : "Encoding..."}
+                {video.renderProgress.stage === "validating"
+                  ? "Validating assets..."
+                  : video.renderProgress.stage === "bundling"
+                    ? "Bundling..."
+                    : video.renderProgress.stage === "rendering"
+                      ? `Rendering ${video.renderProgress.renderedFrames ?? 0}/${video.renderProgress.totalFrames ?? "?"}`
+                      : "Encoding..."}
               </span>
-              <span>{video.renderProgress.progress}%</span>
+              <span>
+                {video.renderProgress.remainingSeconds != null && video.renderProgress.stage === "rendering"
+                  ? `${video.renderProgress.remainingSeconds > 60 ? `${Math.floor(video.renderProgress.remainingSeconds / 60)}m ${video.renderProgress.remainingSeconds % 60}s` : `${video.renderProgress.remainingSeconds}s`} remaining`
+                  : `${video.renderProgress.progress}%`}
+              </span>
             </div>
             <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
               <div
