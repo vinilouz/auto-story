@@ -126,7 +126,7 @@ Professional frequency spectrum visualization with real spectral understanding.
 
 Musical particle system that responds to beats and frequency bands — not generic floating dots.
 
-- [ ] rewrite `src/components/video/audio-viz/AudioParticles.tsx` — music-reactive particle system:
+- [x] rewrite `src/components/video/audio-viz/AudioParticles.tsx` — music-reactive particle system:
   - 500-1000 particles with GPU-driven position/size/opacity via buffer attributes
   - Beat detection triggers burst emissions (kick → large burst, snare → medium scatter, hihat → fine sparkle)
   - Particles flow in 3D Perlin noise field (use simplex noise implementation) — organic, non-random motion
@@ -135,12 +135,12 @@ Musical particle system that responds to beats and frequency bands — not gener
   - Treble modulates particle brightness
   - Particle trails via alpha fade (configurable trail length)
   - Additive blending for glowing appearance
-- [ ] write custom shaders:
+- [x] write custom shaders:
   - Vertex: noise-field displacement, size modulation from audio
   - Fragment: soft circle with configurable glow, color tint per frequency band
-- [ ] write unit tests for particle initialization (verify positions, velocities, age ranges)
-- [ ] write unit tests for noise-field calculations (deterministic given seed)
-- [ ] run tests — must pass before task 6
+- [x] write unit tests for particle initialization (verify positions, velocities, age ranges)
+- [x] write unit tests for noise-field calculations (deterministic given seed)
+- [x] run tests — must pass before task 6
 
 ### Task 6: Smooth Waveform effect
 

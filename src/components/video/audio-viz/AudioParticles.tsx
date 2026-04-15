@@ -20,13 +20,16 @@ uniform mat4 projectionMatrix;
 attribute vec3 position;
 attribute float aSize;
 attribute float aOpacity;
+attribute vec3 aColor;
 
 uniform float uPixelRatio;
 
 varying float vOpacity;
+varying vec3 vColor;
 
 void main() {
   vOpacity = aOpacity;
+  vColor = aColor;
   vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mvPos;
   gl_PointSize = aSize * uPixelRatio * (300.0 / -mvPos.z);
@@ -41,6 +44,7 @@ uniform vec3 uColor;
 uniform float uGlowRadius;
 
 varying float vOpacity;
+varying vec3 vColor;
 
 void main() {
   vec2 center = gl_PointCoord - 0.5;
@@ -51,7 +55,7 @@ void main() {
   float core = smoothstep(0.3, 0.0, dist);
   float alpha = (softEdge * 0.6 + core * 0.4) * vOpacity;
 
-  vec3 color = uColor + core * 0.3;
+  vec3 color = uColor * vColor + core * 0.3;
 
   gl_FragColor = vec4(color, alpha);
 }
@@ -100,13 +104,19 @@ export const AudioParticles: React.FC<AudioParticlesProps> = ({
     [count],
   );
 
+  const colorAttribute = useMemo(
+    () => new THREE.BufferAttribute(buffers.colors, 3),
+    [buffers.colors],
+  );
+
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", positionAttribute);
     geo.setAttribute("aSize", sizeAttribute);
     geo.setAttribute("aOpacity", opacityAttribute);
+    geo.setAttribute("aColor", colorAttribute);
     return geo;
-  }, [positionAttribute, sizeAttribute, opacityAttribute]);
+  }, [positionAttribute, sizeAttribute, opacityAttribute, colorAttribute]);
 
   const uniforms = useMemo(
     () => ({
@@ -152,6 +162,7 @@ export const AudioParticles: React.FC<AudioParticlesProps> = ({
   sizeAttribute.needsUpdate = true;
   opacityAttribute.array.set(attrs.aOpacity);
   opacityAttribute.needsUpdate = true;
+  colorAttribute.needsUpdate = true;
   positionAttribute.needsUpdate = true;
 
   return (

@@ -27,7 +27,10 @@ jest.mock("three/examples/jsm/math/SimplexNoise.js", () => {
 
 import type { AudioParticlesConfig } from "@/lib/video/types";
 import {
+  BAND_COLORS,
+  type BeatType,
   classifyBeat,
+  beatTypeToBand,
   computeParticleAttributes,
   emitBurst,
   initializeParticles,
@@ -53,6 +56,8 @@ describe("initializeParticles", () => {
     expect(buffers.ages).toHaveLength(100);
     expect(buffers.maxAges).toHaveLength(100);
     expect(buffers.sizes).toHaveLength(100);
+    expect(buffers.colors).toHaveLength(100 * 3);
+    expect(buffers.bands).toHaveLength(100);
   });
 
   it("initializes positions in reasonable range (sphere distribution)", () => {
@@ -298,14 +303,119 @@ describe("emitBurst", () => {
   });
 });
 
+describe("band colors and assignment", () => {
+  it("assigns valid frequency bands to all particles", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(200, rng);
+    const validBands = new Set(["bass", "mid", "treble"]);
+    for (let i = 0; i < 200; i++) {
+      expect(validBands.has(buffers.bands[i])).toBe(true);
+    }
+  });
+
+  it("assigns colors matching the band definition", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(200, rng);
+    for (let i = 0; i < 200; i++) {
+      const i3 = i * 3;
+      const expected = BAND_COLORS[buffers.bands[i]];
+      expect(buffers.colors[i3]).toBeCloseTo(expected[0], 5);
+      expect(buffers.colors[i3 + 1]).toBeCloseTo(expected[1], 5);
+      expect(buffers.colors[i3 + 2]).toBeCloseTo(expected[2], 5);
+    }
+  });
+
+  it("produces at least two different band types across particles", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(500, rng);
+    const uniqueBands = new Set(buffers.bands);
+    expect(uniqueBands.size).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("beatTypeToBand", () => {
+  it("maps kick to bass", () => {
+    expect(beatTypeToBand("kick")).toBe("bass");
+  });
+
+  it("maps snare to mid", () => {
+    expect(beatTypeToBand("snare")).toBe("mid");
+  });
+
+  it("maps hihat to treble", () => {
+    expect(beatTypeToBand("hihat")).toBe("treble");
+  });
+
+  it("maps null to bass (default)", () => {
+    expect(beatTypeToBand(null)).toBe("bass");
+  });
+});
+
+describe("emitBurst color assignment", () => {
+  it("assigns bass colors for kick burst", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(100, rng);
+    emitBurst(buffers, "kick", DEFAULT_CONFIG);
+
+    const bassColor = BAND_COLORS.bass;
+    let bassColoredCount = 0;
+    for (let i = 0; i < 100; i++) {
+      if (buffers.ages[i] === 0) {
+        const i3 = i * 3;
+        expect(buffers.colors[i3]).toBeCloseTo(bassColor[0], 5);
+        expect(buffers.colors[i3 + 1]).toBeCloseTo(bassColor[1], 5);
+        expect(buffers.colors[i3 + 2]).toBeCloseTo(bassColor[2], 5);
+        expect(buffers.bands[i]).toBe("bass");
+        bassColoredCount++;
+      }
+    }
+    expect(bassColoredCount).toBeGreaterThan(0);
+  });
+
+  it("assigns treble colors for hihat burst", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(100, rng);
+    emitBurst(buffers, "hihat", DEFAULT_CONFIG);
+
+    const trebleColor = BAND_COLORS.treble;
+    for (let i = 0; i < 100; i++) {
+      if (buffers.ages[i] === 0) {
+        const i3 = i * 3;
+        expect(buffers.colors[i3]).toBeCloseTo(trebleColor[0], 5);
+        expect(buffers.colors[i3 + 1]).toBeCloseTo(trebleColor[1], 5);
+        expect(buffers.colors[i3 + 2]).toBeCloseTo(trebleColor[2], 5);
+        expect(buffers.bands[i]).toBe("treble");
+      }
+    }
+  });
+
+  it("assigns mid colors for snare burst", () => {
+    const rng = createSeededRandom(42);
+    const buffers = initializeParticles(100, rng);
+    emitBurst(buffers, "snare", DEFAULT_CONFIG);
+
+    const midColor = BAND_COLORS.mid;
+    for (let i = 0; i < 100; i++) {
+      if (buffers.ages[i] === 0) {
+        const i3 = i * 3;
+        expect(buffers.colors[i3]).toBeCloseTo(midColor[0], 5);
+        expect(buffers.colors[i3 + 1]).toBeCloseTo(midColor[1], 5);
+        expect(buffers.colors[i3 + 2]).toBeCloseTo(midColor[2], 5);
+        expect(buffers.bands[i]).toBe("mid");
+      }
+    }
+  });
+});
+
 describe("computeParticleAttributes", () => {
-  it("returns correct buffer sizes", () => {
+  it("returns correct buffer sizes including color", () => {
     const rng = createSeededRandom(42);
     const buffers = initializeParticles(100, rng);
     const attrs = computeParticleAttributes(buffers, DEFAULT_CONFIG, 0.5, 0.7);
     expect(attrs.aSize).toHaveLength(100);
     expect(attrs.aOpacity).toHaveLength(100);
     expect(attrs.positions).toHaveLength(100 * 3);
+    expect(attrs.aColor).toHaveLength(100 * 3);
   });
 
   it("opacities are in valid range", () => {

@@ -1,12 +1,16 @@
 import type { SimplexNoise } from "three/examples/jsm/math/SimplexNoise.js";
 import type { AudioParticlesConfig } from "@/lib/video/types";
 
+export type FrequencyBand = "bass" | "mid" | "treble";
+
 export interface ParticleBuffers {
   positions: Float32Array;
   velocities: Float32Array;
   ages: Float32Array;
   maxAges: Float32Array;
   sizes: Float32Array;
+  colors: Float32Array;
+  bands: FrequencyBand[];
 }
 
 export function initializeParticles(
@@ -18,13 +22,31 @@ export function initializeParticles(
   const ages = new Float32Array(count);
   const maxAges = new Float32Array(count);
   const sizes = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const bands: FrequencyBand[] = new Array(count);
 
   for (let i = 0; i < count; i++) {
-    resetParticle(i, positions, velocities, ages, maxAges, sizes, rng);
+    resetParticle(
+      i,
+      positions,
+      velocities,
+      ages,
+      maxAges,
+      sizes,
+      colors,
+      bands,
+      rng,
+    );
   }
 
-  return { positions, velocities, ages, maxAges, sizes };
+  return { positions, velocities, ages, maxAges, sizes, colors, bands };
 }
+
+export const BAND_COLORS: Record<FrequencyBand, [number, number, number]> = {
+  bass: [1.0, 0.4, 0.1],
+  mid: [1.0, 0.9, 0.2],
+  treble: [0.2, 0.6, 1.0],
+};
 
 function resetParticle(
   i: number,
@@ -33,6 +55,8 @@ function resetParticle(
   ages: Float32Array,
   maxAges: Float32Array,
   sizes: Float32Array,
+  colors: Float32Array,
+  bands: FrequencyBand[],
   rng: () => number,
 ) {
   const theta = rng() * Math.PI * 2;
@@ -51,6 +75,15 @@ function resetParticle(
   ages[i] = rng() * 3;
   maxAges[i] = 2 + rng() * 4;
   sizes[i] = 0.5 + rng() * 1.5;
+
+  const bandIndex = Math.floor(rng() * 3);
+  const band: FrequencyBand =
+    bandIndex === 0 ? "bass" : bandIndex === 1 ? "mid" : "treble";
+  bands[i] = band;
+  const bandColor = BAND_COLORS[band];
+  colors[i3] = bandColor[0];
+  colors[i3 + 1] = bandColor[1];
+  colors[i3 + 2] = bandColor[2];
 }
 
 export function updateParticles(
@@ -63,7 +96,8 @@ export function updateParticles(
   midEnergy: number,
   trebleEnergy: number,
 ): void {
-  const { positions, velocities, ages, maxAges, sizes } = buffers;
+  const { positions, velocities, ages, maxAges, sizes, colors, bands } =
+    buffers;
   const count = ages.length;
   const turbulence = config.turbulence * (1 + bassEnergy * 3);
   const sizeMod = 1 + midEnergy * 2;
@@ -78,6 +112,8 @@ export function updateParticles(
         ages,
         maxAges,
         sizes,
+        colors,
+        bands,
         Math.random,
       );
       ages[i] = 0;
@@ -146,6 +182,18 @@ export function classifyBeat(
   return "hihat";
 }
 
+export function beatTypeToBand(beatType: BeatType): FrequencyBand {
+  if (!beatType) return "bass";
+  switch (beatType) {
+    case "kick":
+      return "bass";
+    case "snare":
+      return "mid";
+    case "hihat":
+      return "treble";
+  }
+}
+
 export function emitBurst(
   buffers: ParticleBuffers,
   beatType: BeatType,
@@ -153,7 +201,8 @@ export function emitBurst(
 ): void {
   if (!beatType) return;
 
-  const { positions, velocities, ages, maxAges, sizes } = buffers;
+  const { positions, velocities, ages, maxAges, sizes, colors, bands } =
+    buffers;
   const count = ages.length;
 
   let burstCount: number;
@@ -178,6 +227,9 @@ export function emitBurst(
       break;
   }
 
+  const band = beatTypeToBand(beatType);
+  const bandColor = BAND_COLORS[band];
+
   const oldest = findOldestIndices(ages, burstCount);
   for (const i of oldest) {
     const i3 = i * 3;
@@ -195,6 +247,11 @@ export function emitBurst(
     ages[i] = 0;
     maxAges[i] = 1 + Math.random() * 2;
     sizes[i] = burstSize;
+
+    bands[i] = band;
+    colors[i3] = bandColor[0];
+    colors[i3 + 1] = bandColor[1];
+    colors[i3 + 2] = bandColor[2];
   }
 }
 
@@ -212,7 +269,12 @@ export function computeParticleAttributes(
   config: AudioParticlesConfig,
   trebleEnergy: number,
   opacity: number,
-): { positions: Float32Array; aSize: Float32Array; aOpacity: Float32Array } {
+): {
+  positions: Float32Array;
+  aSize: Float32Array;
+  aOpacity: Float32Array;
+  aColor: Float32Array;
+} {
   const count = buffers.ages.length;
   const aSize = new Float32Array(count);
   const aOpacity = new Float32Array(count);
@@ -231,5 +293,6 @@ export function computeParticleAttributes(
     positions: buffers.positions,
     aSize,
     aOpacity,
+    aColor: buffers.colors,
   };
 }

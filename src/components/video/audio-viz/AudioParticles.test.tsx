@@ -15,6 +15,7 @@ jest.mock("three", () => {
       itemSize,
       needsUpdate: false,
     })),
+    Color: actual.Color,
     AdditiveBlending: 2,
   };
 });
