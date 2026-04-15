@@ -72,6 +72,20 @@ All produce `RemotionVideoProps` consumed by `src/components/video/RemotionVideo
 
 File-based project storage in `public/projects/{id}/config.json`. `src/lib/storage.ts` — `StorageService` handles CRUD and incremental patches (`patchSegmentClip`, `patchSegmentImage`, `patchEntityImage`, `patchMusic`) that write individual fields without full rewrites. Images stored as files in `public/projects/{id}/images/`.
 
+### Audio Visualization (WebGL)
+
+`src/components/video/audio-viz/AudioVizOverlay.tsx` — Orchestrator. Consumes raw FFT from Remotion's `useWindowedAudioData`, runs analysis pipeline, renders all effects in a single Three.js `<Canvas>`.
+
+`src/lib/audio/analysis.ts` — Pure audio analysis: A-weighted perceptual loudness, logarithmic frequency mapping, exponential attack/release smoothing, 7-band extraction (sub-bass through brilliance), energy-based beat detection with cooldown. All effects consume `AudioAnalysisData`.
+
+Effects (all in `src/components/video/audio-viz/`):
+- **ProSpectrum** — 64 instanced mesh bars with rounded-top SDF shaders, mirror reflections, beat-reactive pulse
+- **AudioParticles** — 800 GPU-driven particles in 3D simplex noise field, beat-triggered burst emissions, additive blending
+- **SmoothWaveform** — Catmull-Rom spline interpolation through frequency bins, variable-width `Line2`, frequency-mapped gradient
+- **PostProcessingStack** — `postprocessing` library: bass-reactive bloom, beat-triggered chromatic aberration, bass-reactive vignette
+
+Config: `AudioVizConfig` in `src/lib/video/types.ts`. Effects array selects which render; per-effect configs control parameters.
+
 ### Pipeline Pattern
 
 API routes use function composition with `pipe()` for async/sync workflows. Atomic functions, single data flow, no manual next(). See existing route handlers for examples.
@@ -80,7 +94,8 @@ API routes use function composition with `pipe()` for async/sync workflows. Atom
 
 - `Segment` (`src/lib/flows/types.ts`) — Core unit: text + imagePrompt + imagePath + videoClipUrl + time window
 - `EntityAsset` — Named character with image, used for visual consistency across segments
-- `RemotionVideoProps` (`src/lib/video/types.ts`) — Full video spec: scenes, audio tracks, captions, music
+- `RemotionVideoProps` (`src/lib/video/types.ts`) — Full video spec: scenes, audio tracks, captions, music, audioViz config
+- `AudioAnalysisData` (`src/lib/video/types.ts`) — Per-frame analysis: 7-band extraction, beat state, smoothed frequencies, RMS energy
 - `ProjectData` (`src/lib/storage.ts`) — Persisted project state
 - `Stage` / `FlowMode` (`src/components/story-flow/types.ts`) — Wizard stage and flow type enums
 

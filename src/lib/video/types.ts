@@ -67,6 +67,7 @@ export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
 
 import type { BeatResult, FrequencyBands } from "@/lib/audio/analysis";
 
+/** Available audio visualization effects rendered via WebGL/Three.js */
 export type AudioVizEffectType =
   | "pro-spectrum"
   | "audio-particles"
@@ -74,6 +75,7 @@ export type AudioVizEffectType =
   | "post-processing"
   | "scene-modulation";
 
+/** Professional spectrum bars using instanced meshes with rounded-top SDF shaders and mirror reflections */
 export interface ProSpectrumConfig {
   barCount: number;
   cornerRadius: number;
@@ -84,6 +86,7 @@ export interface ProSpectrumConfig {
   position: "bottom" | "top" | "center";
 }
 
+/** Music-reactive particles in 3D simplex noise field with beat-triggered burst emissions */
 export interface AudioParticlesConfig {
   count: number;
   noiseScale: number;
@@ -93,6 +96,7 @@ export interface AudioParticlesConfig {
   maxSize: number;
 }
 
+/** Smooth waveform via Catmull-Rom spline interpolation with variable-width Line2 */
 export interface SmoothWaveformConfig {
   position: "center" | "bottom" | "top";
   splineTension: number;
@@ -101,6 +105,7 @@ export interface SmoothWaveformConfig {
   colorMapping: "frequency" | "amplitude" | "fixed";
 }
 
+/** GPU post-processing: bass-reactive bloom, beat-triggered chromatic aberration, bass-reactive vignette */
 export interface PostProcessingConfig {
   bloomIntensity: number;
   bloomThreshold: number;
@@ -108,11 +113,13 @@ export interface PostProcessingConfig {
   vignetteDarkness: number;
 }
 
+/** Audio-driven scene zoom/pan modulation */
 export interface SceneModulationConfig {
   zoomIntensity: number;
   panIntensity: number;
 }
 
+/** Top-level audio visualization configuration. `effects` selects which effects render; per-effect configs control parameters. */
 export interface AudioVizConfig {
   enabled: boolean;
   effects: AudioVizEffectType[];
@@ -166,6 +173,7 @@ export const DEFAULT_AUDIO_VIZ_CONFIG: AudioVizConfig = {
   },
 };
 
+/** Per-frame audio analysis consumed by all visualization effects. Produced by the analysis pipeline in AudioVizOverlay. */
 export interface AudioAnalysisData {
   bands: FrequencyBands;
   beat: BeatResult;

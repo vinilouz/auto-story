@@ -186,8 +186,8 @@ Wire everything together and remove old code.
 
 ### Task 9: Update documentation
 
-- [ ] update `CLAUDE.md` Architecture section to reflect new audio-viz structure
-- [ ] update `src/lib/video/types.ts` JSDoc comments for new interfaces
+- [x] update `CLAUDE.md` Architecture section to reflect new audio-viz structure
+- [x] update `src/lib/video/types.ts` JSDoc comments for new interfaces
 
 ## Technical Details
 
