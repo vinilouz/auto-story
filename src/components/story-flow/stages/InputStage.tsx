@@ -93,7 +93,7 @@ export function InputStage({ state }: InputStageProps) {
                 value={segmentSize}
                 onValueChange={setSegmentSize}
                 max={500}
-                min={100}
+                min={10}
                 step={10}
               />
             </div>

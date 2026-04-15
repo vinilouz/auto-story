@@ -4,7 +4,7 @@ import type {
   EntityAsset,
   Segment,
 } from "@/lib/flows/types";
-import type { AudioBatch, TranscriptionResult } from "@/lib/flows/types";
+import type { AudioVizConfig } from "@/lib/video/types";
 
 export type Stage =
   | "input"
@@ -102,6 +102,10 @@ export interface StoryFlowState {
   ) => void;
   videoVolume: number;
   setVideoVolume: (volume: number) => void;
+  audioVizConfig: AudioVizConfig;
+  setAudioVizConfig: (
+    config: AudioVizConfig | ((prev: AudioVizConfig) => AudioVizConfig),
+  ) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
   stages: Stage[];

@@ -300,6 +300,7 @@ async function handleRemotionRender(
             defaultVideoImageFormat: null,
             defaultPixelFormat: null,
             defaultProResProfile: null,
+            defaultSampleRate: null,
           },
           serveUrl: bundleLocation,
           codec: "h264",

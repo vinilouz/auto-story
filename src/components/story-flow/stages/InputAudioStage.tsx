@@ -125,7 +125,7 @@ export function InputAudioStage({ state }: InputAudioStageProps) {
           <Slider
             value={segmentSize}
             onValueChange={setSegmentSize}
-            min={100}
+            min={10}
             max={500}
             step={10}
           />

@@ -1,11 +1,18 @@
+import { useWindowedAudioData, visualizeAudio } from "@remotion/media-utils";
 import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import React from "react";
-import { AbsoluteFill, Audio, Sequence } from "remotion";
+import {
+  AbsoluteFill,
+  Audio,
+  Sequence,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import type { RemotionVideoProps } from "@/lib/video/types";
-import { REMOTION_DEFAULT_FPS } from "@/remotion/constants";
+import { AudioVizOverlay } from "./audio-viz/AudioVizOverlay";
 import { CaptionsLayer } from "./CaptionsLayer";
 import { Scene } from "./Scene";
 
@@ -27,16 +34,49 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
   musicSrc,
   musicVolume = 0.3,
   musicCompressor,
+  audioViz,
 }) => {
-  const isNarrationAt = (frame: number) =>
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const isNarrationAt = (f: number) =>
     audioTracks.some(
-      (t) => frame >= t.startFrame && frame < t.startFrame + t.durationInFrames,
+      (t) => f >= t.startFrame && f < t.startFrame + t.durationInFrames,
     );
 
   const musicVol = musicCompressor
-    ? (frame: number) =>
-        isNarrationAt(frame) ? DUCK_VOLUME * musicVolume : musicVolume
+    ? (f: number) =>
+        isNarrationAt(f) ? DUCK_VOLUME * musicVolume : musicVolume
     : musicVolume;
+
+  const showModulation =
+    audioViz?.enabled && audioViz.effects.includes("scene-modulation");
+
+  const modulationTrack = audioTracks[0];
+  const modulationSrc = modulationTrack?.src ?? "";
+  const modulationFrame = modulationTrack ? frame - modulationTrack.startFrame : 0;
+
+  const { audioData: modulationAudio, dataOffsetInSeconds: modulationOffset } =
+    useWindowedAudioData({
+      src: modulationSrc,
+      frame: modulationFrame,
+      fps,
+      windowInSeconds: 10,
+    });
+
+  let amplitude = 0;
+  if (showModulation && modulationAudio) {
+    const frequencies = visualizeAudio({
+      fps,
+      frame: modulationFrame,
+      audioData: modulationAudio,
+      numberOfSamples: 512,
+      optimizeFor: "speed",
+      dataOffsetInSeconds: modulationOffset,
+    });
+    amplitude =
+      frequencies.reduce((sum, v) => sum + v, 0) / frequencies.length;
+  }
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
@@ -68,7 +108,12 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
               <TransitionSeries.Sequence
                 durationInFrames={scene.durationInFrames}
               >
-                <Scene scene={scene} videoVolume={videoVolume} />
+                <Scene
+                  scene={scene}
+                  videoVolume={videoVolume}
+                  audioAmplitude={showModulation ? amplitude : undefined}
+                  modulationConfig={audioViz?.sceneModulation}
+                />
               </TransitionSeries.Sequence>
 
               {scene.transition &&
@@ -96,6 +141,11 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
           );
         })}
       </TransitionSeries>
+
+      {/* Audio Visualization Overlay */}
+      {audioViz?.enabled && audioTracks.length > 0 && (
+        <AudioVizOverlay audioTracks={audioTracks} config={audioViz} />
+      )}
 
       <CaptionsLayer captions={captions || []} style={captionStyle} />
     </AbsoluteFill>

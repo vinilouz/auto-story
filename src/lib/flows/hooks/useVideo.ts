@@ -2,6 +2,7 @@ import { useState } from "react";
 import { notify } from "@/lib/utils/notify";
 import { type AlignmentMode, alignVideoProps } from "@/lib/video/aligner";
 import type { RemotionVideoProps } from "@/lib/video/types";
+import type { AudioVizConfig } from "@/lib/video/types";
 import { getTranscription } from "@/lib/utils/text";
 import type {
   AudioBatch,
@@ -37,6 +38,7 @@ export function useVideo() {
     videoVolume: number = 0.1,
     musicUrl?: string,
     musicVolume: number = 0.3,
+    audioViz?: AudioVizConfig,
   ) => {
     const completed = audioBatches.filter(
       (b) => b.status === "completed" && b.url,
@@ -181,6 +183,10 @@ export function useVideo() {
       if (musicUrl) {
         props.musicSrc = musicUrl;
         props.musicVolume = musicVolume;
+      }
+
+      if (audioViz?.enabled) {
+        props.audioViz = audioViz;
       }
 
       setVideoProps(props);

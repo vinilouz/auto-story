@@ -51,6 +51,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     musicCompressor,
     musicRaw,
     uploadedAudioFile,
+    audioVizConfig,
     audio,
     transcription,
     videoClips,
@@ -81,6 +82,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         music: musicUrl,
         musicVolume,
         musicRaw,
+        audioVizConfig: mode === "from-audio" ? audioVizConfig : undefined,
         ...extra,
       };
       const saved = await project.save(data);
@@ -106,6 +108,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
       musicUrl,
       musicVolume,
       musicRaw,
+      audioVizConfig,
       mode,
       project,
     ],
@@ -942,6 +945,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
         videoVolume,
         effectiveMusicUrl,
         musicVolume,
+        mode === "from-audio" && audioVizConfig.enabled ? audioVizConfig : undefined,
       );
       setStage("video");
     } catch (e: any) {
@@ -957,6 +961,7 @@ export function useStoryFlowActions(state: StoryFlowState) {
     musicUrl,
     musicVolume,
     musicRaw,
+    audioVizConfig,
     setStage,
   ]);
 

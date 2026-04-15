@@ -316,7 +316,7 @@ export default function TestPage() {
           </Card>
         )}
 
-        {result?.data && typeof result.data === "object" && result.data !== null && "imageUrl" in (result.data as Record<string, unknown>) && (
+        {result?.data && typeof result.data === "object" && result.data !== null && "imageUrl" in (result.data as Record<string, unknown>) ? (
           <Card className="mt-4">
             <CardHeader>
               <CardTitle className="text-base">Generated Image</CardTitle>
@@ -330,9 +330,9 @@ export default function TestPage() {
               />
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
-        {result?.data && typeof result.data === "object" && result.data !== null && "audioBase64" in (result.data as Record<string, unknown>) && (
+        {result?.data && typeof result.data === "object" && result.data !== null && "audioBase64" in (result.data as Record<string, unknown>) ? (
           <Card className="mt-4">
             <CardHeader>
               <CardTitle className="text-base">Generated Audio</CardTitle>
@@ -345,9 +345,9 @@ export default function TestPage() {
               />
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
-        {result?.data && typeof result.data === "object" && result.data !== null && "videoUrl" in (result.data as Record<string, unknown>) && (
+        {result?.data && typeof result.data === "object" && result.data !== null && "videoUrl" in (result.data as Record<string, unknown>) ? (
           <Card className="mt-4">
             <CardHeader>
               <CardTitle className="text-base">Generated Video</CardTitle>
@@ -360,7 +360,7 @@ export default function TestPage() {
               />
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   );

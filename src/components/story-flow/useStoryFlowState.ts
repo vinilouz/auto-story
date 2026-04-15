@@ -18,6 +18,8 @@ import {
 } from "@/lib/domain/navigation";
 import { getStages } from "./config";
 import type { StoryFlowState, Stage, FlowMode } from "./types";
+import type { AudioVizConfig } from "@/lib/video/types";
+import { DEFAULT_AUDIO_VIZ_CONFIG } from "@/lib/video/types";
 
 export function useStoryFlowState(
   mode: FlowMode,
@@ -58,6 +60,9 @@ export function useStoryFlowState(
     StoryFlowState["captionStyle"]
   >(DEFAULT_CAPTION_STYLE);
   const [videoVolume, setVideoVolume] = useState(0);
+  const [audioVizConfig, setAudioVizConfig] = useState<AudioVizConfig>(
+    DEFAULT_AUDIO_VIZ_CONFIG,
+  );
   const [loading, setLoading] = useState(false);
 
   const audio = useAudio();
@@ -147,6 +152,7 @@ export function useStoryFlowState(
         if (tr) transcription.setResult(tr);
         if (p.videoVolume !== undefined) setVideoVolume(p.videoVolume);
         if ((p as any).musicVolume !== undefined) setMusicVolume((p as any).musicVolume);
+        if ((p as any).audioVizConfig) setAudioVizConfig((p as any).audioVizConfig);
 
         setStage(determineInitialStage(mode, p));
       })
@@ -208,6 +214,8 @@ export function useStoryFlowState(
     setCaptionStyle,
     videoVolume,
     setVideoVolume,
+    audioVizConfig,
+    setAudioVizConfig,
     loading,
     setLoading,
     stages,
