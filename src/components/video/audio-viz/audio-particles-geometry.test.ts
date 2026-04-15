@@ -28,9 +28,8 @@ jest.mock("three/examples/jsm/math/SimplexNoise.js", () => {
 import type { AudioParticlesConfig } from "@/lib/video/types";
 import {
   BAND_COLORS,
-  type BeatType,
-  classifyBeat,
   beatTypeToBand,
+  classifyBeat,
   computeParticleAttributes,
   emitBurst,
   initializeParticles,

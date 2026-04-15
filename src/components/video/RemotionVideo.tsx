@@ -16,7 +16,7 @@ import { AudioVizOverlay } from "./audio-viz/AudioVizOverlay";
 import { CaptionsLayer } from "./CaptionsLayer";
 import { Scene } from "./Scene";
 
-const PRESENTATIONS: Record<string, any> = {
+const PRESENTATIONS: Record<string, unknown> = {
   fade: fade(),
   wipe: wipe(),
   slide: slide(),
@@ -54,7 +54,9 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
 
   const modulationTrack = audioTracks[0];
   const modulationSrc = modulationTrack?.src ?? "";
-  const modulationFrame = modulationTrack ? frame - modulationTrack.startFrame : 0;
+  const modulationFrame = modulationTrack
+    ? frame - modulationTrack.startFrame
+    : 0;
 
   const { audioData: modulationAudio, dataOffsetInSeconds: modulationOffset } =
     useWindowedAudioData({
@@ -74,8 +76,7 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
       optimizeFor: "speed",
       dataOffsetInSeconds: modulationOffset,
     });
-    amplitude =
-      frequencies.reduce((sum, v) => sum + v, 0) / frequencies.length;
+    amplitude = frequencies.reduce((sum, v) => sum + v, 0) / frequencies.length;
   }
 
   return (
@@ -86,9 +87,9 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
       )}
 
       {/* Narration Audio Tracks */}
-      {audioTracks.map((track, i) => (
+      {audioTracks.map((track) => (
         <Sequence
-          key={`audio-${i}`}
+          key={`audio-${track.src}-${track.startFrame}`}
           from={track.startFrame}
           durationInFrames={track.durationInFrames}
         >
@@ -98,7 +99,7 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
 
       {/* Visual Track with Transitions */}
       <TransitionSeries>
-        {scenes.map((scene, i) => {
+        {scenes.map((scene) => {
           // Determine Transition
           // The transition is applied AFTER this sequence, connecting to the NEXT.
           // The data model has `transition` on the scene object.

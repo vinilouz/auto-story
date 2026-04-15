@@ -26,6 +26,34 @@ jest.mock("three/examples/jsm/lines/LineMaterial.js", () => ({
     .mockImplementation((opts: Record<string, unknown>) => opts),
 }));
 
+jest.mock("@react-three/postprocessing", () => ({
+  EffectComposer: jest.fn(({ children }) => (
+    <div data-testid="effect-composer">{children}</div>
+  )),
+  Bloom: jest.fn(({ intensity, luminanceThreshold }) => (
+    <div
+      data-testid="bloom"
+      data-intensity={intensity}
+      data-threshold={luminanceThreshold}
+    />
+  )),
+  ChromaticAberration: jest.fn(({ offset }) => (
+    <div
+      data-testid="chromatic-aberration"
+      data-offset-x={offset?.[0]}
+      data-offset-y={offset?.[1]}
+    />
+  )),
+  Vignette: jest.fn(({ darkness }) => (
+    <div data-testid="vignette" data-darkness={darkness} />
+  )),
+}));
+
+jest.mock("postprocessing", () => ({
+  BlendFunction: { NORMAL: 0 },
+  KernelSize: { LARGE: 3 },
+}));
+
 import { render } from "@testing-library/react";
 import React from "react";
 import type { AudioTrackConfig, AudioVizConfig } from "@/lib/video/types";
