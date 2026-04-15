@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react";
 import React from "react";
-import { AudioVizOverlay } from "./AudioVizOverlay";
-import { DEFAULT_AUDIO_VIZ_CONFIG } from "@/lib/video/types";
 import type { AudioTrackConfig, AudioVizConfig } from "@/lib/video/types";
+import { DEFAULT_AUDIO_VIZ_CONFIG } from "@/lib/video/types";
+import { AudioVizOverlay } from "./AudioVizOverlay";
 
 jest.mock("@remotion/media-utils", () => ({
   useWindowedAudioData: () => ({

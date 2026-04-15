@@ -1,13 +1,13 @@
 import {
-  DEFAULT_AUDIO_VIZ_CONFIG,
+  type AudioAnalysisData,
+  type AudioParticlesConfig,
   type AudioVizConfig,
   type AudioVizEffectType,
-  type AudioAnalysisData,
-  type ProSpectrumConfig,
-  type AudioParticlesConfig,
-  type SmoothWaveformConfig,
+  DEFAULT_AUDIO_VIZ_CONFIG,
   type PostProcessingConfig,
+  type ProSpectrumConfig,
   type SceneModulationConfig,
+  type SmoothWaveformConfig,
 } from "./types";
 
 describe("DEFAULT_AUDIO_VIZ_CONFIG", () => {

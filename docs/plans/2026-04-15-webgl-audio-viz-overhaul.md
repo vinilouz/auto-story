@@ -91,18 +91,18 @@ Update `src/lib/video/types.ts` to reflect the new analysis capabilities and eff
 
 Replace the orchestrator to use the new analysis engine and render all effects inside a single Three.js canvas.
 
-- [ ] rewrite `src/components/video/audio-viz/AudioVizOverlay.tsx`:
+- [x] rewrite `src/components/video/audio-viz/AudioVizOverlay.tsx`:
   - Use `useWindowedAudioData` + `visualizeAudio` for raw FFT (keep existing Remotion integration)
   - Apply new `mapLogFrequencies` with perceptual weighting
   - Apply `smoothAttackRelease` per frequency bin with fast attack (10ms) / slow release (80ms)
   - Run `extractBands` and `detectBeat` each frame
   - Produce `AudioAnalysisData` object consumed by all effects
-- [ ] install `postprocessing` package for post-processing stack
-- [ ] set up single `<Canvas>` from `@react-three/fiber` with `<EffectComposer>` from `postprocessing`
-- [ ] render effect layers inside canvas based on `config.effects` array
-- [ ] write unit tests for the analysis pipeline (test that correct analysis data is produced from mock FFT input)
-- [ ] write integration test verifying AudioVizOverlay renders without errors given valid props
-- [ ] run tests — must pass before task 4
+- [x] install `postprocessing` package for post-processing stack
+- [x] set up single `<Canvas>` from `@react-three/fiber` with `<EffectComposer>` from `postprocessing`
+- [x] render effect layers inside canvas based on `config.effects` array
+- [x] write unit tests for the analysis pipeline (test that correct analysis data is produced from mock FFT input)
+- [x] write integration test verifying AudioVizOverlay renders without errors given valid props
+- [x] run tests — must pass before task 4
 
 ### Task 4: Pro Spectrum Bars effect
 
