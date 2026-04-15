@@ -162,15 +162,15 @@ Smooth, organic waveform visualization with proper curve interpolation.
 
 GPU-accelerated visual polish applied to all effects.
 
-- [ ] create `src/components/video/audio-viz/PostProcessingStack.tsx` — wraps effects with post-processing:
+- [x] create `src/components/video/audio-viz/PostProcessingStack.tsx` — wraps effects with post-processing:
   - **Bloom**: Bass-reactive bloom intensity (more bass = more bloom). Threshold configurable.
   - **Chromatic Aberration**: Beat-triggered chromatic shift (subtle RGB split on kick drums)
   - **Vignette**: Replaces old VignetteGlow — bass-reactive edge darkening
   - All effects configurable: bloom intensity/threshold, chromatic offset, vignette darkness
-- [ ] integrate `postprocessing` library's `EffectComposer`, `BloomEffect`, `ChromaticAberrationEffect`, `VignetteEffect`
-- [ ] write unit tests verifying effect parameter calculations (bloom intensity from bass, chromatic offset from beat)
-- [ ] write integration test verifying post-processing stack renders without WebGL errors
-- [ ] run tests — must pass before task 8
+- [x] integrate `postprocessing` library's `EffectComposer`, `BloomEffect`, `ChromaticAberrationEffect`, `VignetteEffect`
+- [x] write unit tests verifying effect parameter calculations (bloom intensity from bass, chromatic offset from beat)
+- [x] write integration test verifying post-processing stack renders without WebGL errors
+- [x] run tests — must pass before task 8
 
 ### Task 8: Integration with RemotionVideo and cleanup
 
