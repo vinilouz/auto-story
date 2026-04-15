@@ -1,3 +1,12 @@
+jest.mock("three/examples/jsm/math/SimplexNoise.js", () => {
+  class MockSimplexNoise {
+    noise3d() {
+      return 0.1;
+    }
+  }
+  return { SimplexNoise: MockSimplexNoise };
+});
+
 import { render } from "@testing-library/react";
 import React from "react";
 import type { AudioTrackConfig, AudioVizConfig } from "@/lib/video/types";
