@@ -65,41 +65,47 @@ export const DEFAULT_CAPTION_STYLE: CaptionStyle = {
   highlightColor: "#FFE81F",
 };
 
+import type { BeatResult, FrequencyBands } from "@/lib/audio/analysis";
+
 export type AudioVizEffectType =
-  | "spectrum-bars"
-  | "vignette-glow"
-  | "particles"
-  | "waveform-ribbon"
+  | "pro-spectrum"
+  | "audio-particles"
+  | "smooth-waveform"
+  | "post-processing"
   | "scene-modulation";
 
-export interface SpectrumBarsConfig {
+export interface ProSpectrumConfig {
+  barCount: number;
+  cornerRadius: number;
+  gap: number;
   maxHeight: number;
-  barGap: number;
-  borderRadius: number;
-  glow: boolean;
-  position: "bottom" | "top" | "center" | "left" | "right";
-}
-
-export interface VignetteGlowConfig {
-  spread: number;
-  minOpacity: number;
-  maxOpacity: number;
+  reflectionOpacity: number;
+  glowIntensity: number;
+  position: "bottom" | "top" | "center";
 }
 
 export interface AudioParticlesConfig {
   count: number;
-  speed: number;
-  size: number;
-  scale: number;
-  noise: number;
+  noiseScale: number;
+  trailLength: number;
+  turbulence: number;
+  baseSize: number;
+  maxSize: number;
 }
 
-export interface WaveformConfig {
-  radius: number;
-  displacement: number;
-  thickness: number;
-  glow: boolean;
+export interface SmoothWaveformConfig {
   position: "center" | "bottom" | "top";
+  splineTension: number;
+  glowIntensity: number;
+  thicknessScale: number;
+  colorMapping: "frequency" | "amplitude" | "fixed";
+}
+
+export interface PostProcessingConfig {
+  bloomIntensity: number;
+  bloomThreshold: number;
+  chromaticOffset: number;
+  vignetteDarkness: number;
 }
 
 export interface SceneModulationConfig {
@@ -112,49 +118,47 @@ export interface AudioVizConfig {
   effects: AudioVizEffectType[];
   opacity: number;
   color: string;
-  spectrumBars: SpectrumBarsConfig;
-  vignetteGlow: VignetteGlowConfig;
-  particles: AudioParticlesConfig;
-  waveformRibbon: WaveformConfig;
+  proSpectrum: ProSpectrumConfig;
+  audioParticles: AudioParticlesConfig;
+  smoothWaveform: SmoothWaveformConfig;
+  postProcessing: PostProcessingConfig;
   sceneModulation: SceneModulationConfig;
 }
 
 export const DEFAULT_AUDIO_VIZ_CONFIG: AudioVizConfig = {
   enabled: true,
-  effects: [
-    "spectrum-bars",
-    "vignette-glow",
-    "particles",
-    "waveform-ribbon",
-    "scene-modulation",
-  ],
+  effects: ["pro-spectrum", "post-processing", "scene-modulation"],
   opacity: 0.7,
   color: "#FFE81F",
-  spectrumBars: {
+  proSpectrum: {
+    barCount: 64,
+    cornerRadius: 0.15,
+    gap: 2,
     maxHeight: 30,
-    barGap: 2,
-    borderRadius: 2,
-    glow: true,
+    reflectionOpacity: 0.3,
+    glowIntensity: 0.5,
     position: "bottom",
   },
-  vignetteGlow: {
-    spread: 60,
-    minOpacity: 2,
-    maxOpacity: 50,
+  audioParticles: {
+    count: 800,
+    noiseScale: 1.0,
+    trailLength: 0.6,
+    turbulence: 1.5,
+    baseSize: 2,
+    maxSize: 8,
   },
-  particles: {
-    count: 100,
-    speed: 0.8,
-    size: 3,
-    scale: 10,
-    noise: 2,
-  },
-  waveformRibbon: {
-    radius: 20,
-    displacement: 40,
-    thickness: 3,
-    glow: true,
+  smoothWaveform: {
     position: "center",
+    splineTension: 0.5,
+    glowIntensity: 0.4,
+    thicknessScale: 1.0,
+    colorMapping: "frequency",
+  },
+  postProcessing: {
+    bloomIntensity: 0.5,
+    bloomThreshold: 0.6,
+    chromaticOffset: 0.002,
+    vignetteDarkness: 0.4,
   },
   sceneModulation: {
     zoomIntensity: 20,
@@ -162,12 +166,11 @@ export const DEFAULT_AUDIO_VIZ_CONFIG: AudioVizConfig = {
   },
 };
 
-export interface AudioFrequencyData {
-  bass: number;
-  mid: number;
-  treble: number;
-  overall: number;
-  frequencies: number[];
+export interface AudioAnalysisData {
+  bands: FrequencyBands;
+  beat: BeatResult;
+  smoothedFrequencies: number[];
+  rmsEnergy: number;
 }
 
 export interface RemotionVideoProps {

@@ -79,13 +79,13 @@ Build the core audio analysis module that all effects will consume. This replace
 
 Update `src/lib/video/types.ts` to reflect the new analysis capabilities and effect types.
 
-- [ ] replace `AudioFrequencyData` with new `AudioAnalysisData` interface containing: 7-band extraction, beat detection state, smoothed frequency array, raw RMS energy
-- [ ] update `AudioVizEffectType` union: remove old effect names, add `"pro-spectrum"`, `"audio-particles"`, `"smooth-waveform"`, `"post-processing"`
-- [ ] update config interfaces: replace `SpectrumBarsConfig`, `VignetteGlowConfig`, `AudioParticlesConfig`, `WaveformConfig` with new pro configs (`ProSpectrumConfig`, `AudioParticlesConfig` rewritten, `SmoothWaveformConfig`, `PostProcessingConfig`)
-- [ ] update `AudioVizConfig` to use new configs, keep `enabled`, `opacity`, `color` for backward compat
-- [ ] update `DEFAULT_AUDIO_VIZ_CONFIG` with sensible professional defaults
-- [ ] write unit tests verifying `DEFAULT_AUDIO_VIZ_CONFIG` has all required fields with correct types
-- [ ] run tests — must pass before task 3
+- [x] replace `AudioFrequencyData` with new `AudioAnalysisData` interface containing: 7-band extraction, beat detection state, smoothed frequency array, raw RMS energy
+- [x] update `AudioVizEffectType` union: remove old effect names, add `"pro-spectrum"`, `"audio-particles"`, `"smooth-waveform"`, `"post-processing"`
+- [x] update config interfaces: replace `SpectrumBarsConfig`, `VignetteGlowConfig`, `AudioParticlesConfig`, `WaveformConfig` with new pro configs (`ProSpectrumConfig`, `AudioParticlesConfig` rewritten, `SmoothWaveformConfig`, `PostProcessingConfig`)
+- [x] update `AudioVizConfig` to use new configs, keep `enabled`, `opacity`, `color` for backward compat
+- [x] update `DEFAULT_AUDIO_VIZ_CONFIG` with sensible professional defaults
+- [x] write unit tests verifying `DEFAULT_AUDIO_VIZ_CONFIG` has all required fields with correct types
+- [x] run tests — must pass before task 3
 
 ### Task 3: Rewrite AudioVizOverlay with new analysis pipeline
 
