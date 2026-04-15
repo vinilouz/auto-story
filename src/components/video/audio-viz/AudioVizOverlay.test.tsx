@@ -7,6 +7,25 @@ jest.mock("three/examples/jsm/math/SimplexNoise.js", () => {
   return { SimplexNoise: MockSimplexNoise };
 });
 
+jest.mock("three/examples/jsm/lines/Line2.js", () => ({
+  Line2: jest.fn().mockImplementation(() => ({
+    computeLineDistances: jest.fn(),
+  })),
+}));
+
+jest.mock("three/examples/jsm/lines/LineGeometry.js", () => ({
+  LineGeometry: jest.fn().mockImplementation(() => ({
+    setPositions: jest.fn(),
+    setColors: jest.fn(),
+  })),
+}));
+
+jest.mock("three/examples/jsm/lines/LineMaterial.js", () => ({
+  LineMaterial: jest
+    .fn()
+    .mockImplementation((opts: Record<string, unknown>) => opts),
+}));
+
 import { render } from "@testing-library/react";
 import React from "react";
 import type { AudioTrackConfig, AudioVizConfig } from "@/lib/video/types";

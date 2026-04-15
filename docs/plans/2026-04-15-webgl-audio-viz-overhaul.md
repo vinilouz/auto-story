@@ -146,17 +146,17 @@ Musical particle system that responds to beats and frequency bands — not gener
 
 Smooth, organic waveform visualization with proper curve interpolation.
 
-- [ ] create `src/components/video/audio-viz/SmoothWaveform.tsx` — Three.js line rendering with:
+- [x] create `src/components/video/audio-viz/SmoothWaveform.tsx` — Three.js line rendering with:
   - Catmull-Rom spline interpolation through frequency data points — smooth curves, not jagged lines
   - Line thickness modulated by frequency amplitude (louder = thicker)
   - Gradient color mapped to frequency position (bass = warm, treble = cool)
   - Glow trail behind the waveform (duplicate line with wider stroke + additive blending + low opacity)
   - Beat detection triggers pulse animation (waveform expands outward briefly)
   - Configurable: position, spline tension, glow intensity, thickness scale, color mapping mode
-- [ ] use `THREE.Line2` / `LineGeometry` from `three/examples/jsm` for variable-width lines
-- [ ] write unit tests for Catmull-Rom interpolation (verify smooth output at known points)
-- [ ] write unit tests for color gradient generation (verify correct color stops)
-- [ ] run tests — must pass before task 7
+- [x] use `THREE.Line2` / `LineGeometry` from `three/examples/jsm` for variable-width lines
+- [x] write unit tests for Catmull-Rom interpolation (verify smooth output at known points)
+- [x] write unit tests for color gradient generation (verify correct color stops)
+- [x] run tests — must pass before task 7
 
 ### Task 7: Post-Processing Stack
 
