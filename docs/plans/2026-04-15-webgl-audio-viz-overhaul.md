@@ -108,19 +108,19 @@ Replace the orchestrator to use the new analysis engine and render all effects i
 
 Professional frequency spectrum visualization with real spectral understanding.
 
-- [ ] create `src/components/video/audio-viz/ProSpectrum.tsx` — WebGL spectrum bars using Three.js instanced meshes:
+- [x] create `src/components/video/audio-viz/ProSpectrum.tsx` — WebGL spectrum bars using Three.js instanced meshes:
   - Instanced `BoxGeometry` for bars — one instance per frequency bin (64 bars)
   - Per-instance attributes: height (from smoothed frequency data), color (gradient mapped to frequency band)
   - Mirror reflection below bars (inverted, faded copies)
   - Beat detection triggers subtle flash/pulse on bass bars
   - Configurable: bar count, corner radius (via shader), gap, max height, reflection opacity, glow intensity
-- [ ] write vertex/fragment shaders for the bars:
+- [x] write vertex/fragment shaders for the bars:
   - Rounded top corners via SDF in fragment shader
   - Vertical gradient fill (base color → lighter at top)
   - Glow effect via alpha falloff around bar edges
-- [ ] write unit tests for bar geometry calculations (height mapping, position calculations)
-- [ ] write unit tests verifying component renders with sample AudioAnalysisData
-- [ ] run tests — must pass before task 5
+- [x] write unit tests for bar geometry calculations (height mapping, position calculations)
+- [x] write unit tests verifying component renders with sample AudioAnalysisData
+- [x] run tests — must pass before task 5
 
 ### Task 5: Audio-Reactive Particles effect
 
