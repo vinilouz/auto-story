@@ -8,7 +8,12 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
-import type { AudioVizConfig, AudioVizEffectType } from "@/lib/video/types";
+import type {
+  AudioVizConfig,
+  AudioVizEffectType,
+  CaptionStyle,
+  RemotionVideoProps,
+} from "@/lib/video/types";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
 
@@ -785,8 +790,8 @@ export function VideoStage({ state, actions }: VideoStageProps) {
 function VideoDebugInfo({
   videoProps,
 }: {
-  videoProps: any;
-  captionStyle: any;
+  videoProps: RemotionVideoProps;
+  captionStyle: CaptionStyle;
 }) {
   const { scenes, audioTracks, captions, fps, durationInFrames } = videoProps;
 

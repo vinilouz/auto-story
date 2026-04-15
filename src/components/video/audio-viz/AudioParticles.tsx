@@ -64,14 +64,17 @@ void main() {
 interface AudioParticlesProps {
   data: AudioAnalysisData;
   config: AudioVizConfig;
+  fps: number;
 }
 
 export const AudioParticles: React.FC<AudioParticlesProps> = ({
   data,
   config,
+  fps,
 }) => {
   const particlesConfig = config.audioParticles;
   const count = particlesConfig.count;
+  const deltaTime = 1 / fps;
 
   const noiseRef = useRef(createNoiseField(42));
   const timeRef = useRef(0);
@@ -132,13 +135,13 @@ export const AudioParticles: React.FC<AudioParticlesProps> = ({
   const midEnergy = (bands.lowMid + bands.mid + bands.highMid) / 3;
   const trebleEnergy = (bands.presence + bands.brilliance) / 2;
 
-  timeRef.current += 1 / 30;
+  timeRef.current += deltaTime;
 
   updateParticles(
     buffers,
     noiseRef.current,
     timeRef.current,
-    1 / 30,
+    deltaTime,
     particlesConfig,
     bassEnergy,
     midEnergy,

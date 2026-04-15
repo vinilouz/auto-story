@@ -46,24 +46,14 @@ export const SmoothWaveform: React.FC<SmoothWaveformProps> = ({
     beatPulseRef.current,
   );
 
-  const mainPositions = useMemo(
-    () =>
-      computeWaveformPoints(
-        data.smoothedFrequencies,
-        spreadWidth,
-        positionY,
-        maxHeight,
-        SUBDIVISIONS,
-        wfConfig.splineTension,
-        beatPulseRef.current,
-      ),
-    [
-      data.smoothedFrequencies,
-      spreadWidth,
-      positionY,
-      maxHeight,
-      wfConfig.splineTension,
-    ],
+  const mainPositions = computeWaveformPoints(
+    data.smoothedFrequencies,
+    spreadWidth,
+    positionY,
+    maxHeight,
+    SUBDIVISIONS,
+    wfConfig.splineTension,
+    beatPulseRef.current,
   );
 
   const glowPositions = useMemo(() => {

@@ -43,7 +43,6 @@ describe("computeAudioAnalysis", () => {
     expect(result.beat).toHaveProperty("intensity");
     expect(result.smoothedFrequencies).toHaveLength(OUTPUT_BARS);
     expect(result.newSmoothed).toHaveLength(OUTPUT_BARS);
-    expect(typeof result.rmsEnergy).toBe("number");
     expect(typeof result.newCooldown).toBe("number");
   });
 
@@ -146,9 +145,8 @@ describe("computeAudioAnalysis", () => {
 
     const result = computeAudioAnalysis(raw, OUTPUT_BARS, previous, 0, FPS);
 
-    if (result.beat.isBeat) {
-      expect(result.newCooldown).toBe(100);
-    }
+    expect(result.beat.isBeat).toBe(true);
+    expect(result.newCooldown).toBe(100);
   });
 
   it("returns zero energy for silent input", () => {
@@ -157,20 +155,21 @@ describe("computeAudioAnalysis", () => {
 
     const result = computeAudioAnalysis(raw, OUTPUT_BARS, previous, 0, FPS);
 
-    expect(result.rmsEnergy).toBe(0);
     expect(result.beat.isBeat).toBe(false);
     for (const band of Object.values(result.bands)) {
       expect(band).toBe(0);
     }
   });
 
-  it("rms energy is non-negative", () => {
+  it("bands are non-negative for any input", () => {
     const raw = generateMockFFT(512);
     const previous = new Array(OUTPUT_BARS).fill(0);
 
     const result = computeAudioAnalysis(raw, OUTPUT_BARS, previous, 0, FPS);
 
-    expect(result.rmsEnergy).toBeGreaterThanOrEqual(0);
+    for (const band of Object.values(result.bands)) {
+      expect(band).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it("handles empty FFT input gracefully", () => {
@@ -179,7 +178,6 @@ describe("computeAudioAnalysis", () => {
     const result = computeAudioAnalysis([], OUTPUT_BARS, previous, 0, FPS);
 
     expect(result.smoothedFrequencies).toHaveLength(0);
-    expect(result.rmsEnergy).toBe(0);
     expect(result.beat.isBeat).toBe(false);
   });
 

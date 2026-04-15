@@ -142,12 +142,10 @@ describe("AudioAnalysisData interface", () => {
       },
       beat: { isBeat: true, intensity: 0.8 },
       smoothedFrequencies: new Array(64).fill(0.3),
-      rmsEnergy: 0.45,
     };
     expect(data.bands.subBass).toBe(0.5);
     expect(data.beat.isBeat).toBe(true);
     expect(data.smoothedFrequencies).toHaveLength(64);
-    expect(data.rmsEnergy).toBe(0.45);
   });
 });
 

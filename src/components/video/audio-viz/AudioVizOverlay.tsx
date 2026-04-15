@@ -69,7 +69,6 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
       bands: result.bands,
       beat: result.beat,
       smoothedFrequencies: result.smoothedFrequencies,
-      rmsEnergy: result.rmsEnergy,
     };
   }
 
@@ -96,7 +95,7 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
           <ProSpectrum data={analysisData} config={config} />
         )}
         {hasEffect("audio-particles") && (
-          <AudioParticles data={analysisData} config={config} />
+          <AudioParticles data={analysisData} config={config} fps={fps} />
         )}
         {hasEffect("smooth-waveform") && (
           <SmoothWaveform data={analysisData} config={config} />

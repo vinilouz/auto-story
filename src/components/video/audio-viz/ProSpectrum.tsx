@@ -178,6 +178,14 @@ export const ProSpectrum: React.FC<ProSpectrumProps> = ({
     [barCount],
   );
 
+  const reusableMatrix = useRef(new THREE.Matrix4());
+  const reusableReflection = useRef(new THREE.Matrix4());
+  const reusablePos = useRef(new THREE.Vector3());
+  const reusableQuat = useRef(new THREE.Quaternion());
+  const reusableScale = useRef(new THREE.Vector3());
+  const reusableReflectionPos = useRef(new THREE.Vector3());
+  const reusableReflectionScale = useRef(new THREE.Vector3());
+
   const updateInstances = () => {
     if (!mainRef.current || !reflectionRef.current) return;
 
@@ -196,8 +204,13 @@ export const ProSpectrum: React.FC<ProSpectrumProps> = ({
       baseColor,
     );
 
-    const matrix = new THREE.Matrix4();
-    const reflectionMatrix = new THREE.Matrix4();
+    const matrix = reusableMatrix.current;
+    const reflectionMatrix = reusableReflection.current;
+    const pos = reusablePos.current;
+    const quat = reusableQuat.current;
+    const scale = reusableScale.current;
+    const reflectionPos = reusableReflectionPos.current;
+    const reflectionScale = reusableReflectionScale.current;
 
     for (let i = 0; i < barCount; i++) {
       matrix.fromArray(matrices.subarray(i * 16, (i + 1) * 16));
@@ -209,16 +222,10 @@ export const ProSpectrum: React.FC<ProSpectrumProps> = ({
         colorArrayRef.current[i * 3 + 2] = colors[i * 3 + 2];
       }
 
-      // Reflection: flip Y around positionY
-      const pos = new THREE.Vector3();
-      const quat = new THREE.Quaternion();
-      const scale = new THREE.Vector3();
       matrix.decompose(pos, quat, scale);
-      reflectionMatrix.compose(
-        new THREE.Vector3(pos.x, positionY - (pos.y - positionY), pos.z),
-        quat,
-        new THREE.Vector3(scale.x, -scale.y, scale.z),
-      );
+      reflectionPos.set(pos.x, positionY - (pos.y - positionY), pos.z);
+      reflectionScale.set(scale.x, -scale.y, scale.z);
+      reflectionMatrix.compose(reflectionPos, quat, reflectionScale);
       reflectionRef.current.setMatrixAt(i, reflectionMatrix);
 
       const rArr = reflectionColorAttribute.array as Float32Array;

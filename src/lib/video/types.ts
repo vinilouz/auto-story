@@ -178,7 +178,6 @@ export interface AudioAnalysisData {
   bands: FrequencyBands;
   beat: BeatResult;
   smoothedFrequencies: number[];
-  rmsEnergy: number;
 }
 
 export interface RemotionVideoProps {

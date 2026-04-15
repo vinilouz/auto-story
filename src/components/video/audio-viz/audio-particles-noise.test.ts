@@ -25,11 +25,7 @@ jest.mock("three/examples/jsm/math/SimplexNoise.js", () => {
   return { SimplexNoise: MockSimplexNoise };
 });
 
-import {
-  createNoiseField,
-  createSeededRandom,
-  sampleNoiseField,
-} from "./audio-particles-noise";
+import { createNoiseField, createSeededRandom } from "./audio-particles-noise";
 
 describe("createSeededRandom", () => {
   it("produces deterministic sequence for given seed", () => {
@@ -75,40 +71,5 @@ describe("createNoiseField", () => {
     const v1 = n1.noise3d(1.5, 2.3, 0.7);
     const v2 = n2.noise3d(1.5, 2.3, 0.7);
     expect(v1).not.toBe(v2);
-  });
-});
-
-describe("sampleNoiseField", () => {
-  const noise = createNoiseField(42);
-
-  it("returns a 3-element tuple", () => {
-    const result = sampleNoiseField(noise, 0, 0, 0, 0, 1, 1);
-    expect(result).toHaveLength(3);
-  });
-
-  it("returns deterministic results for same inputs", () => {
-    const r1 = sampleNoiseField(noise, 1, 2, 3, 0.5, 1, 1.5);
-    const r2 = sampleNoiseField(noise, 1, 2, 3, 0.5, 1, 1.5);
-    expect(r1).toEqual(r2);
-  });
-
-  it("scales by turbulence factor", () => {
-    const r1 = sampleNoiseField(noise, 1, 2, 3, 0, 1, 1);
-    const r2 = sampleNoiseField(noise, 1, 2, 3, 0, 1, 2);
-    for (let i = 0; i < 3; i++) {
-      expect(r2[i]).toBeCloseTo(r1[i] * 2, 5);
-    }
-  });
-
-  it("uses scale to multiply input coordinates", () => {
-    const r1 = sampleNoiseField(noise, 1, 0, 0, 0, 1, 1);
-    const r2 = sampleNoiseField(noise, 0.5, 0, 0, 0, 2, 1);
-    expect(r1).toEqual(r2);
-  });
-
-  it("different time offsets produce different values", () => {
-    const r1 = sampleNoiseField(noise, 1, 2, 3, 0, 1, 1);
-    const r2 = sampleNoiseField(noise, 1, 2, 3, 10, 1, 1);
-    expect(r1).not.toEqual(r2);
   });
 });

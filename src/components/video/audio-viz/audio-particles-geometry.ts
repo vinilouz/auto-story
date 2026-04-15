@@ -11,6 +11,7 @@ export interface ParticleBuffers {
   sizes: Float32Array;
   colors: Float32Array;
   bands: FrequencyBand[];
+  rng: () => number;
 }
 
 export function initializeParticles(
@@ -39,7 +40,7 @@ export function initializeParticles(
     );
   }
 
-  return { positions, velocities, ages, maxAges, sizes, colors, bands };
+  return { positions, velocities, ages, maxAges, sizes, colors, bands, rng };
 }
 
 export const BAND_COLORS: Record<FrequencyBand, [number, number, number]> = {
@@ -114,7 +115,7 @@ export function updateParticles(
         sizes,
         colors,
         bands,
-        Math.random,
+        buffers.rng,
       );
       ages[i] = 0;
       continue;
@@ -234,18 +235,18 @@ export function emitBurst(
   for (const i of oldest) {
     const i3 = i * 3;
 
-    positions[i3] = (Math.random() - 0.5) * 0.5;
-    positions[i3 + 1] = (Math.random() - 0.5) * 0.5;
-    positions[i3 + 2] = (Math.random() - 0.5) * 0.5;
+    positions[i3] = (buffers.rng() - 0.5) * 0.5;
+    positions[i3 + 1] = (buffers.rng() - 0.5) * 0.5;
+    positions[i3 + 2] = (buffers.rng() - 0.5) * 0.5;
 
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = buffers.rng() * Math.PI * 2;
+    const phi = Math.acos(2 * buffers.rng() - 1);
     velocities[i3] = Math.sin(phi) * Math.cos(theta) * burstSpeed;
     velocities[i3 + 1] = Math.sin(phi) * Math.sin(theta) * burstSpeed;
     velocities[i3 + 2] = Math.cos(phi) * burstSpeed;
 
     ages[i] = 0;
-    maxAges[i] = 1 + Math.random() * 2;
+    maxAges[i] = 1 + buffers.rng() * 2;
     sizes[i] = burstSize;
 
     bands[i] = band;
@@ -256,12 +257,21 @@ export function emitBurst(
 }
 
 function findOldestIndices(ages: Float32Array, count: number): number[] {
-  const indexed = Array.from({ length: ages.length }, (_, i) => ({
-    i,
-    age: ages[i] / (ages[i] > 0 ? 1 : 0.001),
-  }));
-  indexed.sort((a, b) => b.age - a.age);
-  return indexed.slice(0, count).map((x) => x.i);
+  const result: number[] = [];
+  for (let i = 0; i < ages.length; i++) {
+    if (result.length < count) {
+      result.push(i);
+    } else {
+      const minIdx = result.reduce(
+        (mi, ri, j) => (ages[ri] < ages[result[mi]] ? j : mi),
+        0,
+      );
+      if (ages[i] > ages[result[minIdx]]) {
+        result[minIdx] = i;
+      }
+    }
+  }
+  return result;
 }
 
 export function computeParticleAttributes(

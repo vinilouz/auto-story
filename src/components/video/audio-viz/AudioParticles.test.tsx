@@ -52,7 +52,6 @@ const SAMPLE_DATA: AudioAnalysisData = {
   },
   beat: { isBeat: false, intensity: 0 },
   smoothedFrequencies: new Array(64).fill(0.4),
-  rmsEnergy: 0.35,
 };
 
 const BEAT_DATA: AudioAnalysisData = {
@@ -69,20 +68,27 @@ const BEAT_DATA: AudioAnalysisData = {
   smoothedFrequencies: new Array(64)
     .fill(0.4)
     .map((v, i) => (i < 16 ? 0.9 : v)),
-  rmsEnergy: 0.6,
 };
 
 describe("AudioParticles", () => {
   it("renders without errors with default config", () => {
     const { container } = render(
-      <AudioParticles data={SAMPLE_DATA} config={DEFAULT_AUDIO_VIZ_CONFIG} />,
+      <AudioParticles
+        data={SAMPLE_DATA}
+        config={DEFAULT_AUDIO_VIZ_CONFIG}
+        fps={30}
+      />,
     );
     expect(container).toBeTruthy();
   });
 
   it("renders with beat data", () => {
     const { container } = render(
-      <AudioParticles data={BEAT_DATA} config={DEFAULT_AUDIO_VIZ_CONFIG} />,
+      <AudioParticles
+        data={BEAT_DATA}
+        config={DEFAULT_AUDIO_VIZ_CONFIG}
+        fps={30}
+      />,
     );
     expect(container).toBeTruthy();
   });
@@ -100,7 +106,7 @@ describe("AudioParticles", () => {
       },
     };
     const { container } = render(
-      <AudioParticles data={SAMPLE_DATA} config={customConfig} />,
+      <AudioParticles data={SAMPLE_DATA} config={customConfig} fps={30} />,
     );
     expect(container).toBeTruthy();
   });
@@ -111,7 +117,7 @@ describe("AudioParticles", () => {
       color: "#00FF88",
     };
     const { container } = render(
-      <AudioParticles data={SAMPLE_DATA} config={config} />,
+      <AudioParticles data={SAMPLE_DATA} config={config} fps={30} />,
     );
     expect(container).toBeTruthy();
   });
@@ -129,12 +135,12 @@ describe("AudioParticles", () => {
       },
       beat: { isBeat: true, intensity: 0.9 },
       smoothedFrequencies: new Array(64).fill(0.9),
-      rmsEnergy: 0.9,
     };
     const { container } = render(
       <AudioParticles
         data={highEnergyData}
         config={DEFAULT_AUDIO_VIZ_CONFIG}
+        fps={30}
       />,
     );
     expect(container).toBeTruthy();
@@ -153,10 +159,13 @@ describe("AudioParticles", () => {
       },
       beat: { isBeat: false, intensity: 0 },
       smoothedFrequencies: new Array(64).fill(0),
-      rmsEnergy: 0,
     };
     const { container } = render(
-      <AudioParticles data={silentData} config={DEFAULT_AUDIO_VIZ_CONFIG} />,
+      <AudioParticles
+        data={silentData}
+        config={DEFAULT_AUDIO_VIZ_CONFIG}
+        fps={30}
+      />,
     );
     expect(container).toBeTruthy();
   });
@@ -167,7 +176,7 @@ describe("AudioParticles", () => {
       opacity: 0.1,
     };
     const { container } = render(
-      <AudioParticles data={SAMPLE_DATA} config={config} />,
+      <AudioParticles data={SAMPLE_DATA} config={config} fps={30} />,
     );
     expect(container).toBeTruthy();
   });

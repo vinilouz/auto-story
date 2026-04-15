@@ -43,7 +43,6 @@ const SAMPLE_DATA: AudioAnalysisData = {
   },
   beat: { isBeat: false, intensity: 0 },
   smoothedFrequencies: new Array(64).fill(0.3),
-  rmsEnergy: 0.25,
 };
 
 const BEAT_DATA: AudioAnalysisData = {
@@ -58,7 +57,6 @@ const BEAT_DATA: AudioAnalysisData = {
   },
   beat: { isBeat: true, intensity: 0.7 },
   smoothedFrequencies: new Array(64).fill(0.5),
-  rmsEnergy: 0.6,
 };
 
 describe("PostProcessingStack", () => {
@@ -128,7 +126,6 @@ describe("PostProcessingStack", () => {
       },
       beat: { isBeat: false, intensity: 0 },
       smoothedFrequencies: [],
-      rmsEnergy: 0,
     };
     const { container } = render(
       <PostProcessingStack data={zeroData} config={DEFAULT_AUDIO_VIZ_CONFIG} />,

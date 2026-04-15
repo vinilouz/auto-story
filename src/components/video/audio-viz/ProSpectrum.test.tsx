@@ -43,7 +43,6 @@ const SAMPLE_DATA: AudioAnalysisData = {
   },
   beat: { isBeat: false, intensity: 0 },
   smoothedFrequencies: new Array(64).fill(0.4),
-  rmsEnergy: 0.35,
 };
 
 const BEAT_DATA: AudioAnalysisData = {
@@ -60,7 +59,6 @@ const BEAT_DATA: AudioAnalysisData = {
   smoothedFrequencies: new Array(64)
     .fill(0.4)
     .map((v, i) => (i < 16 ? 0.9 : v)),
-  rmsEnergy: 0.6,
 };
 
 describe("ProSpectrum", () => {
@@ -139,7 +137,6 @@ describe("ProSpectrum", () => {
       },
       beat: { isBeat: false, intensity: 0 },
       smoothedFrequencies: [],
-      rmsEnergy: 0,
     };
 
     const { container } = render(

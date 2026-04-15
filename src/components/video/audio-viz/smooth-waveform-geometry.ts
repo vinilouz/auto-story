@@ -110,12 +110,14 @@ export function computeWaveformPoints(
     tension,
   );
   const count = interpolated.length;
+  if (count === 0) return new Float32Array(0);
   const positions = new Float32Array(count * 3);
 
   const pulseExpansion = beatPulse * maxHeight * 0.3;
+  const xDivisor = Math.max(1, count - 1);
 
   for (let i = 0; i < count; i++) {
-    const x = (i / (count - 1) - 0.5) * viewWidth;
+    const x = (i / xDivisor - 0.5) * viewWidth;
     const amplitude = interpolated[i];
     const height = amplitude * maxHeight + amplitude * pulseExpansion;
     positions[i * 3] = x;
@@ -124,24 +126,6 @@ export function computeWaveformPoints(
   }
 
   return positions;
-}
-
-export function computeGlowPoints(
-  mainPositions: Float32Array,
-  glowExpansion: number,
-): Float32Array {
-  const count = mainPositions.length / 3;
-  const glowPositions = new Float32Array(count * 3);
-
-  for (let i = 0; i < count; i++) {
-    const x = mainPositions[i * 3];
-    const y = mainPositions[i * 3 + 1];
-    glowPositions[i * 3] = x;
-    glowPositions[i * 3 + 1] = y;
-    glowPositions[i * 3 + 2] = glowExpansion;
-  }
-
-  return glowPositions;
 }
 
 export function computeLineColors(

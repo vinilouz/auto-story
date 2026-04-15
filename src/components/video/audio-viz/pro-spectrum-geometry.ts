@@ -56,16 +56,6 @@ export function parseHexColor(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-export function calculateReflectionMatrix(
-  yPosition: number,
-  reflectionY: number,
-): { scaleY: number; offsetY: number } {
-  return {
-    scaleY: -1,
-    offsetY: -(yPosition - reflectionY) * 2,
-  };
-}
-
 export function calculateBeatFlash(
   isBeat: boolean,
   intensity: number,
@@ -85,12 +75,10 @@ export function computeInstanceTransforms(
 ): {
   matrices: Float32Array;
   colors: Float32Array;
-  flashIntensities: Float32Array;
 } {
   const count = Math.min(frequencies.length, barPositions.length);
   const matrices = new Float32Array(count * 16);
   const colors = new Float32Array(count * 3);
-  const flashIntensities = new Float32Array(count);
 
   for (let i = 0; i < count; i++) {
     const height = mapFrequencyToHeight(frequencies[i], maxHeight);
@@ -113,9 +101,7 @@ export function computeInstanceTransforms(
     colors[i * 3] = col[0];
     colors[i * 3 + 1] = col[1];
     colors[i * 3 + 2] = col[2];
-
-    flashIntensities[i] = i < count * 0.25 ? beatFlash : 0;
   }
 
-  return { matrices, colors, flashIntensities };
+  return { matrices, colors };
 }

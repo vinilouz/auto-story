@@ -100,7 +100,6 @@ export interface AudioAnalysisResult {
   bands: FrequencyBands;
   beat: BeatResult;
   smoothedFrequencies: number[];
-  rmsEnergy: number;
   newSmoothed: number[];
   newCooldown: number;
 }
@@ -136,16 +135,10 @@ export function computeAudioAnalysis(
     ? BEAT_COOLDOWN_MS
     : Math.max(0, beatCooldown - deltaMs);
 
-  const rmsEnergy =
-    smoothed.length > 0
-      ? Math.sqrt(smoothed.reduce((sum, v) => sum + v * v, 0) / smoothed.length)
-      : 0;
-
   return {
     bands,
     beat,
     smoothedFrequencies: smoothed,
-    rmsEnergy,
     newSmoothed: smoothed,
     newCooldown,
   };

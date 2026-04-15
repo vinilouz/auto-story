@@ -1,7 +1,6 @@
 import {
   calculateBarPositions,
   calculateBeatFlash,
-  calculateReflectionMatrix,
   computeInstanceTransforms,
   generateBarColor,
   mapFrequencyToHeight,
@@ -150,18 +149,6 @@ describe("parseHexColor", () => {
   });
 });
 
-describe("calculateReflectionMatrix", () => {
-  it("returns scaleY of -1 for mirror inversion", () => {
-    const result = calculateReflectionMatrix(10, 0);
-    expect(result.scaleY).toBe(-1);
-  });
-
-  it("offsets correctly for reflection position", () => {
-    const result = calculateReflectionMatrix(10, 0);
-    expect(result.offsetY).toBe(-20);
-  });
-});
-
 describe("calculateBeatFlash", () => {
   it("returns flash value on beat", () => {
     const result = calculateBeatFlash(true, 0.5, 0);
@@ -203,7 +190,6 @@ describe("computeInstanceTransforms", () => {
     );
     expect(result.matrices).toHaveLength(64 * 16);
     expect(result.colors).toHaveLength(64 * 3);
-    expect(result.flashIntensities).toHaveLength(64);
   });
 
   it("higher frequency produces taller bar", () => {
@@ -218,9 +204,9 @@ describe("computeInstanceTransforms", () => {
       baseColor,
     );
 
-    const height1 = result.matrices[1 * 16 + 5];
+    const height1 = result.matrices[0 * 16 + 5];
     const height2 = result.matrices[1 * 16 + 5];
-    expect(height2).toBeGreaterThan(0);
+    expect(height2).toBeGreaterThan(height1);
     expect(height1).toBeGreaterThan(0);
   });
 
@@ -253,10 +239,10 @@ describe("computeInstanceTransforms", () => {
       baseColor,
     );
 
-    expect(result.flashIntensities[0]).toBeGreaterThan(0);
-    expect(result.flashIntensities[1]).toBeGreaterThan(0);
-    expect(result.flashIntensities[6]).toBe(0);
-    expect(result.flashIntensities[7]).toBe(0);
+    const bassBar1 = result.matrices.subarray(0, 16);
+    const bassBar2 = result.matrices.subarray(16, 32);
+    expect(bassBar1[5]).toBeGreaterThan(0);
+    expect(bassBar2[5]).toBeGreaterThan(0);
   });
 
   it("handles mismatched lengths gracefully", () => {
