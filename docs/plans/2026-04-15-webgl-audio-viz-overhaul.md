@@ -62,18 +62,18 @@ The new system will:
 
 Build the core audio analysis module that all effects will consume. This replaces the primitive smoothing in `AudioVizOverlay` with professional-grade spectral analysis.
 
-- [ ] create `src/lib/audio/analysis.ts` with pure analysis functions:
+- [x] create `src/lib/audio/analysis.ts` with pure analysis functions:
   - `applyAWeighting(frequencyHz: number): number` — A-weighted perceptual loudness curve
   - `mapLogFrequencies(raw: number[], outputBars: number): number[]` — logarithmic mapping with perceptual weighting
   - `detectBeat(bassEnergy: number, threshold: number, cooldown: number): { isBeat: boolean; intensity: number }` — simple energy-based beat detection with cooldown
   - `smoothAttackRelease(current: number, previous: number, attackMs: number, releaseMs: number, deltaMs: number): number` — exponential smoothing with separate attack/release times
   - `extractBands(frequencies: number[]): { subBass: number; bass: number; lowMid: number; mid: number; highMid: number; presence: number; brilliance: number }` — 7-band extraction matching audio engineering standards (sub-bass 20-60Hz, bass 60-250Hz, low-mid 250-500Hz, mid 500-2kHz, high-mid 2-4kHz, presence 4-6kHz, brilliance 6-20kHz)
-- [ ] write unit tests for `applyAWeighting` — verify known frequency responses (1kHz = 0dB, 100Hz ≈ -20dB, 10kHz ≈ -2.5dB)
-- [ ] write unit tests for `mapLogFrequencies` — verify output length, verify logarithmic distribution, verify perceptual weighting applied
-- [ ] write unit tests for `detectBeat` — verify beat triggers on energy spike, verify cooldown prevents double-triggers, verify intensity calculation
-- [ ] write unit tests for `smoothAttackRelease` — verify fast attack, slow release, verify exponential curve shape
-- [ ] write unit tests for `extractBands` — verify 7 bands extracted, verify correct frequency ranges mapped
-- [ ] run tests — must pass before task 2
+- [x] write unit tests for `applyAWeighting` — verify known frequency responses (1kHz = 0dB, 100Hz ≈ -20dB, 10kHz ≈ -2.5dB)
+- [x] write unit tests for `mapLogFrequencies` — verify output length, verify logarithmic distribution, verify perceptual weighting applied
+- [x] write unit tests for `detectBeat` — verify beat triggers on energy spike, verify cooldown prevents double-triggers, verify intensity calculation
+- [x] write unit tests for `smoothAttackRelease` — verify fast attack, slow release, verify exponential curve shape
+- [x] write unit tests for `extractBands` — verify 7 bands extracted, verify correct frequency ranges mapped
+- [x] run tests — must pass before task 2
 
 ### Task 2: Update types for new audio analysis data structures
 
