@@ -1,63 +1,21 @@
 import { useWindowedAudioData, visualizeAudio } from "@remotion/media-utils";
+import { ThreeCanvas } from "@remotion/three";
 import type React from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { useRef } from "react";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { computeAudioAnalysis } from "@/lib/audio/analysis";
 import type {
-  AudioFrequencyData,
+  AudioAnalysisData,
   AudioTrackConfig,
   AudioVizConfig,
 } from "@/lib/video/types";
 import { AudioParticles } from "./AudioParticles";
-import { SpectrumBars } from "./SpectrumBars";
-import { VignetteGlow } from "./VignetteGlow";
-import { WaveformRibbon } from "./WaveformRibbon";
+import { PostProcessingStack } from "./PostProcessingStack";
+import { ProSpectrum } from "./ProSpectrum";
+import { SmoothWaveform } from "./SmoothWaveform";
 
 const FFT_SAMPLES = 512;
 const OUTPUT_BARS = 64;
-
-function averageBand(values: number[]): number {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
-
-function buildLogEdges(count: number): number[] {
-  const minFreq = 20;
-  const maxFreq = 20000;
-  const logMin = Math.log10(minFreq);
-  const logMax = Math.log10(maxFreq);
-  const edges: number[] = [];
-  for (let i = 0; i <= count; i++) {
-    const t = i / count;
-    const freq = Math.round(Math.pow(10, logMin + t * (logMax - logMin)));
-    edges.push(freq);
-  }
-  return edges;
-}
-
-const LOG_EDGES = buildLogEdges(OUTPUT_BARS);
-
-function fftBinIndex(freq: number, fftSize: number, sampleRate = 44100): number {
-  return Math.round((freq / sampleRate) * fftSize);
-}
-
-function mapLogFrequencies(raw: number[]): number[] {
-  const out: number[] = [];
-  for (let i = 0; i < OUTPUT_BARS; i++) {
-    const loBin = fftBinIndex(LOG_EDGES[i], FFT_SAMPLES);
-    const hiBin = fftBinIndex(LOG_EDGES[i + 1], FFT_SAMPLES);
-    let sum = 0;
-    let count = 0;
-    for (let j = loBin; j < hiBin && j < raw.length; j++) {
-      sum += raw[j];
-      count++;
-    }
-    out.push(count > 0 ? sum / count : 0);
-  }
-  return out;
-}
-
-const SMOOTH_UP = 0.18;
-const SMOOTH_DOWN = 0.08;
 
 interface AudioVizOverlayProps {
   audioTracks: AudioTrackConfig[];
@@ -69,8 +27,9 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
   config,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const smoothedRef = useRef<number[]>(new Array(OUTPUT_BARS).fill(0));
+  const cooldownRef = useRef(0);
 
   const track = audioTracks[0];
   const src = track?.src ?? "";
@@ -83,52 +42,69 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
     windowInSeconds: 10,
   });
 
-  if (!track || !audioData) return null;
+  let analysisData: AudioAnalysisData | null = null;
 
-  const rawFrequencies = visualizeAudio({
-    fps,
-    frame: localFrame,
-    audioData,
-    numberOfSamples: FFT_SAMPLES,
-    optimizeFor: "speed",
-    dataOffsetInSeconds,
-  });
+  if (track && audioData) {
+    const rawFrequencies = visualizeAudio({
+      fps,
+      frame: localFrame,
+      audioData,
+      numberOfSamples: FFT_SAMPLES,
+      optimizeFor: "speed",
+      dataOffsetInSeconds,
+    });
 
-  const logBars = mapLogFrequencies(rawFrequencies);
+    const result = computeAudioAnalysis(
+      rawFrequencies,
+      OUTPUT_BARS,
+      smoothedRef.current,
+      cooldownRef.current,
+      fps,
+    );
 
-  const smoothed = logBars.map((v, i) => {
-    const prev = smoothedRef.current[i] ?? 0;
-    const factor = v > prev ? SMOOTH_UP : SMOOTH_DOWN;
-    const next = prev + (v - prev) * factor;
-    smoothedRef.current[i] = next;
-    return next;
-  });
+    smoothedRef.current = result.newSmoothed;
+    cooldownRef.current = result.newCooldown;
 
-  const freqData: AudioFrequencyData = {
-    bass: averageBand(smoothed.slice(0, 16)),
-    mid: averageBand(smoothed.slice(16, 40)),
-    treble: averageBand(smoothed.slice(40)),
-    overall: averageBand(smoothed),
-    frequencies: smoothed,
-  };
+    analysisData = {
+      bands: result.bands,
+      beat: result.beat,
+      smoothedFrequencies: result.smoothedFrequencies,
+      rmsEnergy: result.rmsEnergy,
+    };
+  }
+
+  if (!analysisData) return null;
 
   const hasEffect = (name: AudioVizConfig["effects"][number]) =>
     config.effects.includes(name);
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
-      {hasEffect("spectrum-bars") && (
-        <SpectrumBars data={freqData} config={config} />
-      )}
-      {hasEffect("vignette-glow") && (
-        <VignetteGlow data={freqData} config={config} />
-      )}
-      {hasEffect("particles") && (
-        <AudioParticles data={freqData} config={config} />
-      )}
-      {hasEffect("waveform-ribbon") && (
-        <WaveformRibbon data={freqData} config={config} />
-      )}
+      <ThreeCanvas
+        width={width}
+        height={height}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          pointerEvents: "none",
+        }}
+        camera={{ position: [0, 0, 5], fov: 75 }}
+        gl={{ alpha: true }}
+      >
+        {hasEffect("pro-spectrum") && (
+          <ProSpectrum data={analysisData} config={config} />
+        )}
+        {hasEffect("audio-particles") && (
+          <AudioParticles data={analysisData} config={config} />
+        )}
+        {hasEffect("smooth-waveform") && (
+          <SmoothWaveform data={analysisData} config={config} />
+        )}
+        {hasEffect("post-processing") && (
+          <PostProcessingStack data={analysisData} config={config} />
+        )}
+      </ThreeCanvas>
     </AbsoluteFill>
   );
 };

@@ -1,16 +1,16 @@
 "use client";
 
 import { ChevronDown, Download, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
+import type { AudioVizConfig, AudioVizEffectType } from "@/lib/video/types";
 import type { StoryFlowState } from "../types";
 import type { StoryFlowActions } from "../useStoryFlowActions";
-import type { AudioVizEffectType, AudioVizConfig } from "@/lib/video/types";
-import { useState } from "react";
 
 interface VideoStageProps {
   state: StoryFlowState;
@@ -18,10 +18,10 @@ interface VideoStageProps {
 }
 
 const EFFECT_META: { id: AudioVizEffectType; label: string }[] = [
-  { id: "spectrum-bars", label: "Spectrum" },
-  { id: "vignette-glow", label: "Glow" },
-  { id: "particles", label: "Particles" },
-  { id: "waveform-ribbon", label: "Waveform" },
+  { id: "pro-spectrum", label: "Spectrum" },
+  { id: "audio-particles", label: "Particles" },
+  { id: "smooth-waveform", label: "Waveform" },
+  { id: "post-processing", label: "Post FX" },
   { id: "scene-modulation", label: "Scene FX" },
 ];
 
@@ -94,282 +94,107 @@ function EffectPanel({
           {EFFECT_META.find((e) => e.id === id)?.label ?? id} settings
         </span>
         <ChevronDown
-          className={cn(
-            "w-4 h-4 transition-transform",
-            open && "rotate-180",
-          )}
+          className={cn("w-4 h-4 transition-transform", open && "rotate-180")}
         />
       </button>
       {open && (
         <div className="px-3 pb-3 space-y-2.5 border-t pt-2">
-          {id === "spectrum-bars" && (
+          {id === "pro-spectrum" && (
             <>
               <SliderRow
+                label="Bar count"
+                value={config.proSpectrum.barCount}
+                min={16}
+                max={128}
+                step={8}
+                onChange={(v) =>
+                  onChange({
+                    proSpectrum: { ...config.proSpectrum, barCount: v },
+                  })
+                }
+              />
+              <SliderRow
                 label="Max height"
-                value={config.spectrumBars.maxHeight}
+                value={config.proSpectrum.maxHeight}
                 min={5}
                 max={100}
                 step={1}
                 unit="%"
                 onChange={(v) =>
                   onChange({
-                    spectrumBars: { ...config.spectrumBars, maxHeight: v },
+                    proSpectrum: { ...config.proSpectrum, maxHeight: v },
                   })
                 }
               />
               <SliderRow
                 label="Bar gap"
-                value={config.spectrumBars.barGap}
+                value={config.proSpectrum.gap}
                 min={0}
                 max={8}
                 step={1}
                 unit="px"
                 onChange={(v) =>
                   onChange({
-                    spectrumBars: { ...config.spectrumBars, barGap: v },
+                    proSpectrum: { ...config.proSpectrum, gap: v },
                   })
                 }
               />
               <SliderRow
                 label="Corner radius"
-                value={config.spectrumBars.borderRadius}
+                value={config.proSpectrum.cornerRadius}
                 min={0}
-                max={10}
-                step={1}
-                unit="px"
+                max={0.5}
+                step={0.05}
                 onChange={(v) =>
                   onChange({
-                    spectrumBars: {
-                      ...config.spectrumBars,
-                      borderRadius: v,
+                    proSpectrum: { ...config.proSpectrum, cornerRadius: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Glow intensity"
+                value={config.proSpectrum.glowIntensity}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    proSpectrum: { ...config.proSpectrum, glowIntensity: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Reflection"
+                value={config.proSpectrum.reflectionOpacity}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    proSpectrum: {
+                      ...config.proSpectrum,
+                      reflectionOpacity: v,
                     },
                   })
                 }
               />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Bass glow</span>
-                <Switch
-                  checked={config.spectrumBars.glow}
-                  onCheckedChange={(v) =>
-                    onChange({
-                      spectrumBars: { ...config.spectrumBars, glow: v },
-                    })
-                  }
-                />
-              </div>
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground">Position</span>
                 <div className="flex flex-wrap gap-1">
-                  {(["bottom", "top", "center", "left", "right"] as const).map(
-                    (p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className={cn(
-                          "px-2 py-0.5 text-xs rounded border transition-colors capitalize",
-                          config.spectrumBars.position === p
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-muted text-muted-foreground border-border",
-                        )}
-                        onClick={() =>
-                          onChange({
-                            spectrumBars: {
-                              ...config.spectrumBars,
-                              position: p,
-                            },
-                          })
-                        }
-                      >
-                        {p}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-          {id === "vignette-glow" && (
-            <>
-              <SliderRow
-                label="Spread"
-                value={config.vignetteGlow.spread}
-                min={30}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) =>
-                  onChange({
-                    vignetteGlow: { ...config.vignetteGlow, spread: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Min opacity"
-                value={config.vignetteGlow.minOpacity}
-                min={0}
-                max={30}
-                step={1}
-                unit="%"
-                onChange={(v) =>
-                  onChange({
-                    vignetteGlow: { ...config.vignetteGlow, minOpacity: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Max opacity"
-                value={config.vignetteGlow.maxOpacity}
-                min={10}
-                max={100}
-                step={5}
-                unit="%"
-                onChange={(v) =>
-                  onChange({
-                    vignetteGlow: { ...config.vignetteGlow, maxOpacity: v },
-                  })
-                }
-              />
-            </>
-          )}
-          {id === "particles" && (
-            <>
-              <SliderRow
-                label="Max count"
-                value={config.particles.count}
-                min={20}
-                max={300}
-                step={10}
-                onChange={(v) =>
-                  onChange({
-                    particles: { ...config.particles, count: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Speed"
-                value={config.particles.speed}
-                min={0}
-                max={8}
-                step={0.5}
-                onChange={(v) =>
-                  onChange({
-                    particles: { ...config.particles, speed: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Size"
-                value={config.particles.size}
-                min={1}
-                max={10}
-                step={0.5}
-                onChange={(v) =>
-                  onChange({
-                    particles: { ...config.particles, size: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Spread"
-                value={config.particles.scale}
-                min={4}
-                max={20}
-                step={1}
-                onChange={(v) =>
-                  onChange({
-                    particles: { ...config.particles, scale: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Noise"
-                value={config.particles.noise}
-                min={0}
-                max={5}
-                step={0.5}
-                onChange={(v) =>
-                  onChange({
-                    particles: { ...config.particles, noise: v },
-                  })
-                }
-              />
-            </>
-          )}
-          {id === "waveform-ribbon" && (
-            <>
-              <SliderRow
-                label="Radius"
-                value={config.waveformRibbon.radius}
-                min={5}
-                max={50}
-                step={1}
-                unit="%"
-                onChange={(v) =>
-                  onChange({
-                    waveformRibbon: { ...config.waveformRibbon, radius: v },
-                  })
-                }
-              />
-              <SliderRow
-                label="Displacement"
-                value={config.waveformRibbon.displacement}
-                min={5}
-                max={150}
-                step={5}
-                unit="px"
-                onChange={(v) =>
-                  onChange({
-                    waveformRibbon: {
-                      ...config.waveformRibbon,
-                      displacement: v,
-                    },
-                  })
-                }
-              />
-              <SliderRow
-                label="Thickness"
-                value={config.waveformRibbon.thickness}
-                min={1}
-                max={10}
-                step={0.5}
-                unit="px"
-                onChange={(v) =>
-                  onChange({
-                    waveformRibbon: {
-                      ...config.waveformRibbon,
-                      thickness: v,
-                    },
-                  })
-                }
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Glow</span>
-                <Switch
-                  checked={config.waveformRibbon.glow}
-                  onCheckedChange={(v) =>
-                    onChange({
-                      waveformRibbon: { ...config.waveformRibbon, glow: v },
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Position</span>
-                <div className="flex gap-1">
-                  {(["center", "top", "bottom"] as const).map((p) => (
+                  {(["bottom", "top", "center"] as const).map((p) => (
                     <button
                       key={p}
                       type="button"
                       className={cn(
                         "px-2 py-0.5 text-xs rounded border transition-colors capitalize",
-                        config.waveformRibbon.position === p
+                        config.proSpectrum.position === p
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-muted text-muted-foreground border-border",
                       )}
                       onClick={() =>
                         onChange({
-                          waveformRibbon: {
-                            ...config.waveformRibbon,
+                          proSpectrum: {
+                            ...config.proSpectrum,
                             position: p,
                           },
                         })
@@ -380,6 +205,254 @@ function EffectPanel({
                   ))}
                 </div>
               </div>
+            </>
+          )}
+          {id === "audio-particles" && (
+            <>
+              <SliderRow
+                label="Count"
+                value={config.audioParticles.count}
+                min={100}
+                max={1000}
+                step={50}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: { ...config.audioParticles, count: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Noise scale"
+                value={config.audioParticles.noiseScale}
+                min={0.1}
+                max={3}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: { ...config.audioParticles, noiseScale: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Trail length"
+                value={config.audioParticles.trailLength}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: {
+                      ...config.audioParticles,
+                      trailLength: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Turbulence"
+                value={config.audioParticles.turbulence}
+                min={0}
+                max={5}
+                step={0.5}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: { ...config.audioParticles, turbulence: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Base size"
+                value={config.audioParticles.baseSize}
+                min={0.5}
+                max={5}
+                step={0.5}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: { ...config.audioParticles, baseSize: v },
+                  })
+                }
+              />
+              <SliderRow
+                label="Max size"
+                value={config.audioParticles.maxSize}
+                min={4}
+                max={16}
+                step={1}
+                onChange={(v) =>
+                  onChange({
+                    audioParticles: { ...config.audioParticles, maxSize: v },
+                  })
+                }
+              />
+            </>
+          )}
+          {id === "smooth-waveform" && (
+            <>
+              <SliderRow
+                label="Spline tension"
+                value={config.smoothWaveform.splineTension}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    smoothWaveform: {
+                      ...config.smoothWaveform,
+                      splineTension: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Glow intensity"
+                value={config.smoothWaveform.glowIntensity}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    smoothWaveform: {
+                      ...config.smoothWaveform,
+                      glowIntensity: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Thickness scale"
+                value={config.smoothWaveform.thicknessScale}
+                min={0.5}
+                max={3}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    smoothWaveform: {
+                      ...config.smoothWaveform,
+                      thicknessScale: v,
+                    },
+                  })
+                }
+              />
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">
+                  Color mapping
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {(["frequency", "amplitude", "fixed"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      className={cn(
+                        "px-2 py-0.5 text-xs rounded border transition-colors capitalize",
+                        config.smoothWaveform.colorMapping === m
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border",
+                      )}
+                      onClick={() =>
+                        onChange({
+                          smoothWaveform: {
+                            ...config.smoothWaveform,
+                            colorMapping: m,
+                          },
+                        })
+                      }
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Position</span>
+                <div className="flex gap-1">
+                  {(["center", "top", "bottom"] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={cn(
+                        "px-2 py-0.5 text-xs rounded border transition-colors capitalize",
+                        config.smoothWaveform.position === p
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border",
+                      )}
+                      onClick={() =>
+                        onChange({
+                          smoothWaveform: {
+                            ...config.smoothWaveform,
+                            position: p,
+                          },
+                        })
+                      }
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {id === "post-processing" && (
+            <>
+              <SliderRow
+                label="Bloom intensity"
+                value={config.postProcessing.bloomIntensity}
+                min={0}
+                max={2}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    postProcessing: {
+                      ...config.postProcessing,
+                      bloomIntensity: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Bloom threshold"
+                value={config.postProcessing.bloomThreshold}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(v) =>
+                  onChange({
+                    postProcessing: {
+                      ...config.postProcessing,
+                      bloomThreshold: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Chromatic offset"
+                value={config.postProcessing.chromaticOffset}
+                min={0}
+                max={0.01}
+                step={0.001}
+                onChange={(v) =>
+                  onChange({
+                    postProcessing: {
+                      ...config.postProcessing,
+                      chromaticOffset: v,
+                    },
+                  })
+                }
+              />
+              <SliderRow
+                label="Vignette darkness"
+                value={config.postProcessing.vignetteDarkness}
+                min={0}
+                max={1}
+                step={0.1}
+                onChange={(v) =>
+                  onChange({
+                    postProcessing: {
+                      ...config.postProcessing,
+                      vignetteDarkness: v,
+                    },
+                  })
+                }
+              />
             </>
           )}
           {id === "scene-modulation" && (
@@ -551,9 +624,7 @@ export function VideoStage({ state, actions }: VideoStageProps) {
               <label className="text-sm font-medium">Audio Visualization</label>
               <Switch
                 checked={audioVizConfig.enabled}
-                onCheckedChange={(checked) =>
-                  patchViz({ enabled: checked })
-                }
+                onCheckedChange={(checked) => patchViz({ enabled: checked })}
               />
             </div>
             {audioVizConfig.enabled && (
@@ -669,7 +740,8 @@ export function VideoStage({ state, actions }: VideoStageProps) {
                       : "Encoding..."}
               </span>
               <span>
-                {video.renderProgress.remainingSeconds != null && video.renderProgress.stage === "rendering"
+                {video.renderProgress.remainingSeconds != null &&
+                video.renderProgress.stage === "rendering"
                   ? `${video.renderProgress.remainingSeconds > 60 ? `${Math.floor(video.renderProgress.remainingSeconds / 60)}m ${video.renderProgress.remainingSeconds % 60}s` : `${video.renderProgress.remainingSeconds}s`} remaining`
                   : `${video.renderProgress.progress}%`}
               </span>
@@ -684,7 +756,13 @@ export function VideoStage({ state, actions }: VideoStageProps) {
         )}
         {video.videoProps ? (
           <VideoPlayer
-            props={{ ...video.videoProps, captionStyle, videoVolume, musicVolume, musicCompressor }}
+            props={{
+              ...video.videoProps,
+              captionStyle,
+              videoVolume,
+              musicVolume,
+              musicCompressor,
+            }}
           />
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">

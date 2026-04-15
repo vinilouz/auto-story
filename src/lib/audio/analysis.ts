@@ -91,6 +91,66 @@ export function smoothAttackRelease(
   return previous + alpha * (current - previous);
 }
 
+const ATTACK_MS = 10;
+const RELEASE_MS = 80;
+const BEAT_THRESHOLD = 1.4;
+const BEAT_COOLDOWN_MS = 100;
+
+export interface AudioAnalysisResult {
+  bands: FrequencyBands;
+  beat: BeatResult;
+  smoothedFrequencies: number[];
+  rmsEnergy: number;
+  newSmoothed: number[];
+  newCooldown: number;
+}
+
+export function computeAudioAnalysis(
+  rawFrequencies: number[],
+  outputBars: number,
+  previousSmoothed: number[],
+  beatCooldown: number,
+  fps: number,
+): AudioAnalysisResult {
+  const weightedBars = mapLogFrequencies(rawFrequencies, outputBars);
+  const deltaMs = (1 / fps) * 1000;
+
+  const smoothed: number[] = [];
+  for (let i = 0; i < weightedBars.length; i++) {
+    const prev = previousSmoothed[i] ?? 0;
+    smoothed.push(
+      smoothAttackRelease(
+        weightedBars[i],
+        prev,
+        ATTACK_MS,
+        RELEASE_MS,
+        deltaMs,
+      ),
+    );
+  }
+
+  const bands = extractBands(smoothed);
+  const bassEnergy = (bands.subBass + bands.bass) / 2;
+  const beat = detectBeat(bassEnergy, BEAT_THRESHOLD, beatCooldown);
+  const newCooldown = beat.isBeat
+    ? BEAT_COOLDOWN_MS
+    : Math.max(0, beatCooldown - deltaMs);
+
+  const rmsEnergy =
+    smoothed.length > 0
+      ? Math.sqrt(smoothed.reduce((sum, v) => sum + v * v, 0) / smoothed.length)
+      : 0;
+
+  return {
+    bands,
+    beat,
+    smoothedFrequencies: smoothed,
+    rmsEnergy,
+    newSmoothed: smoothed,
+    newCooldown,
+  };
+}
+
 export function extractBands(frequencies: number[]): FrequencyBands {
   if (frequencies.length === 0) {
     return {

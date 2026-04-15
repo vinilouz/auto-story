@@ -1,9 +1,10 @@
 import type React from "react";
 import type { AudioAnalysisData, AudioVizConfig } from "@/lib/video/types";
 
-interface AudioParticlesProps {
+interface PostProcessingStackProps {
   data: AudioAnalysisData;
   config: AudioVizConfig;
 }
 
-export const AudioParticles: React.FC<AudioParticlesProps> = () => null;
+export const PostProcessingStack: React.FC<PostProcessingStackProps> = () =>
+  null;
