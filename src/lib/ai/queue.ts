@@ -102,12 +102,14 @@ export async function executeBatch<A extends ActionType>(
   opts: {
     maxRetries?: number;
     concurrency?: number;
+    dispatchIntervalMs?: number;
     onProgress?: (completed: number, total: number) => void;
     onResult?: (result: BatchResult<ActionMap[A]["res"]>) => void;
   } = {},
 ): Promise<BatchResult<ActionMap[A]["res"]>[]> {
   const maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
   const concurrency = opts.concurrency ?? DEFAULT_CONCURRENCY;
+  const dispatchIntervalMs = opts.dispatchIntervalMs ?? 60_000;
   const total = requests.length;
 
   const cfg = ACTIONS[action]?.[0];
@@ -180,10 +182,19 @@ export async function executeBatch<A extends ActionType>(
 
   const jobs = requests.map((req, i) => ({ id: i, request: req, attempts: 0 }));
 
+  const inflight: Promise<void>[] = [];
+
   for (let i = 0; i < jobs.length; i += concurrency) {
     const batch = jobs.slice(i, i + concurrency);
-    await Promise.all(batch.map(processJob));
+    for (const job of batch) {
+      inflight.push(processJob(job));
+    }
+    if (i + concurrency < jobs.length) {
+      await sleep(dispatchIntervalMs);
+    }
   }
+
+  await Promise.all(inflight);
 
   const ok = results.filter((r) => r?.status === "success").length;
   log.info(`Batch concluído: ${ok}/${total} ok`);
