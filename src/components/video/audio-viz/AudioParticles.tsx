@@ -2,176 +2,161 @@ import type React from "react";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { AudioAnalysisData, AudioVizConfig } from "@/lib/video/types";
-import {
-  classifyBeat,
-  computeParticleAttributes,
-  emitBurst,
-  initializeParticles,
-  updateParticles,
-} from "./audio-particles-geometry";
-import { createNoiseField } from "./audio-particles-noise";
 
 const vertexShader = `
-precision highp float;
-
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-
-attribute vec3 position;
 attribute float aSize;
 attribute float aOpacity;
-attribute vec3 aColor;
-
-uniform float uPixelRatio;
-
 varying float vOpacity;
-varying vec3 vColor;
 
 void main() {
   vOpacity = aOpacity;
-  vColor = aColor;
   vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mvPos;
-  gl_PointSize = aSize * uPixelRatio * (300.0 / -mvPos.z);
-  gl_PointSize = clamp(gl_PointSize, 1.0, 128.0);
+  gl_PointSize = aSize * (200.0 / -mvPos.z);
+  gl_PointSize = clamp(gl_PointSize, 1.0, 64.0);
 }
 `;
 
 const fragmentShader = `
-precision highp float;
-
 uniform vec3 uColor;
-uniform float uGlowRadius;
-
 varying float vOpacity;
-varying vec3 vColor;
 
 void main() {
-  vec2 center = gl_PointCoord - 0.5;
-  float dist = length(center);
+  float dist = length(gl_PointCoord - 0.5);
   if (dist > 0.5) discard;
-
-  float softEdge = smoothstep(0.5, 0.5 - uGlowRadius, dist);
-  float core = smoothstep(0.3, 0.0, dist);
-  float alpha = (softEdge * 0.6 + core * 0.4) * vOpacity;
-
-  vec3 color = uColor * vColor + core * 0.3;
-
-  gl_FragColor = vec4(color, alpha);
+  float alpha = smoothstep(0.5, 0.1, dist) * vOpacity;
+  gl_FragColor = vec4(uColor, alpha);
 }
 `;
+
+interface Particle {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  life: number;
+  maxLife: number;
+}
 
 interface AudioParticlesProps {
   data: AudioAnalysisData;
   config: AudioVizConfig;
-  fps: number;
 }
 
 export const AudioParticles: React.FC<AudioParticlesProps> = ({
   data,
   config,
-  fps,
 }) => {
-  const particlesConfig = config.audioParticles;
-  const count = particlesConfig.count;
-  const deltaTime = 1 / fps;
+  const cfg = config.audioParticles;
+  const count = cfg.count;
 
-  const noiseRef = useRef(createNoiseField(42));
-  const timeRef = useRef(0);
+  const particlesRef = useRef<Particle[]>([]);
+  const initialized = useRef(false);
 
-  const buffers = useMemo(() => {
-    const seededRng = (() => {
-      let s = 42;
-      return () => {
-        s = ((s * 1664525 + 1013904223) | 0) >>> 0;
-        return s / 4294967296;
-      };
-    })();
-    return initializeParticles(count, seededRng);
-  }, [count]);
+  const positionArray = useRef(new Float32Array(count * 3));
+  const sizeArray = useRef(new Float32Array(count));
+  const opacityArray = useRef(new Float32Array(count));
 
-  const prevBeatRef = useRef(false);
-
-  const positionAttribute = useMemo(
-    () => new THREE.BufferAttribute(buffers.positions, 3),
-    [buffers.positions],
+  const positionAttr = useMemo(
+    () => new THREE.BufferAttribute(positionArray.current, 3),
+    [],
   );
-
-  const sizeAttribute = useMemo(
-    () => new THREE.BufferAttribute(new Float32Array(count), 1),
-    [count],
+  const sizeAttr = useMemo(
+    () => new THREE.BufferAttribute(sizeArray.current, 1),
+    [],
   );
-
-  const opacityAttribute = useMemo(
-    () => new THREE.BufferAttribute(new Float32Array(count), 1),
-    [count],
-  );
-
-  const colorAttribute = useMemo(
-    () => new THREE.BufferAttribute(buffers.colors, 3),
-    [buffers.colors],
+  const opacityAttr = useMemo(
+    () => new THREE.BufferAttribute(opacityArray.current, 1),
+    [],
   );
 
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", positionAttribute);
-    geo.setAttribute("aSize", sizeAttribute);
-    geo.setAttribute("aOpacity", opacityAttribute);
-    geo.setAttribute("aColor", colorAttribute);
+    geo.setAttribute("position", positionAttr);
+    geo.setAttribute("aSize", sizeAttr);
+    geo.setAttribute("aOpacity", opacityAttr);
     return geo;
-  }, [positionAttribute, sizeAttribute, opacityAttribute, colorAttribute]);
+  }, [positionAttr, sizeAttr, opacityAttr]);
 
   const uniforms = useMemo(
     () => ({
       uColor: { value: new THREE.Color(config.color) },
-      uPixelRatio: { value: 1 },
-      uGlowRadius: { value: 0.15 },
     }),
     [config.color],
   );
 
-  const { bands, beat } = data;
-  const bassEnergy = (bands.subBass + bands.bass) / 2;
-  const midEnergy = (bands.lowMid + bands.mid + bands.highMid) / 3;
-  const trebleEnergy = (bands.presence + bands.brilliance) / 2;
-
-  timeRef.current += deltaTime;
-
-  updateParticles(
-    buffers,
-    noiseRef.current,
-    timeRef.current,
-    deltaTime,
-    particlesConfig,
-    bassEnergy,
-    midEnergy,
-    trebleEnergy,
-  );
-
-  const beatType = classifyBeat(bands, beat.isBeat);
-  if (beat.isBeat && !prevBeatRef.current) {
-    emitBurst(buffers, beatType, particlesConfig);
+  if (!initialized.current) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spread = Math.random() * 4;
+      particlesRef.current.push({
+        x: Math.cos(angle) * spread,
+        y: (Math.random() - 0.5) * 4,
+        z: (Math.random() - 0.5) * 2,
+        vx: (Math.random() - 0.5) * 0.02,
+        vy: (Math.random() - 0.5) * 0.02,
+        vz: (Math.random() - 0.5) * 0.01,
+        life: Math.random(),
+        maxLife: 2 + Math.random() * 3,
+      });
+    }
+    initialized.current = true;
   }
-  prevBeatRef.current = beat.isBeat;
 
-  const attrs = computeParticleAttributes(
-    buffers,
-    particlesConfig,
-    trebleEnergy,
-    config.opacity,
-  );
+  const bassEnergy = (data.bands.subBass + data.bands.bass) / 2;
+  const midEnergy = (data.bands.lowMid + data.bands.mid) / 3;
+  const overallEnergy =
+    data.smoothedFrequencies.reduce((s, v) => s + v, 0) /
+    data.smoothedFrequencies.length;
+  const speed = 0.3 + bassEnergy * 2;
+  const sizeMod = 1 + midEnergy * 3;
 
-  sizeAttribute.array.set(attrs.aSize);
-  sizeAttribute.needsUpdate = true;
-  opacityAttribute.array.set(attrs.aOpacity);
-  opacityAttribute.needsUpdate = true;
-  colorAttribute.needsUpdate = true;
-  positionAttribute.needsUpdate = true;
+  for (let i = 0; i < count; i++) {
+    const p = particlesRef.current[i];
+    p.life += 0.016;
+
+    if (p.life >= p.maxLife || Math.abs(p.x) > 8 || Math.abs(p.y) > 5) {
+      const angle = Math.random() * Math.PI * 2;
+      const burst = data.beat.isBeat ? 0.1 + data.beat.intensity * 0.05 : 0.02;
+      p.x = (Math.random() - 0.5) * 2;
+      p.y = (Math.random() - 0.5) * 2;
+      p.z = Math.random() - 0.5;
+      p.vx = Math.cos(angle) * burst;
+      p.vy = Math.sin(angle) * burst;
+      p.vz = (Math.random() - 0.5) * burst;
+      p.life = 0;
+      p.maxLife = 2 + Math.random() * 3;
+    }
+
+    p.x += p.vx * speed;
+    p.y += p.vy * speed;
+    p.z += p.vz * speed;
+
+    p.vx += (Math.random() - 0.5) * 0.002 * speed;
+    p.vy += (Math.random() - 0.5) * 0.002 * speed;
+
+    const lifeRatio = p.life / p.maxLife;
+    const fadeIn = Math.min(lifeRatio * 5, 1);
+    const fadeOut = 1 - lifeRatio * lifeRatio;
+
+    positionArray.current[i * 3] = p.x;
+    positionArray.current[i * 3 + 1] = p.y;
+    positionArray.current[i * 3 + 2] = p.z;
+    sizeArray.current[i] =
+      (cfg.baseSize + overallEnergy * cfg.maxSize) * sizeMod * fadeIn;
+    opacityArray.current[i] = fadeIn * fadeOut * config.opacity;
+  }
+
+  positionAttr.needsUpdate = true;
+  sizeAttr.needsUpdate = true;
+  opacityAttr.needsUpdate = true;
 
   return (
     <points>
       <primitive object={geometry} attach="geometry" />
-      <rawShaderMaterial
+      <shaderMaterial
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
         uniforms={uniforms}

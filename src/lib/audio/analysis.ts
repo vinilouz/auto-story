@@ -100,7 +100,6 @@ export interface AudioAnalysisResult {
   bands: FrequencyBands;
   beat: BeatResult;
   smoothedFrequencies: number[];
-  newSmoothed: number[];
   newCooldown: number;
 }
 
@@ -128,7 +127,7 @@ export function computeAudioAnalysis(
     );
   }
 
-  const bands = extractBands(smoothed);
+  const bands = extractBandsFromLogSpaced(smoothed);
   const bassEnergy = (bands.subBass + bands.bass) / 2;
   const beat = detectBeat(bassEnergy, BEAT_THRESHOLD, beatCooldown);
   const newCooldown = beat.isBeat
@@ -139,7 +138,6 @@ export function computeAudioAnalysis(
     bands,
     beat,
     smoothedFrequencies: smoothed,
-    newSmoothed: smoothed,
     newCooldown,
   };
 }
@@ -186,6 +184,70 @@ export function extractBands(frequencies: number[]): FrequencyBands {
     let sum = 0;
     let count = 0;
     for (let b = Math.max(0, binStart); b < binEnd; b++) {
+      sum += frequencies[b];
+      count++;
+    }
+    bands[range.key] = count > 0 ? sum / count : 0;
+  }
+
+  return bands;
+}
+
+export function extractBandsFromLogSpaced(
+  frequencies: number[],
+): FrequencyBands {
+  if (frequencies.length === 0) {
+    return {
+      subBass: 0,
+      bass: 0,
+      lowMid: 0,
+      mid: 0,
+      highMid: 0,
+      presence: 0,
+      brilliance: 0,
+    };
+  }
+
+  const nyquist = DEFAULT_SAMPLE_RATE / 2;
+  const minFreq = 20;
+  const maxFreq = Math.min(nyquist, 20000);
+  const logMin = Math.log10(minFreq);
+  const logMax = Math.log10(maxFreq);
+
+  const freqToBarIndex = (freq: number): number => {
+    const clamped = Math.max(minFreq, Math.min(maxFreq, freq));
+    const logFreq = Math.log10(clamped);
+    return Math.round(
+      ((logFreq - logMin) / (logMax - logMin)) * frequencies.length,
+    );
+  };
+
+  const ranges: { key: keyof FrequencyBands; low: number; high: number }[] = [
+    { key: "subBass", low: 20, high: 60 },
+    { key: "bass", low: 60, high: 250 },
+    { key: "lowMid", low: 250, high: 500 },
+    { key: "mid", low: 500, high: 2000 },
+    { key: "highMid", low: 2000, high: 4000 },
+    { key: "presence", low: 4000, high: 6000 },
+    { key: "brilliance", low: 6000, high: 20000 },
+  ];
+
+  const bands: FrequencyBands = {
+    subBass: 0,
+    bass: 0,
+    lowMid: 0,
+    mid: 0,
+    highMid: 0,
+    presence: 0,
+    brilliance: 0,
+  };
+
+  for (const range of ranges) {
+    const barStart = freqToBarIndex(range.low);
+    const barEnd = Math.min(freqToBarIndex(range.high), frequencies.length);
+    let sum = 0;
+    let count = 0;
+    for (let b = Math.max(0, barStart); b < barEnd; b++) {
       sum += frequencies[b];
       count++;
     }

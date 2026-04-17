@@ -80,7 +80,7 @@ export function InputStage({ state }: InputStageProps) {
             value={scriptText}
             onChange={(e) => setScriptText(e.target.value)}
             placeholder="Your story..."
-            className="min-h-[200px]"
+            className="min-h-[200px] max-h-[600px] scrollbar-tiny overflow-y-auto"
           />
         </div>
         <div className="grid md:grid-cols-2 gap-6">

@@ -253,7 +253,7 @@ export async function apiRequestMultipart<T>(
   const fileName = path.basename(filePath);
   const mimeType = fileName.endsWith(".mp3") ? "audio/mpeg" : "audio/wav";
 
-  formData.append("file", new Blob([fileBuffer], { type: mimeType }), fileName);
+  formData.append("file", new File([fileBuffer], fileName, { type: mimeType }));
 
   try {
     const res = await fetchWithTimeout(

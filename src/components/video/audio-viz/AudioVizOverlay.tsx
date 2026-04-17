@@ -1,21 +1,16 @@
-import { useWindowedAudioData, visualizeAudio } from "@remotion/media-utils";
 import { ThreeCanvas } from "@remotion/three";
 import type React from "react";
-import { useRef } from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { computeAudioAnalysis } from "@/lib/audio/analysis";
+import { AbsoluteFill, useVideoConfig } from "remotion";
 import type {
   AudioAnalysisData,
   AudioTrackConfig,
   AudioVizConfig,
 } from "@/lib/video/types";
+import { useAudioBrain } from "./AudioBrain";
 import { AudioParticles } from "./AudioParticles";
 import { PostProcessingStack } from "./PostProcessingStack";
 import { ProSpectrum } from "./ProSpectrum";
-import { SmoothWaveform } from "./SmoothWaveform";
-
-const FFT_SAMPLES = 512;
-const OUTPUT_BARS = 64;
+import { WaveformCanvas } from "./WaveformCanvas";
 
 interface AudioVizOverlayProps {
   audioTracks: AudioTrackConfig[];
@@ -26,55 +21,18 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
   audioTracks,
   config,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
-  const smoothedRef = useRef<number[]>(new Array(OUTPUT_BARS).fill(0));
-  const cooldownRef = useRef(0);
+  const { width, height } = useVideoConfig();
+  const brain = useAudioBrain(audioTracks);
 
-  const track = audioTracks[0];
-  const src = track?.src ?? "";
-  const localFrame = track ? frame - track.startFrame : 0;
+  if (!brain) return null;
 
-  const { audioData, dataOffsetInSeconds } = useWindowedAudioData({
-    src,
-    frame: localFrame,
-    fps,
-    windowInSeconds: 10,
-  });
+  const analysisData: AudioAnalysisData = {
+    bands: brain.analysis.bands,
+    beat: brain.analysis.beat,
+    smoothedFrequencies: brain.analysis.smoothedFrequencies,
+  };
 
-  let analysisData: AudioAnalysisData | null = null;
-
-  if (track && audioData) {
-    const rawFrequencies = visualizeAudio({
-      fps,
-      frame: localFrame,
-      audioData,
-      numberOfSamples: FFT_SAMPLES,
-      optimizeFor: "speed",
-      dataOffsetInSeconds,
-    });
-
-    const result = computeAudioAnalysis(
-      rawFrequencies,
-      OUTPUT_BARS,
-      smoothedRef.current,
-      cooldownRef.current,
-      fps,
-    );
-
-    smoothedRef.current = result.newSmoothed;
-    cooldownRef.current = result.newCooldown;
-
-    analysisData = {
-      bands: result.bands,
-      beat: result.beat,
-      smoothedFrequencies: result.smoothedFrequencies,
-    };
-  }
-
-  if (!analysisData) return null;
-
-  const hasEffect = (name: AudioVizConfig["effects"][number]) =>
+  const has = (name: AudioVizConfig["effects"][number]) =>
     config.effects.includes(name);
 
   return (
@@ -82,28 +40,28 @@ export const AudioVizOverlay: React.FC<AudioVizOverlayProps> = ({
       <ThreeCanvas
         width={width}
         height={height}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          pointerEvents: "none",
-        }}
+        style={{ position: "absolute", top: 0, left: 0 }}
         camera={{ position: [0, 0, 5], fov: 75 }}
         gl={{ alpha: true }}
       >
-        {hasEffect("pro-spectrum") && (
+        {has("pro-spectrum") && (
           <ProSpectrum data={analysisData} config={config} />
         )}
-        {hasEffect("audio-particles") && (
-          <AudioParticles data={analysisData} config={config} fps={fps} />
+        {has("audio-particles") && (
+          <AudioParticles data={analysisData} config={config} />
         )}
-        {hasEffect("smooth-waveform") && (
-          <SmoothWaveform data={analysisData} config={config} />
-        )}
-        {hasEffect("post-processing") && (
+        {has("post-processing") && (
           <PostProcessingStack data={analysisData} config={config} />
         )}
       </ThreeCanvas>
+      {has("smooth-waveform") && (
+        <WaveformCanvas
+          data={analysisData}
+          config={config}
+          width={width}
+          height={height}
+        />
+      )}
     </AbsoluteFill>
   );
 };
