@@ -81,20 +81,30 @@ describe("louzlabs provider", () => {
     expect(res?.audioBuffer).toBe(buf);
   });
 
-  it("generateVideo should map to /v1/video/generations", async () => {
-    (httpClient.apiRequest as jest.Mock).mockResolvedValue({ url: "vid.mp4" });
-    await provider?.generateVideo!(
+  it("generateVideo should map to /v1/video/generations via SSE", async () => {
+    const mockReader = {
+      read: jest.fn().mockResolvedValueOnce({
+        done: false,
+        value: Buffer.from("data: {\"url\":\"vid.mp4\"}\n\n"),
+      }).mockResolvedValueOnce({ done: true }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    (httpClient.apiRequestSSE as jest.Mock).mockResolvedValue({
+      body: { getReader: () => mockReader },
+    });
+    const res = await provider?.generateVideo!(
       "model",
       { prompt: "move", referenceImage: "ref.png" },
       creds,
     );
 
-    expect(httpClient.apiRequest).toHaveBeenCalledWith(
+    expect(httpClient.apiRequestSSE).toHaveBeenCalledWith(
       "http://api/v1/video/generations",
       "secret",
       { prompt: "move", aspect_ratio: "16:9", images: ["ref.png"] },
       expect.any(Object),
     );
+    expect(res?.videoUrl).toBe("vid.mp4");
   });
 
   it("generateTranscription should map to /v1/audio/transcriptions", async () => {

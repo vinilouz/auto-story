@@ -3,6 +3,10 @@ import "__tests__/mocks";
 
 import "whatwg-fetch";
 import "@testing-library/jest-dom";
+import { TextDecoder, TextEncoder } from "node:util";
+
+if (!globalThis.TextEncoder) globalThis.TextEncoder = TextEncoder;
+if (!globalThis.TextDecoder) globalThis.TextDecoder = TextDecoder;
 
 // Mock ResizeObserver for Radix UI components
 class ResizeObserverMock {
