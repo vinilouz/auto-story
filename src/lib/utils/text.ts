@@ -1,6 +1,5 @@
 import { createLogger } from "../logger";
 import type {
-  AudioBatch,
   Segment,
   TranscriptionResult,
   TranscriptionWord,
@@ -14,7 +13,13 @@ export async function getTranscription(
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load transcription: ${url}`);
   const data = await res.json();
-  return Array.isArray(data) ? data : data.words || [];
+  return (Array.isArray(data) ? data : data.words || []).map(
+    (w: { text?: string; word?: string; startMs?: number; start?: number; endMs?: number; end?: number }) => ({
+      text: w.text ?? w.word,
+      startMs: w.startMs ?? w.start,
+      endMs: w.endMs ?? w.end,
+    }),
+  );
 }
 
 const PROTECTED_ABBREVIATIONS = [
@@ -212,20 +217,9 @@ export function splitIntoBatches(
 
 export async function splitTranscriptionByDuration(
   transcriptionResults: TranscriptionResult[],
-  audioBatches: AudioBatch[],
   clipDurationSec: number,
   audioDurationsMs: number[],
 ): Promise<Segment[]> {
-  const allWords: (TranscriptionWord & {
-    globalStartMs: number;
-    globalEndMs: number;
-  })[] = [];
-
-  const completedBatches = audioBatches.filter(
-    (b) => b.status === "completed" && b.url,
-  );
-
-  // Use the first completed transcription result (single transcription for all audio)
   const validResult = transcriptionResults.find(
     (r) => r.status === "completed" && r.transcriptionUrl,
   );
@@ -234,22 +228,7 @@ export async function splitTranscriptionByDuration(
 
   const words = await getTranscription(validResult.transcriptionUrl);
 
-  let globalOffsetMs = 0;
-  for (let batchIdx = 0; batchIdx < completedBatches.length; batchIdx++) {
-    const batchDurationMs = audioDurationsMs[batchIdx];
-
-    for (const w of words) {
-      allWords.push({
-        ...w,
-        globalStartMs: globalOffsetMs + w.startMs,
-        globalEndMs: globalOffsetMs + w.endMs,
-      });
-    }
-
-    globalOffsetMs += batchDurationMs;
-  }
-
-  if (allWords.length === 0) return [];
+  if (words.length === 0) return [];
 
   const totalDurationMs = audioDurationsMs.reduce((a, b) => a + b, 0);
   const clipDurationMs = clipDurationSec * 1000;
@@ -261,8 +240,8 @@ export async function splitTranscriptionByDuration(
     const windowStart = i * clipDurationMs;
     const windowEnd = (i + 1) * clipDurationMs;
 
-    const wordsInWindow = allWords.filter(
-      (w) => w.globalStartMs >= windowStart && w.globalStartMs < windowEnd,
+    const wordsInWindow = words.filter(
+      (w) => w.startMs >= windowStart && w.startMs < windowEnd,
     );
 
     const text =
@@ -274,8 +253,11 @@ export async function splitTranscriptionByDuration(
     segments.push({
       id: crypto.randomUUID(),
       text,
-      startMs: windowStart,
-      endMs: Math.min(windowEnd, totalDurationMs),
+      startMs: wordsInWindow.length > 0 ? wordsInWindow[0].startMs : windowStart,
+      endMs:
+        wordsInWindow.length > 0
+          ? wordsInWindow[wordsInWindow.length - 1].endMs
+          : Math.min(windowEnd, totalDurationMs),
     } as Segment);
   }
 

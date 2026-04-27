@@ -876,7 +876,6 @@ export function useStoryFlowActions(state: StoryFlowState) {
     );
     const newSegs = await splitTranscriptionByDuration(
       transcription.result ? [transcription.result] : [],
-      audio.batches,
       clipDuration,
       audioDurationsMs,
     );

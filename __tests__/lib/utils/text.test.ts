@@ -55,19 +55,10 @@ describe("Text Utils", () => {
           transcriptionUrl: "mock-transcription-url",
         },
       ];
-      const audioBatches = [
-        {
-          index: 0,
-          text: "Anything",
-          status: "completed" as const,
-          url: "mock-url",
-        },
-      ];
       const audioDurationsMs = [12000]; // 12 second total audio
 
       const result = await splitTranscriptionByDuration(
         transcriptionResults,
-        audioBatches,
         5, // 5 seconds per clip
         audioDurationsMs,
       );

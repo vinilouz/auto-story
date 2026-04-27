@@ -1,36 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { execute } from "@/lib/ai/registry";
+import "@/lib/ai/providers/louzlabs";
 import { createLogger } from "@/lib/logger";
 import { concatenateAudio } from "@/lib/utils/audio";
 
 const log = createLogger("api/transcription");
 
 const DATA_DIR = path.join(process.cwd(), "public", "projects");
-
-async function transcribe(audioFilePath: string) {
-  const fileBuffer = fs.readFileSync(audioFilePath);
-  const form = new FormData();
-  form.append(
-    "file",
-    new Blob([fileBuffer], { type: "audio/mpeg" }),
-    path.basename(audioFilePath),
-  );
-
-  const res = await fetch(
-    `${process.env.LOUZLABS_BASE_URL}/v1/audio/transcriptions`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.LOUZLABS_API_KEY}` },
-      body: form,
-    },
-  );
-  if (!res.ok)
-    throw new Error(`Transcription failed (${res.status}): ${await res.text()}`);
-  return (await res.json()) as {
-    words: Array<{ text: string; startMs: number; endMs: number }>;
-  };
-}
 
 export async function POST(req: Request) {
   try {
@@ -77,7 +55,9 @@ export async function POST(req: Request) {
     }
 
     log.info(`Transcribing ${path.basename(audioPath)}...`);
-    const { words } = await transcribe(audioPath);
+    const { words } = await execute("generateTranscription", {
+      file: audioPath,
+    });
     fs.writeFileSync(cachePath, JSON.stringify(words, null, 2));
     log.success(`Transcription complete: ${words.length} words`);
 

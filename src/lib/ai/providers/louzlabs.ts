@@ -1,8 +1,8 @@
 import {
-  apiRequest,
   apiRequestMultipart,
   apiRequestRaw,
   apiRequestSSE,
+  parseSSEData,
 } from "@/lib/ai/http-client";
 import {
   type AudioRequest,
@@ -23,84 +23,75 @@ import {
 const TIMEOUT_MUSIC = 240_000;
 const TIMEOUT_VIDEO = 300_000;
 
-async function parseSSE(response: Response, timeoutMs: number): Promise<string> {
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
+function iteratorFromReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
   const decoder = new TextDecoder();
-  let buffer = "";
-
-  const timer = new Promise<never>((_, reject) =>
-    setTimeout(
-      () => reject(new Error(`SSE timeout after ${timeoutMs / 1000}s`)),
-      timeoutMs,
-    ),
-  );
-
-  const processLine = (line: string): string | undefined => {
-    if (!line.startsWith("data: ")) return undefined;
-    const raw = line.slice(6).trim();
-    if (raw === "[DONE]" || raw.startsWith(": ") || !raw) return undefined;
-    const data = JSON.parse(raw);
-    if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
-    if (data.url) return data.url;
-    return undefined;
+  return {
+    [Symbol.asyncIterator]() {
+      return {
+        async next() {
+          const { done, value } = await reader.read();
+          if (done) return { done: true, value: undefined };
+          return { done: false, value: decoder.decode(value, { stream: true }) };
+        },
+      };
+    },
   };
+}
 
-  const read = async () => {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const chunks = buffer.split("\n\n");
-      buffer = chunks.pop() || "";
-
-      for (const chunk of chunks) {
-        for (const line of chunk.split("\n")) {
-          try {
-            const result = processLine(line);
-            if (result) return result;
-          } catch (err: any) {
-            if (err.message && !err.message.includes("JSON")) throw err;
-          }
-        }
-      }
-    }
-    
-    if (buffer.trim()) {
-      for (const line of buffer.split("\n")) {
-        try {
-          const result = processLine(line);
-          if (result) return result;
-        } catch (err: any) {
-          if (err.message && !err.message.includes("JSON")) throw err;
-        }
-      }
-    }
-    
-    throw new Error("Stream ended without URL");
-  };
-
-  try {
-    return await Promise.race([read(), timer]);
-  } finally {
-    reader.cancel().catch(() => {});
-  }
+async function parseSSEUrl(
+  response: Response,
+  timeoutMs: number,
+): Promise<string> {
+  const data = await parseSSEData<{ url?: string }>(response, timeoutMs);
+  if (!data.url) throw new Error("Stream ended without URL");
+  return data.url;
 }
 
 registerProvider({
   name: "louzlabs",
 
   async generateText(model, req: TextRequest, creds): Promise<TextResponse> {
-    const data = await apiRequest<{ text: string }>(
+    const res = await apiRequestSSE(
       `${creds.baseUrl}/v1/chat/completions`,
       creds.apiKey,
       { prompt: req.prompt, model },
       { actionName: "generateText", providerAndModel: `louzlabs/${model}` },
     );
-    if (!data.text) throw new Error("Empty text response");
-    return { text: data.text };
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body");
+
+    let buffer = "";
+    let text = "";
+
+    for await (const chunk of iteratorFromReader(reader)) {
+      buffer += chunk;
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        for (const line of part.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]" || raw.startsWith(": ") || !raw) continue;
+          const parsed = JSON.parse(raw);
+          if (parsed.error)
+            throw new Error(
+              typeof parsed.error === "string"
+                ? parsed.error
+                : JSON.stringify(parsed.error),
+            );
+          const delta =
+            parsed.choices?.[0]?.delta?.content ??
+            parsed.choices?.[0]?.message?.content;
+          if (delta) text += delta;
+        }
+      }
+    }
+
+    reader.cancel().catch(() => {});
+    if (!text) throw new Error("Empty text response");
+    return { text };
   },
 
   async generateImage(model, req: ImageRequest, creds): Promise<ImageResponse> {
@@ -114,17 +105,21 @@ registerProvider({
       payload.images = req.referenceImages;
     }
 
-    const data = await apiRequest<{ b64_json?: string; url?: string }>(
+    const res = await apiRequestSSE(
       `${creds.baseUrl}/v1/images/generations`,
       creds.apiKey,
       payload,
       { actionName: "generateImage", providerAndModel: `louzlabs/${model}` },
     );
 
-    const imageUrl = data.b64_json
-      ? `data:image/png;base64,${data.b64_json}`
-      : data.url;
-
+    const data = await parseSSEData<{
+      data: Array<{ url?: string | null; b64_json?: string | null }>;
+    }>(res);
+    const img = data.data?.[0];
+    if (!img) throw new Error("No image in response");
+    const imageUrl = img.b64_json
+      ? `data:image/png;base64,${img.b64_json}`
+      : img.url;
     if (!imageUrl) throw new Error("No image URL in response");
     return { imageUrl };
   },
@@ -162,7 +157,7 @@ registerProvider({
       },
     );
 
-    const videoUrl = await parseSSE(res, TIMEOUT_VIDEO);
+    const videoUrl = await parseSSEUrl(res, TIMEOUT_VIDEO);
     return { videoUrl };
   },
 
@@ -184,7 +179,7 @@ registerProvider({
       },
     );
 
-    const musicUrl = await parseSSE(res, TIMEOUT_MUSIC);
+    const musicUrl = await parseSSEUrl(res, TIMEOUT_MUSIC);
     return { musicUrl };
   },
 
@@ -193,7 +188,7 @@ registerProvider({
     req: TranscriptionRequest,
     creds,
   ): Promise<TranscriptionResponse> {
-    const data = await apiRequestMultipart<TranscriptionResponse>(
+    const res = await apiRequestMultipart(
       `${creds.baseUrl}/v1/audio/transcriptions`,
       creds.apiKey,
       req.file,
@@ -203,7 +198,8 @@ registerProvider({
       },
     );
 
-    if (!data || !Array.isArray(data.words)) {
+    const data = await parseSSEData<TranscriptionResponse>(res);
+    if (!data.words) {
       throw new Error("Invalid transcription response format");
     }
     return data;

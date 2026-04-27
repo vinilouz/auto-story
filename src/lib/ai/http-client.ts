@@ -109,7 +109,10 @@ export async function apiRequest<T>(
       let logRes: unknown = data;
       if (data && typeof data === "object") {
         if ("b64_json" in data)
-          logRes = { b64_json: `[${(data as any).b64_json?.length ?? 0} chars]`, url: data.url };
+          logRes = {
+            b64_json: `[${(data as any).b64_json?.length ?? 0} chars]`,
+            url: data.url,
+          };
         else if ("words" in data)
           logRes = {
             words_count: Array.isArray(data.words) ? data.words.length : 0,
@@ -241,12 +244,76 @@ export async function apiRequestSSE(
   }
 }
 
-export async function apiRequestMultipart<T>(
+export async function parseSSEData<T>(
+  response: Response,
+  timeoutMs?: number,
+): Promise<T> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let lastData: T | null = null;
+
+  function processLines(text: string): void {
+    for (const line of text.split("\n")) {
+      try {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]" || raw.startsWith(": ") || !raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed.error)
+          throw new Error(
+            typeof parsed.error === "string"
+              ? parsed.error
+              : JSON.stringify(parsed.error),
+          );
+        lastData = parsed as T;
+      } catch (err: any) {
+        if (err.message && !err.message.includes("JSON")) throw err;
+      }
+    }
+  }
+
+  const read = async (): Promise<T> => {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop() || "";
+
+      for (const chunk of chunks) processLines(chunk);
+    }
+
+    if (buffer.trim()) processLines(buffer);
+    if (!lastData) throw new Error("Stream ended without data");
+    return lastData;
+  };
+
+  try {
+    if (timeoutMs) {
+      const timer = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`SSE timeout after ${timeoutMs / 1000}s`)),
+          timeoutMs,
+        ),
+      );
+      return await Promise.race([read(), timer]);
+    }
+    return await read();
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+}
+
+export async function apiRequestMultipart(
   url: string,
   apiKey: string,
   filePath: string,
   opts?: RequestOptions,
-): Promise<T> {
+): Promise<Response> {
   const start = Date.now();
   const formData = new FormData();
   const fileBuffer = fs.readFileSync(filePath);
@@ -269,20 +336,18 @@ export async function apiRequestMultipart<T>(
     );
 
     await handleResponse(res);
-    const data = await res.json();
-    const duration = Date.now() - start;
 
     if (opts?.actionName && opts?.providerAndModel) {
       saveDebugLog(
         opts.actionName,
         opts.providerAndModel,
-        duration,
+        Date.now() - start,
         { file: fileName },
-        data,
+        { stream: true },
       );
     }
 
-    return data as T;
+    return res;
   } catch (err: unknown) {
     const duration = Date.now() - start;
     if (opts?.actionName && opts?.providerAndModel) {

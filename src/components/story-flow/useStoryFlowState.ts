@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_CAPTION_STYLE } from "@/lib/flows/types";
 import {
-  splitTranscriptionByDuration,
   useAudio,
   useDownload,
   useProject,

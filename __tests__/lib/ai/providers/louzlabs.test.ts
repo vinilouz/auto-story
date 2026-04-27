@@ -2,8 +2,8 @@ import { getProvider } from "@/lib/ai/registry";
 import "@/lib/ai/providers/louzlabs";
 import * as httpClient from "@/lib/ai/http-client";
 
-// Mock the http-client before the tests run
 jest.mock("@/lib/ai/http-client", () => ({
+  ...jest.requireActual("@/lib/ai/http-client"),
   apiRequest: jest.fn(),
   apiRequestRaw: jest.fn(),
   apiRequestSSE: jest.fn(),
@@ -18,9 +18,21 @@ describe("louzlabs provider", () => {
     jest.clearAllMocks();
   });
 
-  it("generateText should map to /v1/chat/completions", async () => {
-    (httpClient.apiRequest as jest.Mock).mockResolvedValue({
-      text: "response",
+  it("generateText should accumulate delta content from SSE", async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":" world"}}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":"!"}}]}\n\n' +
+      "data: [DONE]\n\n";
+    const mockReader = {
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({ done: false, value: Buffer.from(sse) })
+        .mockResolvedValueOnce({ done: true }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    (httpClient.apiRequestSSE as jest.Mock).mockResolvedValue({
+      body: { getReader: () => mockReader },
     });
     const res = await provider?.generateText!(
       "model",
@@ -28,24 +40,58 @@ describe("louzlabs provider", () => {
       creds,
     );
 
-    expect(httpClient.apiRequest).toHaveBeenCalledWith(
+    expect(httpClient.apiRequestSSE).toHaveBeenCalledWith(
       "http://api/v1/chat/completions",
       "secret",
       { prompt: "hello", model: "model" },
-      expect.objectContaining({ actionName: "generateText" }),
+      expect.any(Object),
+    );
+    expect(res?.text).toBe("Hello world!");
+  });
+
+  it("generateText should handle message.content format", async () => {
+    const sse =
+      'data: {"choices":[{"message":{"content":"response"}}]}\n\n' +
+      "data: [DONE]\n\n";
+    const mockReader = {
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({ done: false, value: Buffer.from(sse) })
+        .mockResolvedValueOnce({ done: true }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    (httpClient.apiRequestSSE as jest.Mock).mockResolvedValue({
+      body: { getReader: () => mockReader },
+    });
+    const res = await provider?.generateText!(
+      "model",
+      { prompt: "hello" },
+      creds,
     );
     expect(res?.text).toBe("response");
   });
 
-  it("generateImage should map to /v1/images/generations", async () => {
-    (httpClient.apiRequest as jest.Mock).mockResolvedValue({ url: "img.png" });
+  it("generateImage should map to /v1/images/generations via SSE", async () => {
+    const mockReader = {
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: Buffer.from('data: {"data":[{"url":"img.png"}]}\n\n'),
+        })
+        .mockResolvedValueOnce({ done: true }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    (httpClient.apiRequestSSE as jest.Mock).mockResolvedValue({
+      body: { getReader: () => mockReader },
+    });
     const res = await provider?.generateImage!(
       "model",
       { prompt: "draw me", referenceImages: ["ref.png"] },
       creds,
     );
 
-    expect(httpClient.apiRequest).toHaveBeenCalledWith(
+    expect(httpClient.apiRequestSSE).toHaveBeenCalledWith(
       "http://api/v1/images/generations",
       "secret",
       {
@@ -63,7 +109,6 @@ describe("louzlabs provider", () => {
     const buf = new ArrayBuffer(0);
     (httpClient.apiRequestRaw as jest.Mock).mockResolvedValue(buf);
 
-    // Test ignores empty buffer check in mock to verify mapping
     Object.defineProperty(buf, "byteLength", { value: 10 });
 
     const res = await provider?.generateAudio!(
@@ -83,10 +128,13 @@ describe("louzlabs provider", () => {
 
   it("generateVideo should map to /v1/video/generations via SSE", async () => {
     const mockReader = {
-      read: jest.fn().mockResolvedValueOnce({
-        done: false,
-        value: Buffer.from("data: {\"url\":\"vid.mp4\"}\n\n"),
-      }).mockResolvedValueOnce({ done: true }),
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: Buffer.from('data: {"url":"vid.mp4"}\n\n'),
+        })
+        .mockResolvedValueOnce({ done: true }),
       cancel: jest.fn().mockResolvedValue(undefined),
     };
     (httpClient.apiRequestSSE as jest.Mock).mockResolvedValue({
@@ -107,9 +155,21 @@ describe("louzlabs provider", () => {
     expect(res?.videoUrl).toBe("vid.mp4");
   });
 
-  it("generateTranscription should map to /v1/audio/transcriptions", async () => {
+  it("generateTranscription should map to /v1/audio/transcriptions via SSE", async () => {
+    const mockReader = {
+      read: jest
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: Buffer.from(
+            'data: {"words":[{"text":"hi","startMs":0,"endMs":500}]}\n\n',
+          ),
+        })
+        .mockResolvedValueOnce({ done: true }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
     (httpClient.apiRequestMultipart as jest.Mock).mockResolvedValue({
-      words: [{ text: "hi", startMs: 0, endMs: 500 }],
+      body: { getReader: () => mockReader },
     });
     const res = await provider!.generateTranscription!(
       "model",
