@@ -2,6 +2,7 @@ import { bundle } from "@remotion/bundler";
 import { type OnStartData, renderMedia } from "@remotion/renderer";
 import ffmpeg from "ffmpeg-static";
 import fs from "node:fs";
+import { cpus } from "node:os";
 import path from "node:path";
 // @ts-expect-error
 import ffprobe from "ffprobe-static";
@@ -81,7 +82,8 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
     : undefined,
 });
 
-const RENDER_CONCURRENCY = 10;
+const cpuCount = cpus().length;
+const RENDER_CONCURRENCY = cpuCount > 10 ? 10 : Math.floor(cpuCount / 2);
 
 async function checkUrl(url: string): Promise<{ url: string; ok: boolean; status?: number }> {
   if (!url || url.startsWith("data:")) return { url, ok: true };

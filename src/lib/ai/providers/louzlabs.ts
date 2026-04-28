@@ -31,7 +31,10 @@ function iteratorFromReader(reader: ReadableStreamDefaultReader<Uint8Array>) {
         async next() {
           const { done, value } = await reader.read();
           if (done) return { done: true, value: undefined };
-          return { done: false, value: decoder.decode(value, { stream: true }) };
+          return {
+            done: false,
+            value: decoder.decode(value, { stream: true }),
+          };
         },
       };
     },
@@ -42,9 +45,12 @@ async function parseSSEUrl(
   response: Response,
   timeoutMs: number,
 ): Promise<string> {
-  const data = await parseSSEData<{ url?: string }>(response, timeoutMs);
-  if (!data.url) throw new Error("Stream ended without URL");
-  return data.url;
+  const data = await parseSSEData<{
+    data: Array<{ url?: string | null }>;
+  }>(response, timeoutMs);
+  const vid = data.data?.[0];
+  if (!vid?.url) throw new Error("Stream ended without URL");
+  return vid.url;
 }
 
 registerProvider({
@@ -138,6 +144,7 @@ registerProvider({
 
   async generateVideo(model, req: VideoRequest, creds): Promise<VideoResponse> {
     const payload: Record<string, unknown> = {
+      model,
       prompt: req.prompt,
       aspect_ratio: "16:9",
     };
