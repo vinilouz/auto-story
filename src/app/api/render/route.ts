@@ -85,8 +85,45 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
 const cpuCount = cpus().length;
 const RENDER_CONCURRENCY = cpuCount > 10 ? 10 : Math.floor(cpuCount / 2);
 
-async function checkUrl(url: string): Promise<{ url: string; ok: boolean; status?: number }> {
+async function checkUrl(
+  url: string,
+  origin?: string,
+): Promise<{ url: string; ok: boolean; status?: number }> {
   if (!url || url.startsWith("data:")) return { url, ok: true };
+
+  const isSameHost = (a: string, b: string): boolean => {
+    try {
+      const ua = new URL(a);
+      const ub = new URL(b);
+      return ua.hostname === ub.hostname && ua.port === ub.port;
+    } catch {
+      return false;
+    }
+  };
+
+  const isLocal = (target: string): boolean => {
+    if (target.startsWith("/")) return true;
+    if (origin && isSameHost(target, origin)) return true;
+    return false;
+  };
+
+  if (isLocal(url)) {
+    let localPath = url;
+    try {
+      const parsed = new URL(url);
+      localPath = parsed.pathname;
+    } catch {
+      // already relative
+    }
+    const filePath = path.join(process.cwd(), "public", localPath);
+    try {
+      await fs.promises.access(filePath);
+      return { url, ok: true };
+    } catch {
+      return { url, ok: false };
+    }
+  }
+
   try {
     const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(8000) });
     return { url, ok: res.ok, status: res.status };
@@ -97,6 +134,7 @@ async function checkUrl(url: string): Promise<{ url: string; ok: boolean; status
 
 async function validateAssets(
   props: Record<string, unknown>,
+  origin: string,
 ): Promise<{ valid: boolean; broken: string[] }> {
   const urls: string[] = [];
 
@@ -118,7 +156,7 @@ async function validateAssets(
   if (props.musicSrc) urls.push(props.musicSrc as string);
 
   const uniqueUrls = [...new Set(urls)];
-  const results = await Promise.all(uniqueUrls.map(checkUrl));
+  const results = await Promise.all(uniqueUrls.map((url) => checkUrl(url, origin)));
   const broken = results.filter((r) => !r.ok).map((r) => r.url);
 
   if (broken.length > 0) {
@@ -167,6 +205,7 @@ export async function POST(req: NextRequest) {
       projectId,
       projectName,
       compositionId,
+      origin,
     );
   } catch (error: unknown) {
     log.error("Render route error", error);
@@ -198,7 +237,7 @@ async function handleMediabunnyRender(
 
       try {
         sendEvent({ type: "progress", progress: 0, stage: "validating" });
-        const { valid, broken } = await validateAssets(props);
+        const { valid, broken } = await validateAssets(props, origin);
         if (!valid) {
           sendEvent({
             type: "error",
@@ -256,6 +295,7 @@ async function handleRemotionRender(
   projectId: string | undefined,
   projectName: string | undefined,
   compositionId: string,
+  origin: string,
 ): Promise<Response> {
   const bundleLocation = await ensureBundle();
   const { outputPath, videoUrl } = getOutputPath(projectId);
@@ -274,7 +314,7 @@ async function handleRemotionRender(
 
       try {
         sendEvent({ type: "progress", progress: 0, stage: "validating" });
-        const { valid, broken } = await validateAssets(props);
+        const { valid, broken } = await validateAssets(props, origin);
         if (!valid) {
           sendEvent({
             type: "error",
