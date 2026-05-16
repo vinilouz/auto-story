@@ -1,16 +1,16 @@
-import { bundle } from "@remotion/bundler";
-import { type OnStartData, renderMedia } from "@remotion/renderer";
-import ffmpeg from "ffmpeg-static";
 import fs from "node:fs";
 import { cpus } from "node:os";
 import path from "node:path";
+import { bundle } from "@remotion/bundler";
+import { type OnStartData, renderMedia } from "@remotion/renderer";
+import ffmpeg from "ffmpeg-static";
 // @ts-expect-error
 import ffprobe from "ffprobe-static";
 import { type NextRequest, NextResponse } from "next/server";
+import { createLogger } from "@/lib/logger";
 import { ACTIVE_RENDERER, RENDERER } from "@/lib/video/config";
 import { renderWithMediabunny } from "@/lib/video/mediabunny";
 import type { RemotionVideoProps } from "@/lib/video/types";
-import { createLogger } from "@/lib/logger";
 import {
   REMOTION_CACHE_SIZE,
   REMOTION_CRF,
@@ -82,6 +82,41 @@ const normalizeProps = (props: Record<string, unknown>, origin: string) => ({
     : undefined,
 });
 
+const resolveToLocalPaths = (
+  props: Record<string, unknown>,
+): Record<string, unknown> => {
+  const toLocalPath = (url: string): string => {
+    if (!url || url.startsWith("data:")) return url;
+    try {
+      const parsed = new URL(url);
+      return path.join(process.cwd(), "public", parsed.pathname);
+    } catch {
+      if (url.startsWith("/")) return path.join(process.cwd(), "public", url);
+      return url;
+    }
+  };
+
+  return {
+    ...props,
+    scenes:
+      (props.scenes as Array<Record<string, unknown>>)?.map((s) => ({
+        ...s,
+        imageUrl: toLocalPath(s.imageUrl as string),
+        videoClipUrl: s.videoClipUrl
+          ? toLocalPath(s.videoClipUrl as string)
+          : undefined,
+      })) ?? [],
+    audioTracks:
+      (props.audioTracks as Array<Record<string, unknown>>)?.map((t) => ({
+        ...t,
+        src: toLocalPath(t.src as string),
+      })) ?? [],
+    musicSrc: props.musicSrc
+      ? toLocalPath(props.musicSrc as string)
+      : undefined,
+  };
+};
+
 const cpuCount = cpus().length;
 const RENDER_CONCURRENCY = cpuCount > 10 ? 10 : Math.floor(cpuCount / 2);
 
@@ -125,7 +160,10 @@ async function checkUrl(
   }
 
   try {
-    const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(8000),
+    });
     return { url, ok: res.ok, status: res.status };
   } catch {
     return { url, ok: false };
@@ -146,7 +184,9 @@ async function validateAssets(
     }
   }
 
-  const audioTracks = props.audioTracks as Array<Record<string, unknown>> | undefined;
+  const audioTracks = props.audioTracks as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (audioTracks) {
     for (const t of audioTracks) {
       if (t.src) urls.push(t.src as string);
@@ -156,11 +196,15 @@ async function validateAssets(
   if (props.musicSrc) urls.push(props.musicSrc as string);
 
   const uniqueUrls = [...new Set(urls)];
-  const results = await Promise.all(uniqueUrls.map((url) => checkUrl(url, origin)));
+  const results = await Promise.all(
+    uniqueUrls.map((url) => checkUrl(url, origin)),
+  );
   const broken = results.filter((r) => !r.ok).map((r) => r.url);
 
   if (broken.length > 0) {
-    log.error(`Asset validation failed: ${broken.length}/${uniqueUrls.length} URLs broken`);
+    log.error(
+      `Asset validation failed: ${broken.length}/${uniqueUrls.length} URLs broken`,
+    );
   } else {
     log.info(`Asset validation passed: ${uniqueUrls.length} URLs OK`);
   }
@@ -169,15 +213,10 @@ async function validateAssets(
 }
 
 export async function POST(req: NextRequest) {
-  let tempOutput = "";
+  const tempOutput = "";
   try {
     const body = await req.json();
-    const {
-      videoProps,
-      projectId,
-      projectName,
-      compositionId = "CaptionedVideo",
-    } = body;
+    const { videoProps, projectId, compositionId = "CaptionedVideo" } = body;
 
     if (!videoProps) {
       return NextResponse.json(
@@ -192,24 +231,18 @@ export async function POST(req: NextRequest) {
     log.info(`Using renderer: ${ACTIVE_RENDERER}`);
 
     if (ACTIVE_RENDERER === RENDERER.MEDIABUNNY) {
-      return handleMediabunnyRender(
-        normalizedProps,
-        projectId,
-        projectName,
-        origin,
-      );
+      return handleMediabunnyRender(normalizedProps, projectId, origin);
     }
 
     return handleRemotionRender(
       normalizedProps,
       projectId,
-      projectName,
       compositionId,
       origin,
     );
   } catch (error: unknown) {
     log.error("Render route error", error);
-    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => { });
+    if (tempOutput) fs.promises.unlink(tempOutput).catch(() => {});
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to render",
@@ -222,7 +255,6 @@ export async function POST(req: NextRequest) {
 async function handleMediabunnyRender(
   props: Record<string, unknown>,
   projectId: string | undefined,
-  projectName: string | undefined,
   origin: string,
 ): Promise<Response> {
   const encoder = new TextEncoder();
@@ -252,8 +284,9 @@ async function handleMediabunnyRender(
 
         const { outputPath, videoUrl } = getOutputPath(projectId);
 
+        const localProps = resolveToLocalPaths(props);
         await renderWithMediabunny(
-          props as unknown as RemotionVideoProps,
+          localProps as unknown as RemotionVideoProps,
           outputPath,
           (progress) => {
             sendEvent({
@@ -293,7 +326,6 @@ async function handleMediabunnyRender(
 async function handleRemotionRender(
   props: Record<string, unknown>,
   projectId: string | undefined,
-  projectName: string | undefined,
   compositionId: string,
   origin: string,
 ): Promise<Response> {
@@ -397,7 +429,7 @@ async function handleRemotionRender(
       } catch (error: unknown) {
         log.error("Remotion render failed", error);
         if (fs.existsSync(outputPath))
-          fs.promises.unlink(outputPath).catch(() => { });
+          fs.promises.unlink(outputPath).catch(() => {});
         sendEvent({
           type: "error",
           error: error instanceof Error ? error.message : "Render failed",

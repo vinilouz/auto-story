@@ -21,7 +21,7 @@ export async function generateAudio(opts: {
     projectId,
   } = opts;
 
-  const segments = splitIntoBatches(text, 10000, systemPrompt);
+  const segments = splitIntoBatches(text, 5000, systemPrompt);
   const batches: AudioBatch[] = segments.map((t, i) => ({
     index: i,
     text: t,

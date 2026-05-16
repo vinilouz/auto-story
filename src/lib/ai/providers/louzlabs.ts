@@ -20,6 +20,7 @@ import {
   type VideoResponse,
 } from "@/lib/ai/registry";
 
+const TIMEOUT_AUDIO = 180_000;
 const TIMEOUT_MUSIC = 240_000;
 const TIMEOUT_VIDEO = 300_000;
 
@@ -60,7 +61,11 @@ registerProvider({
     const res = await apiRequestSSE(
       `${creds.baseUrl}/v1/chat/completions`,
       creds.apiKey,
-      { model, stream: true, messages: [{ role: "user", content: req.prompt }] },
+      {
+        model,
+        stream: true,
+        messages: [{ role: "user", content: req.prompt }],
+      },
       { actionName: "generateText", providerAndModel: `louzlabs/${model}` },
     );
 
@@ -135,7 +140,11 @@ registerProvider({
       `${creds.baseUrl}/v1/audio/speech`,
       creds.apiKey,
       { prompt: req.text, voice: req.voice },
-      { actionName: "generateAudio", providerAndModel: `louzlabs/${model}` },
+      {
+        timeoutMs: TIMEOUT_AUDIO,
+        actionName: "generateAudio",
+        providerAndModel: `louzlabs/${model}`,
+      },
     );
 
     if (!audioBuffer.byteLength) throw new Error("Empty audio response");
