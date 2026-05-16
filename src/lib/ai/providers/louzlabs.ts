@@ -60,7 +60,7 @@ registerProvider({
     const res = await apiRequestSSE(
       `${creds.baseUrl}/v1/chat/completions`,
       creds.apiKey,
-      { prompt: req.prompt, model },
+      { model, stream: true, messages: [{ role: "user", content: req.prompt }] },
       { actionName: "generateText", providerAndModel: `louzlabs/${model}` },
     );
 

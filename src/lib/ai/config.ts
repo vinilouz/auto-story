@@ -18,7 +18,7 @@ export const DEFAULT_MAX_RETRIES = 4;
 
 export const ACTIONS: Record<ActionType, ModelConfig[]> = {
   generateText: [
-    { provider: "louzlabs", model: "gemini-3.1-flash-lite-preview" },
+    { provider: "louzlabs", model: "deepseek-v4-flash" },
   ],
   generateImage: [{ provider: "louzlabs" }],
   generateAudio: [{ provider: "louzlabs" }],
