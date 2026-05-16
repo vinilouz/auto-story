@@ -34,31 +34,34 @@ export async function generateAudio(opts: {
 
   log.info(`Generating ${indices.length}/${segments.length} audio batches`);
 
-  await Promise.all(
-    indices.map(async (idx) => {
-      batches[idx].status = "generating";
-      try {
-        const { audioBuffer } = await execute("generateAudio", {
-          text: segments[idx],
-          voice,
-        });
+  for (let i = 0; i < indices.length; i++) {
+    const idx = indices[i];
+    batches[idx].status = "generating";
+    try {
+      const { audioBuffer } = await execute("generateAudio", {
+        text: segments[idx],
+        voice,
+      });
 
-        if (projectId) {
-          batches[idx].url = await saveAudio(audioBuffer, projectId, idx);
-        } else {
-          (batches[idx] as AudioBatch & { audioBase64?: string }).audioBase64 =
-            Buffer.from(audioBuffer).toString("base64");
-        }
-
-        batches[idx].status = "completed";
-        log.success(`Batch #${idx + 1} completed`);
-      } catch (e: any) {
-        batches[idx].status = "error";
-        batches[idx].error = e.message;
-        log.error(`Batch #${idx + 1} failed`, e.message);
+      if (projectId) {
+        batches[idx].url = await saveAudio(audioBuffer, projectId, idx);
+      } else {
+        (batches[idx] as AudioBatch & { audioBase64?: string }).audioBase64 =
+          Buffer.from(audioBuffer).toString("base64");
       }
-    }),
-  );
+
+      batches[idx].status = "completed";
+      log.success(`Batch #${idx + 1} completed`);
+    } catch (e: any) {
+      batches[idx].status = "error";
+      batches[idx].error = e.message;
+      log.error(`Batch #${idx + 1} failed`, e.message);
+    }
+
+    if (i < indices.length - 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
 
   return { batches };
 }
